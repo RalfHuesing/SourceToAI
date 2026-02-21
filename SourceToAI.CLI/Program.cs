@@ -22,8 +22,8 @@ var configuration = new ConfigurationBuilder()
     .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
     .Build();
 
-var appSettings = new AppSettings();
-configuration.GetSection("SourceToAI").Bind(appSettings);
+var appSettings = configuration.GetSection("SourceToAI").Get<AppSettings>()
+                  ?? new AppSettings();
 
 // 3. Dependency Injection Container aufbauen
 var services = new ServiceCollection();

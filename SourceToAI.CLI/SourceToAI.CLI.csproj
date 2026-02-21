@@ -9,7 +9,7 @@
         <PublishSingleFile>true</PublishSingleFile>
         <SelfContained>true</SelfContained>
         <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
-
+        <EnableConfigurationBindingGenerator>true</EnableConfigurationBindingGenerator>
         <PublishTrimmed>true</PublishTrimmed>
         <TrimMode>partial</TrimMode>
     </PropertyGroup>
