@@ -8,7 +8,6 @@ namespace SourceToAI.CLI.Configuration;
 
 public class AppSettings
 {
-    public string OutputRootDirectory { get; set; } = string.Empty;
     public string[] ExcludedDirectories { get; set; } = [];
     public string[] IncludedExtensions { get; set; } = [];
 }

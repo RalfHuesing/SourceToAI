@@ -5,15 +5,16 @@ using SourceToAI.CLI.Configuration;
 using SourceToAI.CLI.Services.Discovery;
 using SourceToAI.CLI.Services.Processing;
 
-// 1. CLI Argumente prüfen
-if (args.Length == 0 || string.IsNullOrWhiteSpace(args[0]))
+// 1. CLI Argumente prüfen (Jetzt 2 Argumente erforderlich)
+if (args.Length < 2 || string.IsNullOrWhiteSpace(args[0]) || string.IsNullOrWhiteSpace(args[1]))
 {
-    Console.WriteLine("Verwendung: SourceToAI.exe <Pfad-zur-Solution>");
-    Console.WriteLine("Beispiel: SourceToAI.exe C:\\Daten\\MeineSolution\\");
+    Console.WriteLine("Verwendung: SourceToAI.exe <Export-Pfad> <Pfad-zur-Solution>");
+    Console.WriteLine("Beispiel: SourceToAI.exe ./exports C:\\Daten\\MeineSolution\\");
     return;
 }
 
-string targetPath = args[0];
+string exportPath = args[0];   // Erstes Argument: Wo soll es hin?
+string solutionPath = args[1]; // Zweites Argument: Was soll gelesen werden?
 
 // 2. Konfiguration laden
 var configuration = new ConfigurationBuilder()
@@ -48,7 +49,7 @@ var serviceProvider = services.BuildServiceProvider();
 try
 {
     var orchestrator = serviceProvider.GetRequiredService<ConsoleOrchestrator>();
-    orchestrator.Run(targetPath);
+    orchestrator.Run(solutionPath, exportPath);
 }
 catch (Exception ex)
 {

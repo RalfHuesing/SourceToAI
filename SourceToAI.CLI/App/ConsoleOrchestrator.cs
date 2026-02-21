@@ -16,7 +16,7 @@ public class ConsoleOrchestrator(
     IFeedGenerator feedGenerator,
     AppSettings settings)
 {
-    public void Run(string rootPath)
+    public void Run(string rootPath, string exportPath)
     {
         Console.WriteLine("==================================================");
         Console.WriteLine("🚀 SourceToAI - Standalone AI Feed Generator");
@@ -45,7 +45,7 @@ public class ConsoleOrchestrator(
         // 3. Ausgabe-Verzeichnis vorbereiten (Einmal pro Run)
         var runUuid = Guid.NewGuid().ToString();
         var dateSuffix = DateTime.Now.ToString("yyyyMMdd");
-        var outputDir = Path.Combine(settings.OutputRootDirectory, $"{solutionName}-{runUuid}");
+        var outputDir = Path.Combine(exportPath, $"{solutionName}-{runUuid}");
 
         try
         {
