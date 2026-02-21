@@ -3,7 +3,7 @@ name: Build and Release
 on:
   push:
     tags:
-      - 'v*' # Startet den Build bei Tags wie v1.0.0
+      - 'v*'
 
 jobs:
   release:
@@ -30,7 +30,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup .NET
-        uses: actions/setup-net@v4
+        uses: actions/setup-dotnet@v4 # KORRIGIERT: setup-dotnet statt setup-net
         with:
           dotnet-version: '8.0.x'
 
@@ -41,23 +41,32 @@ jobs:
           -r ${{ matrix.rid }} 
           --self-contained true 
           -p:PublishSingleFile=true 
-          -p:PublishTrimmed=true 
+          -p:PublishTrimmed=false 
           -o ./publish
 
-      - name: Rename Executable (Unix)
-        if: matrix.os != 'windows-latest'
-        run: mv ./publish/SourceToAI ./publish/${{ matrix.executable }}
+      - name: Rename and Prepare (Unix/Windows)
+        shell: pwsh
+        run: |
+          # Finde die echte Datei (z.B. SourceToAI.CLI.exe) und nenne sie um
+          $originalName = if ("${{ matrix.os }}" -eq "windows-latest") { "SourceToAI.CLI.exe" } else { "SourceToAI.CLI" }
+          Rename-Item "./publish/$originalName" "./publish/${{ matrix.executable }}"
+          # Kopiere die appsettings.json in den publish Ordner, falls nicht schon da
+          if (Test-Path "SourceToAI.CLI/appsettings.json") {
+            Copy-Item "SourceToAI.CLI/appsettings.json" "./publish/appsettings.json"
+          }
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.rid }}
-          path: ./publish/${{ matrix.executable }}
+          path: ./publish/*
 
       - name: Release
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: ./publish/${{ matrix.executable }}
+          files: |
+            ./publish/${{ matrix.executable }}
+            ./publish/appsettings.json
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
