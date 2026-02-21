@@ -5,6 +5,9 @@ on:
     tags:
       - 'v*'
 
+permissions:
+  contents: write  # Ermöglicht das Erstellen von Releases und Hochladen von Assets
+
 jobs:
   release:
     strategy:
