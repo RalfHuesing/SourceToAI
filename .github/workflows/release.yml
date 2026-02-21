@@ -47,10 +47,22 @@ jobs:
       - name: Rename and Prepare (Unix/Windows)
         shell: pwsh
         run: |
-          # Finde die echte Datei (z.B. SourceToAI.CLI.exe) und nenne sie um
+          # 1. Bestimme den Namen der Datei, die dotnet publish erzeugt hat
+          # Da das Projekt 'SourceToAI.CLI' heißt, ist das der Standardname
           $originalName = if ("${{ matrix.os }}" -eq "windows-latest") { "SourceToAI.CLI.exe" } else { "SourceToAI.CLI" }
-          Rename-Item "./publish/$originalName" "./publish/${{ matrix.executable }}"
-          # Kopiere die appsettings.json in den publish Ordner, falls nicht schon da
+          $newName = "${{ matrix.executable }}"
+
+          Write-Host "Versuche $originalName in $newName umzubenennen..."
+
+          # 2. Rename-Item darf im Ziel KEINEN Pfad enthalten
+          if (Test-Path "./publish/$originalName") {
+            Rename-Item -Path "./publish/$originalName" -NewName $newName
+          } else {
+            Write-Error "Datei ./publish/$originalName wurde nicht gefunden!"
+            exit 1
+          }
+
+          # 3. appsettings.json für den User beipacken
           if (Test-Path "SourceToAI.CLI/appsettings.json") {
             Copy-Item "SourceToAI.CLI/appsettings.json" "./publish/appsettings.json"
           }
