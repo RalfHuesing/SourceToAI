@@ -1,8 +1,4 @@
-﻿Hier ist die vollumfängliche README für dein neues Projekt **SourceToAI**. Sie dient als Architekturdokumentation und Spezifikation für unseren Nachbau.
-
----
-
-# 📖 SourceToAI - Standalone AI Feed Generator
+﻿# 📖 SourceToAI - Standalone AI Feed Generator
 
 **SourceToAI** ist ein leichtgewichtiges, eigenständiges .NET 8 CLI-Tool. Es repliziert die Kernfunktionalität der `San.Development.Tools.Core` Feed-Engine, um Quellcode aus lokalen C#-Solutions offline zu extrahieren und in KI-optimierte Markdown-Dateien (SanMarkdownFeed-Format) umzuwandeln.
 
