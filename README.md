@@ -1,40 +1,67 @@
-﻿# 📖 SourceToAI - Standalone AI Feed Generator
+﻿# 🚀 SourceToAI - Standalone AI Feed Generator
 
-**SourceToAI** ist ein leichtgewichtiges, eigenständiges .NET 8 CLI-Tool. Es repliziert die Kernfunktionalität der `San.Development.Tools.Core` Feed-Engine, um Quellcode aus lokalen C#-Solutions offline zu extrahieren und in KI-optimierte Markdown-Dateien (SanMarkdownFeed-Format) umzuwandeln.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+**SourceToAI** ist ein leichtgewichtiges, eigenständiges .NET 8 CLI-Tool. Es extrahiert Quellcode und Dokumentationen aus lokalen C#-Solutions offline und wandelt sie in KI-optimierte Markdown-Dateien um. 
+
+Entwickelt speziell für Entwickler, die mit Visual Studio Solutions und Web-basierten KIs (wie ChatGPT, Gemini, Claude) arbeiten. Lade deinen Code einfach und perfekt formatiert in den KI-Kontext!
+
+---
 
 ## ✨ Features
 
-* **Headless CLI:** Einfache Ausführung über die Kommandozeile ohne UI-Overhead.
-* **Auto-Discovery:** Identifiziert automatisch die `.sln`-Datei für den Lösungsnamen und alle darin enthaltenen `.csproj`-Projekte.
-* **SanMarkdownFeed-Protokoll:**
-* Generierung von YAML-Frontmatter für Metadaten.
-* Erstellung einer vollständigen Manifest-Tabelle inkl. MD5-Hashes, Dateigrößen und relativen Pfaden.
-* Dynamic Fencing (Vermeidung von Formatierungsfehlern durch intelligente Backtick-Ermittlung).
+* **KI-Optimiertes Format (MarkdownFeed):** Generiert Dateien mit YAML-Frontmatter für Metadaten und einer vollständigen Manifest-Tabelle inkl. MD5-Hashes, Dateigrößen und relativen Pfaden.
+* **One-File-Per-Project:** Extrahiert den gesamten relevanten Code eines `.csproj`-Projekts in exakt *eine* Markdown-Datei.
+* **Intelligente Dokumentations-Erfassung (.Docs):** Bündelt automatisch deine Root `README.md` und eventuelle `.cursor/rules` in einem virtuellen Projekt, damit die KI sofort die Architektur- und Projektregeln versteht.
+* **Dynamic Fencing:** Verhindert Formatierungsfehler durch intelligente Backtick-Ermittlung bei Code-Blöcken (zählt die längste Sequenz von Backticks in einer Datei und fügt `n+1` Backticks für den Code-Block hinzu).
+* **Filter-Engine:** Ignoriert standardmäßig Build-Artefakte (`bin`, `obj`), Source-Control-Ordner (`.git`) und IDE-Metadaten (`.vs`, `.idea`).
 
+---
 
-* **Filter-Engine:** Ignoriert automatisch Build-Artefakte (`bin`, `obj`), Source-Control-Ordner (`.git`) und IDE-Metadaten (`.vs`).
-* **One-File-Per-Project:** Extrahiert den gesamten relevanten Code eines Projekts in exakt *eine* Datei.
+## 🤖 KI-Workflow: Best Practices
+
+So nutzt du SourceToAI am besten mit ChatGPT, Gemini und Co.:
+
+1. **Code exportieren:** Lass das Tool über deine Solution laufen.
+2. **Dateien hochladen:** Lade die generierte `.Docs`-Datei (für den Gesamtkontext) sowie die relevanten Projekt-Dateien (`ProjektA.md`, `ProjektB.md`) in den Chat deiner Web-KI hoch.
+3. **Prompten:** Nutze Prompts, die das Manifest und die Struktur referenzieren. Beispiel:
+   > *"Im angehängten KI-Feed findest du die Architektur-Doku und den Code von Projekt X. Bitte analysiere Datei [ID 5] und Datei [ID 12] aus dem Manifest und schreibe mir Unit-Tests dafür. Beachte dabei die in der .Docs-Datei definierten Architekturregeln."*
+
+---
+
+## 📦 Installation & Download
+
+Die Anwendung wird automatisch über GitHub Actions gebaut. Du kannst die fertigen Binaries direkt herunterladen:
+
+1. Gehe zu den [Releases](../../releases) in diesem Repository.
+2. Lade die passende `.zip`-Datei für dein Betriebssystem herunter.
+3. Entpacke das Archiv in ein Verzeichnis deiner Wahl.
+
+*(Alternativ kannst du das Repository klonen und per `dotnet build` bzw. `dotnet run` selbst kompilieren).*
 
 ---
 
 ## 🚀 Verwendung
 
-Das Tool erwartet als einziges Argument den Pfad zum Root-Verzeichnis der Solution (dort wo die `.sln` liegt).
+Das Tool wird über die Kommandozeile bedient und benötigt zwingend **zwei Argumente**:
+1. `<Export-Pfad>`: Wo sollen die generierten Markdown-Dateien gespeichert werden?
+2. `<Pfad-zur-Solution>`: Das Root-Verzeichnis deiner C#-Solution (dort, wo die `.sln`-Datei liegt).
 
+**Beispiel:**
 ```cmd
-SourceToAI.exe C:\Daten\MeineSolution\
+SourceToAI.exe C:\AI_Feeds\Exports C:\Daten\MeineSolution\
 
 ```
 
 ### Ordner- & Datei-Struktur (Output)
 
-Das System generiert bei jedem Aufruf eine neue UUID, um alte Exporte nicht zu überschreiben.
+Das System erstellt für jeden Durchlauf einen neuen Unterordner mit dem Solution-Namen und einer UUID, um alte Exporte nicht zu überschreiben.
 
 ```text
-[Ausgabeverzeichnis lt. appsettings]\MeineSolution-8f7a6b5c-4d3e-2f1a-0b9c-8d7e6f5a4b3c\
-    ├── MeineSolution.ProjektA-20260221.md
-    ├── MeineSolution.ProjektB-20260221.md
-    └── MeineSolution.ProjektC-20260221.md
+C:\AI_Feeds\Exports\MeineSolution-8f7a6b5c-4d3e-2f1a-0b9c-8d7e6f5a4b3c\
+    ├── MeineSolution.Docs-20260222.md
+    ├── MeineSolution.ProjektA-20260222.md
+    └── MeineSolution.ProjektB-20260222.md
 
 ```
 
@@ -42,95 +69,20 @@ Das System generiert bei jedem Aufruf eine neue UUID, um alte Exporte nicht zu �
 
 ## ⚙️ Konfiguration (`appsettings.json`)
 
-Die Konfigurationsdatei muss im gleichen Verzeichnis wie die `.exe` liegen.
+Das Tool verwendet eine `appsettings.json`, die im gleichen Verzeichnis wie die Ausführungsdatei liegen muss. Hier definierst du, welche Verzeichnisse ignoriert und welche Dateiendungen inkludiert werden sollen.
 
 ```json
 {
-  "SourceToAI": {
-    "OutputRootDirectory": "C:\\AI_Feeds\\Exports",
-    "ExcludedDirectories": [ "bin", "obj", ".git", ".vs", ".idea", "node_modules" ],
-    "IncludedExtensions": [ ".cs", ".sql", ".json", ".xml", ".xaml", ".md", ".js", ".ts", ".css" ]
-  }
+    "SourceToAI": {
+        "ExcludedDirectories": [ "bin", "obj", ".git", ".vs", ".idea", "node_modules" ],
+        "IncludedExtensions": [ ".cs", ".sql", ".json", ".xml", ".xaml", ".md", ".mdc", ".js", ".ts", ".css" ]
+    }
 }
 
 ```
 
 ---
 
-## 📦 Abhängigkeiten (NuGet Packages)
+## 📄 Lizenz
 
-Um das Projekt aufzusetzen, benötigst du folgende Standard-Microsoft-Pakete für Dependency Injection und Konfiguration:
-
-* `Microsoft.Extensions.Configuration.Json`
-* `Microsoft.Extensions.Configuration.Binder`
-* `Microsoft.Extensions.DependencyInjection`
-* `Microsoft.Extensions.Logging.Console` *(Optional, falls strukturiertes Console-Logging gewünscht ist)*
-
-*(Hinweis: Kryptographie für MD5 ist nativ in `System.Security.Cryptography` im .NET 8 BCL enthalten).*
-
----
-
-## 🏗️ Architektur & Klassenstruktur
-
-Das Projekt wird strikt nach Clean Code / SOLID Prinzipien in saubere Namespaces unterteilt. Du kannst diese Struktur direkt in deiner IDE scaffolden.
-
-### 1. `SourceToAI.Bootstrapper`
-
-Zuständig für das Setup der Applikation.
-
-* `Program.cs` - Einstiegspunkt. Parst `args[0]`, baut den `ServiceCollection`-Container und lädt die `appsettings.json`.
-
-### 2. `SourceToAI.Configuration`
-
-* `AppSettings.cs` - Typisierte Repräsentation der `appsettings.json`.
-
-### 3. `SourceToAI.Models`
-
-Datenstrukturen für den Kontrollfluss und das Feed-Protokoll.
-
-* `ProjectDefinition.cs` - Hält den Namen des Projekts und den Root-Pfad der `.csproj`.
-* `FileManifestEntry.cs` - Modell für die Manifest-Tabelle (ID, Typ, Hash, Size, RelativePath).
-* `FileContent.cs` - Repräsentiert eine eingelesene Datei inkl. Inhalt und Syntax-Sprache.
-* `ExtractionResult.cs` - Result-Pattern-Klasse für sauberes Error-Handling ohne Exceptions.
-
-### 4. `SourceToAI.Services.Discovery`
-
-Verantwortlich für das Finden der Dateien auf der Festplatte.
-
-* `ISolutionDiscoveryService` / `SolutionDiscoveryService.cs`
-* Findet die `.sln` (für den Namen).
-* Sucht rekursiv nach `.csproj` Dateien.
-
-
-* `IFileDiscoveryService` / `FileDiscoveryService.cs`
-* Sucht alle Dateien innerhalb eines Projekt-Ordners.
-* Wendet die Ignore-Listen (`ExcludedDirectories`, `IncludedExtensions`) an.
-
-
-
-### 5. `SourceToAI.Services.Processing`
-
-Die Kern-Logik (Der Nachbau der Core-Engine).
-
-* `IFileTypeService` / `FileTypeService.cs`
-* Ermittelt anhand der Extension den "Type" (Code, Doc, Config).
-* Liefert den passenden Markdown-Language-Tag (z.B. `csharp`, `xml`).
-
-
-* `IHashService` / `HashService.cs`
-* Kapselt `MD5.HashData()` zur Generierung der 8-stelligen Hex-Hashes für das Manifest.
-
-
-* `IFeedGenerator` / `MarkdownFeedGenerator.cs`
-* **Das Herzstück:** Baut den tatsächlichen Markdown-String zusammen.
-* Generiert YAML-Frontmatter (inkl. neuer Session-UUID).
-* Baut die Markdown-Tabelle (`## MANIFEST`).
-* Fügt die Dateiinhalte zusammen und berechnet das **Dynamic Fencing** (zählt die längste Sequenz von Backticks in einer Datei und fügt n+1 Backticks für den Code-Block hinzu).
-
-
-
-### 6. `SourceToAI.App`
-
-* `ConsoleOrchestrator.cs`
-* Wird vom `Program.cs` aufgerufen.
-* Steuert den Workflow: `Lade Solution` -> `Für jedes Projekt: Lade Dateien -> Generiere Feed -> Speichere auf Disk`.
+Dieses Projekt ist unter der **MIT-Lizenz** lizenziert. Weitere Details findest du in der `LICENSE` Datei.

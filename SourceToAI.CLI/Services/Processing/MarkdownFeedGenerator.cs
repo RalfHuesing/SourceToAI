@@ -57,7 +57,7 @@ public class MarkdownFeedGenerator(
             sb.AppendLine();
 
             // Header & Instruction
-            sb.AppendLine($"# SAN AI FEED: {feedName}");
+            sb.AppendLine($"# AI FEED: {feedName}");
             sb.AppendLine("# (Part 1 of 1)");
             sb.AppendLine();
             sb.AppendLine("## INSTRUCTION");
@@ -126,7 +126,7 @@ public class MarkdownFeedGenerator(
             }
         }
 
-        // Mindestens 4 Backticks (San-Standard), ansonsten (Maximal gefundene + 1)
+        // Mindestens 4 Backticks, ansonsten (Maximal gefundene + 1)
         return Math.Max(4, maxConsecutiveBackticks + 1);
     }
 }
