@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "SourceToAI.CLI": {
+      "commandName": "Project",
+      "commandLineArgs": "C:\\Daten\\Entwicklung\\San.smart.Planner.Solver"
+    }
+  }
+}

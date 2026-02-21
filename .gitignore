@@ -1,0 +1,32 @@
+# ==========================================
+# .NET / C# Standard
+# ==========================================
+[Bb]in/
+[Oo]bj/
+[Tt]est[Rr]esults/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# ==========================================
+# IDEs (Visual Studio, Rider, VS Code)
+# ==========================================
+.vs/
+.idea/
+.vscode/
+*.RiderPreferences
+
+# ==========================================
+# OS Files
+# ==========================================
+.DS_Store
+Thumbs.db
+
+# ==========================================
+# SourceToAI & Custom Tooling
+# ==========================================
+# Ignoriere unsere lokal generierten AI-Feeds, falls das Output-Verzeichnis innerhalb der Solution liegt
+AI_Feeds/
+AI_Exports/
+*.mdc~

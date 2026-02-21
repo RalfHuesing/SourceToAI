@@ -1,0 +1,12 @@
+# Auto-detect text files and normalize line endings
+* text=auto
+
+# C# / .NET specific
+*.cs text diff=csharp
+*.sln text eol=crlf
+*.csproj text eol=crlf
+*.json text
+
+# Dokumentation
+*.md text
+*.mdc text
