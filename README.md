@@ -1,5 +1,7 @@
 ﻿# 🚀 SourceToAI - Standalone AI Feed Generator
 
+ <img width="1905" height="1128" alt="image" src="https://github.com/user-attachments/assets/3d85e7d9-36ae-4541-bb38-00cccf4b315e" />
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 **SourceToAI** ist ein leichtgewichtiges, eigenständiges .NET 8 CLI-Tool. Es extrahiert Quellcode und Dokumentationen aus lokalen C#-Solutions offline und wandelt sie in KI-optimierte Markdown-Dateien um. 
