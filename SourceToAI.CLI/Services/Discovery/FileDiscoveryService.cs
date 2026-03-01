@@ -27,7 +27,15 @@ public class FileDiscoveryService : IFileDiscoveryService
 
                 foundFiles.AddRange(ruleFiles);
             }
+            // 3. .cursor/rules Verzeichnis prüfen
+            var githubDir = Path.Combine(rootPath, ".github", "workflows");
+            if (Directory.Exists(githubDir))
+            {
+                var gitHubFiles = Directory.GetFiles(githubDir, "*.*", SearchOption.AllDirectories)
+                    .Where(f => settings.IncludedExtensions.Contains(Path.GetExtension(f).ToLowerInvariant()));
 
+                foundFiles.AddRange(gitHubFiles);
+            }
             return ExtractionResult<List<string>>.Success(foundFiles);
         }
         catch (Exception ex)
