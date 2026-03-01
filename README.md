@@ -51,16 +51,17 @@ Das Tool wird über die Kommandozeile bedient und benötigt zwingend **zwei Argu
 
 **Beispiel:**
 ```cmd
-SourceToAI.exe C:\AI_Feeds\Exports C:\Daten\MeineSolution\
+SourceToAI.exe C:\Daten\MeineSolution\
 
 ```
 
 ### Ordner- & Datei-Struktur (Output)
 
-Das System erstellt für jeden Durchlauf einen neuen Unterordner mit dem Solution-Namen und einer UUID, um alte Exporte nicht zu überschreiben.
+Das System erstellt für jeden Durchlauf einen neuen Unterordner mit dem Solution-Namen.
+Existiert der Ordner bereits werden alle darin befindlichen .md-Dateien gelöscht, um sicherzustellen, dass nur die aktuellsten Daten vorhanden sind.
 
 ```text
-C:\AI_Feeds\Exports\MeineSolution-8f7a6b5c-4d3e-2f1a-0b9c-8d7e6f5a4b3c\
+C:\AI_Feeds\Exports\MeineSolution\
     ├── MeineSolution.Docs-20260222.md
     ├── MeineSolution.ProjektA-20260222.md
     └── MeineSolution.ProjektB-20260222.md

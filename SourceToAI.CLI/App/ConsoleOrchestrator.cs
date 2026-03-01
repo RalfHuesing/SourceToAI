@@ -43,14 +43,26 @@ public class ConsoleOrchestrator(
         Console.WriteLine($"[INFO] {projects.Count} Projekte gefunden.\n");
 
         // 3. Ausgabe-Verzeichnis vorbereiten (Einmal pro Run)
-        var runUuid = Guid.NewGuid().ToString();
         var dateSuffix = DateTime.Now.ToString("yyyyMMdd");
-        var outputDir = Path.Combine(exportPath, $"{solutionName}-{runUuid}");
+        var outputDir = Path.Combine(exportPath, solutionName);
 
         try
         {
-            Directory.CreateDirectory(outputDir);
-            Console.WriteLine($"[INFO] Ausgabeordner erstellt: {outputDir}\n");
+            if (Directory.Exists(outputDir))
+            {
+                Console.WriteLine($"[INFO] Ausgabeordner '{solutionName}' existiert bereits. Lösche alte .md-Dateien...");
+                // Sicherheitsfilter: Nur .md Dateien im Hauptverzeichnis (nicht rekursiv) löschen
+                var existingMdFiles = Directory.GetFiles(outputDir, "*.md", SearchOption.TopDirectoryOnly);
+                foreach (var file in existingMdFiles)
+                {
+                    File.Delete(file);
+                }
+            }
+            else
+            {
+                Directory.CreateDirectory(outputDir);
+                Console.WriteLine($"[INFO] Ausgabeordner erstellt: {outputDir}\n");
+            }
         }
         catch (Exception ex)
         {
@@ -58,7 +70,7 @@ public class ConsoleOrchestrator(
             return;
         }
 
-        Console.WriteLine($"⚙️ Verarbeite Solution-Dokumentation (Root & .cursor)...");
+        Console.WriteLine($"- Verarbeite Solution-Dokumentation (Root & .cursor)...");
         var docsResult = fileDiscovery.FindSolutionDocs(rootPath, settings);
         int successCount = 0;
 
@@ -88,7 +100,7 @@ public class ConsoleOrchestrator(
         // 4. Projekte verarbeiten
         foreach (var project in projects)
         {
-            Console.WriteLine($"⚙️ Verarbeite Projekt: {project.ProjectName}...");
+            Console.WriteLine($"- Verarbeite Projekt: {project.ProjectName}...");
 
             var filesResult = fileDiscovery.FindFilesForProject(project, settings);
             if (!filesResult.IsSuccess || filesResult.Value!.Count == 0)
@@ -114,8 +126,8 @@ public class ConsoleOrchestrator(
         }
 
         Console.WriteLine("\n==================================================");
-        Console.WriteLine($"✅ Fertig! {successCount} von {projects.Count} Projekten erfolgreich exportiert.");
-        Console.WriteLine($"📂 Zu finden unter: {outputDir}");
+        Console.WriteLine($"- Fertig! {successCount} von {projects.Count} Projekten erfolgreich exportiert.");
+        Console.WriteLine($"- Zu finden unter: {outputDir}");
         Console.WriteLine("==================================================");
     }
 }
