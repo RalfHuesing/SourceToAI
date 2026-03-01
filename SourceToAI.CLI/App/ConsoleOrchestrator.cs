@@ -1,6 +1,7 @@
-﻿using SourceToAI.CLI.Configuration;
+using SourceToAI.CLI.Configuration;
 using SourceToAI.CLI.Models;
 using SourceToAI.CLI.Services.Discovery;
+using SourceToAI.CLI.Services.Integration;
 using SourceToAI.CLI.Services.Processing;
 using System;
 using System.Collections.Generic;
@@ -14,7 +15,8 @@ public class ConsoleOrchestrator(
     ISolutionDiscoveryService solutionDiscovery,
     IFileDiscoveryService fileDiscovery,
     IFeedGenerator feedGenerator,
-    AppSettings settings)
+    AppSettings settings,
+    IEnumerable<IPostExportTask> postExportTasks)
 {
     public void Run(string rootPath, string exportPath)
     {
@@ -129,5 +131,15 @@ public class ConsoleOrchestrator(
         Console.WriteLine($"- Fertig! {successCount} von {projects.Count} Projekten erfolgreich exportiert.");
         Console.WriteLine($"- Zu finden unter: {outputDir}");
         Console.WriteLine("==================================================");
+
+        if (postExportTasks.Any())
+        {
+            Console.WriteLine("\n- Führe Post-Export Tasks aus...");
+            foreach (var task in postExportTasks)
+            {
+                task.ExecuteAsync(solutionName, outputDir).GetAwaiter().GetResult();
+            }
+            Console.WriteLine("- Post-Export Tasks abgeschlossen.");
+        }
     }
 }
