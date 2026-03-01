@@ -14,7 +14,7 @@ namespace SourceToAI.CLI.Services.Integration;
 public class GoogleDriveClient : IGoogleDriveClient
 {
     private readonly string[] Scopes = { DriveService.Scope.DriveFile };
-    private readonly string ApplicationName = "SourceToAI Sync";
+    private readonly string ApplicationName = "Code-Sync";
     private readonly string CredentialsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "GoogleDrive.CodeSync");
 
     public async Task ReplaceSolutionFolderAsync(string targetRootFolder, string solutionName, string localDirectory)

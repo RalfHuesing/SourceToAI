@@ -1,8 +1,8 @@
 {
-    "profiles": {
-        "SourceToAI.CLI": {
-            "commandName": "Project",
-            "commandLineArgs": "C:\\Daten\\TEMP\\AI_Feeds C:\\Daten\\Entwicklung\\SourceToAI"
-        }
+  "profiles": {
+    "SourceToAI.CLI": {
+      "commandName": "Project",
+      "commandLineArgs": "C:\\Daten\\TEMP\\AI_Feeds C:\\Daten\\Entwicklung\\SourceToAI"
     }
+  }
 }
