@@ -6,10 +6,11 @@ on:
       - 'v*'
 
 permissions:
-  contents: write  # Ermöglicht das Erstellen von Releases und Hochladen von Assets
+  contents: write
 
 jobs:
-  release:
+  # 1. JOB: Baue alle Binaries parallel
+  build:
     strategy:
       matrix:
         include:
@@ -47,40 +48,49 @@ jobs:
           -p:PublishTrimmed=false 
           -o ./publish
 
-      - name: Rename and Prepare (Unix/Windows)
+      - name: Rename and Prepare
         shell: pwsh
         run: |
-          # 1. Dynamische Suche der ausführbaren Datei (ignoriert .json und .pdb)
           $publishedExecutable = Get-ChildItem -Path "./publish" -File | Where-Object { $_.Name -match "SourceToAI" -and $_.Extension -notmatch "json|pdb" }
           $newName = "${{ matrix.executable }}"
 
           if ($publishedExecutable) {
-            Write-Host "Gefunden: $($publishedExecutable.Name). Versuche in $newName umzubenennen..."
             Rename-Item -Path $publishedExecutable.FullName -NewName $newName
           } else {
-            Write-Error "Keine ausführbare Datei im publish-Ordner gefunden! Inhalt:"
-            Get-ChildItem -Path "./publish"
+            Write-Error "Keine ausführbare Datei gefunden!"
             exit 1
           }
 
-          # 2. appsettings.json für den User beipacken
           if (Test-Path "SourceToAI.CLI/appsettings.json") {
             Copy-Item "SourceToAI.CLI/appsettings.json" "./publish/appsettings.json"
           }
 
-      - name: Upload Artifacts
+      - name: Upload Artifacts to Action
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.rid }}
-          path: ./publish/*
+          name: binaries-${{ matrix.rid }}
+          # Lade hier nur die umbenannte Datei hoch. appsettings nur beim Windows-Job.
+          path: |
+            ./publish/${{ matrix.executable }}
+            ${{ matrix.os == 'windows-latest' && './publish/appsettings.json' || '' }}
+          retention-days: 1 # Brauchen wir nur kurz für den nächsten Job
 
-      - name: Release
+  # 2. JOB: Erstelle das GitHub Release (Läuft nur EINMAL, wenn Build fertig ist)
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: binaries-*
+          path: ./release-files
+          merge-multiple: true # Legt alle Dateien (exe, mac, linux, json) in denselben Ordner
+
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          # Lade die appsettings.json nur beim Windows-Job hoch, um Race Conditions ("Too many retries") zu vermeiden!
-          files: |
-            ./publish/${{ matrix.executable }}
-            ${{ matrix.os == 'windows-latest' && './publish/appsettings.json' || '' }}
+          files: ./release-files/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
