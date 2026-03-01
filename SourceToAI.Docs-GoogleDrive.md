@@ -7,6 +7,7 @@ SourceToAI bietet die Möglichkeit, nach einem erfolgreichen lokalen Export die 
 - Bei jedem Lauf werden lediglich die vorhandenen `.md`-Dateien im Zielordner selektiv gelöscht und durch die neuen ersetzt. Dies gewährleistet persistente Folder IDs für die einfache Integration mit KI-Tools (z.B. Gemini Workspace Extension).
 - Am Ende des Synchronisationsvorgangs wird die stabile Google Drive Folder ID in der Konsole ausgegeben, damit sie direkt weiterverwendet werden kann.
 - Der verwendete OAuth-Scope (`drive.file`) stellt sicher, dass SourceToAI **nur** auf die von der App selbst erstellten Dateien und Ordner zugreifen kann, was maximale Sicherheit für deine restlichen privaten Daten bietet.
+- **Parallele Verarbeitung:** Um die Performance bei großen Projekten zu maximieren, werden Uploads und Löschvorgänge asynchron parallel ausgeführt. Eine integrierte Drosselung (Throttled Parallelism via `SemaphoreSlim`) begrenzt dabei die gleichzeitigen Anfragen auf maximal 5, um Rate-Limiting-Probleme ("429 Too Many Requests") der Google Drive API zu verhindern.
 
 ## Setup-Anleitung
 

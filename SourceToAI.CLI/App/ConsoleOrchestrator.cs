@@ -18,7 +18,7 @@ public class ConsoleOrchestrator(
     AppSettings settings,
     IEnumerable<IPostExportTask> postExportTasks)
 {
-    public void Run(string rootPath, string exportPath)
+    public async Task RunAsync(string rootPath, string exportPath)
     {
         Console.WriteLine("==================================================");
         Console.WriteLine("🚀 SourceToAI - Standalone AI Feed Generator");
@@ -137,7 +137,7 @@ public class ConsoleOrchestrator(
             Console.WriteLine("\n- Führe Post-Export Tasks aus...");
             foreach (var task in postExportTasks)
             {
-                task.ExecuteAsync(solutionName, outputDir).GetAwaiter().GetResult();
+                await task.ExecuteAsync(solutionName, outputDir);
             }
             Console.WriteLine("- Post-Export Tasks abgeschlossen.");
         }
