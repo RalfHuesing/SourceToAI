@@ -27,8 +27,9 @@ public class GoogleDriveSyncService : IPostExportTask
 
         try
         {
-            await _googleDriveClient.ReplaceSolutionFolderAsync(_settings.TargetFolder, solutionName, outputDirectory);
+            var folderId = await _googleDriveClient.ReplaceSolutionFolderAsync(_settings.TargetFolder, solutionName, outputDirectory);
             Console.WriteLine($"[INFO] Google Drive Upload für '{solutionName}' erfolgreich abgeschlossen.");
+            Console.WriteLine($"[INFO] Google Drive Folder ID: {folderId}");
         }
         catch (Exception ex)
         {

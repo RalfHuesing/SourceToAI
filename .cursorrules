@@ -1,4 +1,5 @@
 # SourceToAI Architecture Rules
 
+- **Stabile Cloud-IDs:** Cloud-Ressourcen (wie Google Drive Folder) sollen bei Synchronisationen stets über "In-Place Updates" (selektives Löschen von Inhalten) aktualisiert werden, statt sie komplett neu zu erstellen. Dies gewährleistet persistente IDs für die Integration mit LLMs und externen Systemen.
 - **Post-Export Pipeline:** Erweiterungen, die nach dem Export von Dateien ausgeführt werden sollen (z.B. Uploads, Benachrichtigungen, Post-Processing), müssen das Interface `IPostExportTask` implementieren. Sie werden automatisch über den Dependency Injection Container vom `ConsoleOrchestrator` geladen und aufgerufen.
 - **Interfaces & DI:** Alle neuen Services müssen über Interfaces abstrahiert und im Container (`Program.cs`) registriert werden, um Testbarkeit zu gewährleisten.
