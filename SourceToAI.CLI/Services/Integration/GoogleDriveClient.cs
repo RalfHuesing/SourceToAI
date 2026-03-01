@@ -17,29 +17,48 @@ public class GoogleDriveClient : IGoogleDriveClient
     private readonly string ApplicationName = "Code-Sync";
     private readonly string CredentialsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "GoogleDrive.CodeSync");
 
-    public async Task ReplaceSolutionFolderAsync(string targetRootFolder, string solutionName, string localDirectory)
+    public async Task<string> ReplaceSolutionFolderAsync(string targetRootFolder, string solutionName, string localDirectory)
     {
         var service = await GetDriveServiceAsync();
 
         // 1. Root-Ordner finden oder erstellen
         var rootFolderId = await GetOrCreateFolderAsync(service, targetRootFolder, "root");
 
-        // 2. Solution-Ordner finden und ggf. löschen
-        var existingSolutionFolderId = await GetFolderIdAsync(service, solutionName, rootFolderId);
-        if (existingSolutionFolderId != null)
-        {
-            await service.Files.Delete(existingSolutionFolderId).ExecuteAsync();
-        }
+        // 2. Solution-Ordner finden oder neu erstellen (er bleibt stabil)
+        var solutionFolderId = await GetOrCreateFolderAsync(service, solutionName, rootFolderId);
 
-        // 3. Solution-Ordner neu erstellen
-        var newSolutionFolderId = await CreateFolderAsync(service, solutionName, rootFolderId);
+        // 3. Alte MD-Dateien im Ordner paginiert suchen und löschen
+        string? pageToken = null;
+        do
+        {
+            var request = service.Files.List();
+            request.Q = $"'{solutionFolderId}' in parents and trashed=false";
+            request.Spaces = "drive";
+            request.Fields = "nextPageToken, files(id, name)";
+            request.PageToken = pageToken;
+
+            var result = await request.ExecuteAsync();
+            if (result.Files != null)
+            {
+                foreach (var file in result.Files)
+                {
+                    if (file.Name.EndsWith(".md", StringComparison.OrdinalIgnoreCase))
+                    {
+                        await service.Files.Delete(file.Id).ExecuteAsync();
+                    }
+                }
+            }
+            pageToken = result.NextPageToken;
+        } while (pageToken != null);
 
         // 4. Dateien hochladen
         var files = Directory.GetFiles(localDirectory, "*.md");
         foreach (var file in files)
         {
-            await UploadFileAsync(service, file, newSolutionFolderId);
+            await UploadFileAsync(service, file, solutionFolderId);
         }
+
+        return solutionFolderId;
     }
 
     private async Task<DriveService> GetDriveServiceAsync()

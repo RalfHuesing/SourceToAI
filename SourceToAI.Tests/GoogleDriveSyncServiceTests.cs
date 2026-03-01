@@ -29,6 +29,9 @@ public class GoogleDriveSyncServiceTests
         // Arrange
         var settings = new GoogleDriveSyncSettings { Enabled = true, TargetFolder = "TestFolder" };
         var mockClient = new Mock<IGoogleDriveClient>();
+        mockClient.Setup(c => c.ReplaceSolutionFolderAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+                  .ReturnsAsync("dummy_folder_id");
+
         var service = new GoogleDriveSyncService(settings, mockClient.Object);
 
         var solutionName = "TestSolution";

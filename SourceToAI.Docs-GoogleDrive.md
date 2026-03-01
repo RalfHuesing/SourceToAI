@@ -3,7 +3,9 @@
 SourceToAI bietet die Möglichkeit, nach einem erfolgreichen lokalen Export die generierten Markdown-Feeds automatisch in Google Drive hochzuladen. 
 
 ## Funktionsweise
-- Der Upload überschreibt ("Clean Slate") bei jedem Lauf den projektspezifischen Ordner, um sicherzustellen, dass keine alten/gelöschten Dateien auf Google Drive übrig bleiben.
+- Der Upload nutzt "In-Place Updates", d.h. der Zielordner für die Solution wird auf Google Drive einmalig erstellt und bleibt dann stabil (die Folder ID ändert sich nicht).
+- Bei jedem Lauf werden lediglich die vorhandenen `.md`-Dateien im Zielordner selektiv gelöscht und durch die neuen ersetzt. Dies gewährleistet persistente Folder IDs für die einfache Integration mit KI-Tools (z.B. Gemini Workspace Extension).
+- Am Ende des Synchronisationsvorgangs wird die stabile Google Drive Folder ID in der Konsole ausgegeben, damit sie direkt weiterverwendet werden kann.
 - Der verwendete OAuth-Scope (`drive.file`) stellt sicher, dass SourceToAI **nur** auf die von der App selbst erstellten Dateien und Ordner zugreifen kann, was maximale Sicherheit für deine restlichen privaten Daten bietet.
 
 ## Setup-Anleitung
