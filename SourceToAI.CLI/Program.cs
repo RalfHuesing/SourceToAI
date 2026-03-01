@@ -58,7 +58,7 @@ var serviceProvider = services.BuildServiceProvider();
 try
 {
     var orchestrator = serviceProvider.GetRequiredService<ConsoleOrchestrator>();
-    orchestrator.Run(solutionPath, exportPath);
+    await orchestrator.RunAsync(solutionPath, exportPath);
 }
 catch (Exception ex)
 {

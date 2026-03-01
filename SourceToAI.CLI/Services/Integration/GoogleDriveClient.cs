@@ -3,6 +3,7 @@ using Google.Apis.Drive.v3;
 using Google.Apis.Services;
 using Google.Apis.Util.Store;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -27,7 +28,11 @@ public class GoogleDriveClient : IGoogleDriveClient
         // 2. Solution-Ordner finden oder neu erstellen (er bleibt stabil)
         var solutionFolderId = await GetOrCreateFolderAsync(service, solutionName, rootFolderId);
 
-        // 3. Alte MD-Dateien im Ordner paginiert suchen und löschen
+        using var semaphore = new SemaphoreSlim(5);
+        var exceptions = new ConcurrentQueue<Exception>();
+
+        // 3. Alte MD-Dateien im Ordner paginiert suchen
+        var filesToDelete = new List<string>();
         string? pageToken = null;
         do
         {
@@ -44,18 +49,60 @@ public class GoogleDriveClient : IGoogleDriveClient
                 {
                     if (file.Name.EndsWith(".md", StringComparison.OrdinalIgnoreCase))
                     {
-                        await service.Files.Delete(file.Id).ExecuteAsync();
+                        filesToDelete.Add(file.Id);
                     }
                 }
             }
             pageToken = result.NextPageToken;
         } while (pageToken != null);
 
+        // 3.1 Paralleles Löschen
+        var deleteTasks = filesToDelete.Select(async fileId =>
+        {
+            await semaphore.WaitAsync();
+            try
+            {
+                await service.Files.Delete(fileId).ExecuteAsync();
+            }
+            catch (Exception ex)
+            {
+                exceptions.Enqueue(ex);
+            }
+            finally
+            {
+                semaphore.Release();
+            }
+        });
+        await Task.WhenAll(deleteTasks);
+
+        if (!exceptions.IsEmpty)
+        {
+            throw new AggregateException("Fehler beim Löschen alter Dateien.", exceptions);
+        }
+
         // 4. Dateien hochladen
         var files = Directory.GetFiles(localDirectory, "*.md");
-        foreach (var file in files)
+        var uploadTasks = files.Select(async file =>
         {
-            await UploadFileAsync(service, file, solutionFolderId);
+            await semaphore.WaitAsync();
+            try
+            {
+                await UploadFileAsync(service, file, solutionFolderId);
+            }
+            catch (Exception ex)
+            {
+                exceptions.Enqueue(ex);
+            }
+            finally
+            {
+                semaphore.Release();
+            }
+        });
+        await Task.WhenAll(uploadTasks);
+
+        if (!exceptions.IsEmpty)
+        {
+            throw new AggregateException("Fehler beim Hochladen neuer Dateien.", exceptions);
         }
 
         return solutionFolderId;
