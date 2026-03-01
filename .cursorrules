@@ -1,0 +1,4 @@
+# SourceToAI Architecture Rules
+
+- **Post-Export Pipeline:** Erweiterungen, die nach dem Export von Dateien ausgeführt werden sollen (z.B. Uploads, Benachrichtigungen, Post-Processing), müssen das Interface `IPostExportTask` implementieren. Sie werden automatisch über den Dependency Injection Container vom `ConsoleOrchestrator` geladen und aufgerufen.
+- **Interfaces & DI:** Alle neuen Services müssen über Interfaces abstrahiert und im Container (`Program.cs`) registriert werden, um Testbarkeit zu gewährleisten.
