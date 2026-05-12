@@ -1,0 +1,34 @@
+---
+description: Architektur- und Arbeitsregeln für SourceToAI (Cloud-IDs, DI, I/O, Commits)
+alwaysApply: true
+---
+
+# SourceToAI – Projektrichtlinien
+
+## Architektur
+
+- **Stabile Cloud-IDs:** Cloud-Ressourcen (wie Google Drive Folder) sollen bei Synchronisationen stets über „In-Place Updates“ (selektives Löschen von Inhalten) aktualisiert werden, statt sie komplett neu zu erstellen. Das gewährleistet persistente IDs für die Integration mit LLMs und externen Systemen.
+- **Post-Export Pipeline:** Erweiterungen, die nach dem Export von Dateien ausgeführt werden sollen (z. B. Uploads, Benachrichtigungen, Post-Processing), müssen das Interface `IPostExportTask` implementieren. Sie werden automatisch über den Dependency-Injection-Container vom `ConsoleOrchestrator` geladen und aufgerufen.
+- **Interfaces & DI:** Alle neuen Services müssen über Interfaces abstrahiert und im Container (`Program.cs`) registriert werden, um Testbarkeit zu gewährleisten.
+- **Parallele I/O-Operationen:** Nutze gedrosselten Parallelismus via `SemaphoreSlim` (z. B. auf 5 begrenzt) für externe Netzwerk- oder I/O-intensive Massenoperationen, um Rate Limits zu respektieren. Sammle Fehler in einer `ConcurrentQueue<Exception>`, statt sie unkontrolliert hochbubbeln zu lassen, und werfe am Ende bei Bedarf eine `AggregateException`.
+
+## Commit-Text nach Änderungen
+
+Wenn du in dieser Session **Dateien geschrieben oder geändert hast** (Code, Konfiguration, Dokumentation – egal welcher Art), soll am **Ende deiner Antwort** ein **Commit-Text-Vorschlag** stehen, den der Nutzer manuell in den Commit übernehmen kann.
+
+- **Sprache:** Deutsch (Betreff und optionaler Body).
+- **Stil:** [Conventional Commits](https://www.conventionalcommits.org/) – z. B. `feat:`, `fix:`, `docs:`, `refactor:`, `chore:`, `test:`; bei Bedarf Scope in Klammern, z. B. `feat(cli): …`.
+- **Betreff:** kurz, imperativ/ohne vollständigen Satz, max. ca. 72 Zeichen; beschreibt prägnant **was** geändert wurde und **warum**, falls nötig, im Body.
+- **Body (optional):** Stichpunkte oder kurze Sätze mit Kontext, Breaking Changes oder Hinweisen.
+- **Kein automatischer Git-Commit** – nur der Textblock zum Kopieren.
+
+Formatbeispiel (nur als Orientierung für den Agenten):
+
+```text
+feat(cli): Google-Drive-Sync mit In-Place-Update
+
+- Ordner wird nicht neu angelegt, Inhalte selektiv aktualisiert
+- Fehler werden in ConcurrentQueue gesammelt
+```
+
+Wenn es **keine** Dateischreibungen gab, entfällt der Commit-Vorschlag.
