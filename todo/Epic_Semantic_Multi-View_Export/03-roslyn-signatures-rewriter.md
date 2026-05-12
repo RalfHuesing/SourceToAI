@@ -23,10 +23,10 @@
 
 ## Selbstverifikation
 
-- [ ] Primary Constructors / record-Syntax: mindestens **gelesen** und mit Test abgedeckt oder als „Known limitation“ in `00` nachgetragen (lieber abdecken).
-- [ ] `00`-DoD: „signatures syntaktisch valide“ — hier mit Tests vorab absichern.
-- [ ] Kein doppeltes File-Read — Rewriter bekommt nur `SyntaxNode`.
-- [ ] `dotnet test` grün.
+- [x] Primary Constructors / record-Syntax: mindestens **gelesen** und mit Test abgedeckt oder als „Known limitation“ in `00` nachgetragen (lieber abdecken).
+- [x] `00`-DoD: „signatures syntaktisch valide“ — hier mit Tests vorab absichern.
+- [x] Kein doppeltes File-Read — Rewriter bekommt nur `SyntaxNode`.
+- [x] `dotnet test` grün.
 
 ## Nächster Schritt
 
