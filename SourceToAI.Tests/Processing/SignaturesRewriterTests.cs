@@ -2,6 +2,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using SourceToAI.CLI.Services.Processing.Rewriters;
+using System.Text;
 
 namespace SourceToAI.Tests.Processing;
 
@@ -143,6 +144,40 @@ public class SignaturesRewriterTests
         Assert.DoesNotContain("=>", output);
         var roundTrip = CSharpSyntaxTree.ParseText(output, ParseOptions, cancellationToken: ct);
         AssertNoParseErrors(roundTrip, "Ausgabe", ct);
+    }
+
+    [Fact]
+    public void Rewrite_many_mixed_members_round_trips_without_errors()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        const int count = 400;
+        var sb = new StringBuilder("""
+            public static class Bulk
+            {
+            """);
+
+        for (var i = 0; i < count; i++)
+        {
+            sb.Append("public static int E").Append(i).Append("() => ").Append(i).AppendLine(";");
+            sb.Append("public static void B").Append(i).AppendLine("() { int _ = 1; }");
+        }
+
+        sb.AppendLine("}");
+        var source = sb.ToString();
+
+        var tree = CSharpSyntaxTree.ParseText(source, ParseOptions, cancellationToken: ct);
+        AssertNoParseErrors(tree, "Eingabe (Bulk)", ct);
+
+        var root = tree.GetCompilationUnitRoot(ct);
+        var rewritten = SignaturesRewriter.Rewrite(root);
+        var output = rewritten.ToFullString();
+
+        Assert.DoesNotContain("int _ = 1", output);
+        Assert.DoesNotContain("=>", output);
+
+        var roundTrip = CSharpSyntaxTree.ParseText(output, ParseOptions, cancellationToken: ct);
+        var errors = roundTrip.GetDiagnostics(ct).Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
+        Assert.Empty(errors);
     }
 
     [Fact]

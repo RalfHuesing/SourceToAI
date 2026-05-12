@@ -22,8 +22,8 @@
 
 ## Selbstverifikation (nach Umsetzung)
 
-- [ ] Kurznotiz: vorher/nachher (z. B. Allocations oder Laufzeit) oder bewusst „kein messbarer Gewinn → Task verworfen“ in `00` dokumentiert.
-- [ ] `dotnet test` grün.
+- [x] Kurznotiz: vorher/nachher (z. B. Allocations oder Laufzeit) oder bewusst „kein messbarer Gewinn → Task verworfen“ in `00` dokumentiert.
+- [x] `dotnet test` grün.
 
 ## Nächster Schritt
 
