@@ -1,5 +1,5 @@
 ---
-description: Architektur- und Arbeitsregeln für SourceToAI (Cloud-IDs, DI, I/O, Commits)
+description: Architektur- und Arbeitsregeln für SourceToAI (Cloud-IDs, DI, I/O, Warnungen, Commits)
 alwaysApply: true
 ---
 
@@ -16,6 +16,11 @@ alwaysApply: true
 
 - **≥200 Zeilen:** Datei wird langsam zu groß → Refactoring **empfohlen** (Aufteilen, Extrahieren, klarere Zuständigkeiten), bevor weiter gewuchert wird.
 - **≥500 Zeilen:** **Blocker** – keine sinnvolle Weiterarbeit an dieser Monolith-Datei ohne vorheriges, sinnvolles Refactoring (Zerlegung in kleinere Typen/Dateien, klare Grenzen).
+
+## Compiler-Warnungen (hart)
+
+- **Keine behebbaren Warnungen:** Warnungen, die sich durch Codeänderung, Korrektur von APIs oder gezielte `#pragma`/Suppressions mit dokumentierter Begründung beheben lassen, dürfen nicht stehen bleiben.
+- **Proaktiv beheben:** Neue oder bestehende Warnungen werden aktiv abgearbeitet (nicht „irgendwann“), bevor Änderungen als fertig gelten. Globales Abschalten von Warnstufen oder breites `NoWarn` ohne konkreten Grund ist unüblich und bedarf klarer Projektentscheidung.
 
 ## Commit-Text (nur bei geänderten Dateien)
 
