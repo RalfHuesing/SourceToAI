@@ -99,6 +99,16 @@ public class AiFeedMarkdownComposerTests
     }
 
     [Fact]
+    public void Compose_manifest_size_column_matches_utf8_byte_count_of_exported_body()
+    {
+        const string body = "€"; // 3 UTF-8-Bytes
+        var segments = new[] { new AiFeedContentSegment("x.cs", "Code", "csharp", body) };
+        var md = Composer.Compose("S", "P", FixedSession, FixedGenerated, segments);
+        Assert.Contains("| [1](#1) | Code |", md);
+        Assert.Contains(" 3 |", md);
+    }
+
+    [Fact]
     public void Compose_drops_whitespace_only_segments_and_renumbers_manifest_and_content_ids()
     {
         var segments = new[]

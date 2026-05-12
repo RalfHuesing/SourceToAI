@@ -4,6 +4,29 @@ namespace SourceToAI.Tests.Export;
 
 public sealed class MultiViewExportPathsTests
 {
+    [Fact]
+    public void GetSolutionExportRoot_combines_export_path_and_solution_folder()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "sta-solroot-" + Guid.NewGuid().ToString("N"));
+        Assert.Equal(Path.Combine(root, "MySolution"), MultiViewExportPaths.GetSolutionExportRoot(root, "MySolution"));
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("...")]
+    public void SanitizeFileNameSegment_empty_or_only_invalid_trim_yields_unnamed(string segment) =>
+        Assert.Equal("unnamed", MultiViewExportPaths.SanitizeFileNameSegment(segment));
+
+    [Fact]
+    public void AllocateUniqueFileStem_null_used_set_throws() =>
+        Assert.Throws<ArgumentNullException>(() =>
+            MultiViewExportPaths.AllocateUniqueFileStem("Any", null!));
+
+    [Fact]
+    public void GetViewOutputPath_three_arg_empty_stem_throws() =>
+        Assert.Throws<ArgumentException>(() => MultiViewExportPaths.GetViewOutputPath(@"C:\out", "complete", ""));
+
     [Theory]
     [InlineData("complete", "complete")]
     [InlineData("signatures-only", "signatures-only")]
