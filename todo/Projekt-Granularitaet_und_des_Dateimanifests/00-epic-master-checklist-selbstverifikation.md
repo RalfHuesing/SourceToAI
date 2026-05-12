@@ -19,7 +19,7 @@ Wenn eine nummerierte Task (`01-…`–`09-…`) **inhaltlich erledigt** ist: de
 | [x] Nach View-Filter **komplett leere** Dateien: weder Manifest noch Content | `04`, `05` |
 | [x] Zentraler Builder (keine Duplikation der Zusammenstellung pro View) | `03`, `04` |
 | [x] Roslyn **Parse Once, Rewrite Multiple** unverändert | implizit `04`/`06` — keine Doppel-Einlesepfade einführen |
-| [x] `readme.md` beschreibt neue Struktur / Prompt-Nutzung | `06`–`07` — Repo-`README.md` + generierte Export-`readme.md` (Stand Task `06`) |
+| [x] `readme.md` beschreibt neue Struktur / Prompt-Nutzung | `06`–`07` — Repo-`README.md` + generierte Export-`readme.md` (Task `07` verifiziert) |
 | [x] `dependency-graph.md` / Solution-Ebene | unverändert auf Solution-Root (nur in `00` verankert, falls Anpassungen nötig: `07` oder kleiner Follow-up) |
 | [x] Tests (Unit + Integration) | `02`–`06` je Task; `08`, `09` Querschnitt |
 
@@ -75,4 +75,4 @@ Nach einem Lauf unter `{exportPath}/{solutionName}/` (gemäß `Konzept.md` Absch
 
 ---
 
-**Status:** Epic in Umsetzung — Task `01`–`06` erledigt; `07`–`09` ausstehend.
+**Status:** Epic in Umsetzung — Task `01`–`07` erledigt; `08`–`09` ausstehend.

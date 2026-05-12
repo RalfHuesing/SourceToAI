@@ -245,6 +245,13 @@ public sealed class MultiViewExportIntegrationTests
 
         // konzept.md Abschnitt 2 — alle Pfade relativ zu {export}/{solutionName}
         Assert.True(File.Exists(Path.Combine(outRoot, "readme.md")));
+        var exportReadme = await File.ReadAllTextAsync(
+            Path.Combine(outRoot, "readme.md"),
+            TestContext.Current.CancellationToken);
+        Assert.Contains("MANIFEST", exportReadme, StringComparison.Ordinal);
+        Assert.Contains("CONTENT", exportReadme, StringComparison.Ordinal);
+        Assert.Contains("pro Projekt", exportReadme, StringComparison.Ordinal);
+        Assert.DoesNotContain("full-source.md", exportReadme, StringComparison.OrdinalIgnoreCase);
         Assert.True(File.Exists(Path.Combine(outRoot, "dependency-graph.md")));
         Assert.True(File.Exists(Path.Combine(outRoot, "complete", "FixtureSol.Proj1.md")));
         Assert.True(File.Exists(Path.Combine(outRoot, "complete", "FixtureSol.Proj2.md")));

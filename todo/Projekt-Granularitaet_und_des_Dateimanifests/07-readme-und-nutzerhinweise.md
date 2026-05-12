@@ -25,9 +25,9 @@
 
 ## Selbstverifikation (nach Umsetzung)
 
-- [ ] Generierte `readme.md` in Integrationstest-Lauf lesbar und ohne veraltete Dateinamen.
-- [ ] `dotnet test` grün.
-- [ ] `00`: Final-Checkliste Punkt readme abhaken.
+- [x] Generierte `readme.md` in Integrationstest-Lauf lesbar und ohne veraltete Dateinamen.
+- [x] `dotnet test` grün.
+- [x] `00`: Final-Checkliste Punkt readme abhaken.
 
 ## Nächster Schritt
 
