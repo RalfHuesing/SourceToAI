@@ -57,14 +57,16 @@ SourceToAI.exe C:\Daten\MeineSolution\
 
 ### Ordner- & Datei-Struktur (Output)
 
-Das System erstellt für jeden Durchlauf einen neuen Unterordner mit dem Solution-Namen.
-Existiert der Ordner bereits werden alle darin befindlichen .md-Dateien gelöscht, um sicherzustellen, dass nur die aktuellsten Daten vorhanden sind.
+Unter dem gewählten Export-Pfad legt das Tool pro erkanntem Solution-Namen einen **eigenen Unterordner** an (bei erneutem Lauf wird dieser Ordner zuvor vollständig geleert). Darin liegt der **semantische Multi-View-Baum**: neben `readme.md` und `dependency-graph.md` die Sichten `complete/full-source.md` (1:1-Quellen inkl. Nicht-`.cs`), `signatures-only/signatures.md`, `public-only/public-api.md` und `dto-only/models.md` — Details und Prompt-Hinweise stehen in der generierten `readme.md`.
 
 ```text
 C:\AI_Feeds\Exports\MeineSolution\
-    ├── MeineSolution.Docs-20260222.md
-    ├── MeineSolution.ProjektA-20260222.md
-    └── MeineSolution.ProjektB-20260222.md
+    ├── readme.md
+    ├── dependency-graph.md
+    ├── complete\full-source.md
+    ├── signatures-only\signatures.md
+    ├── public-only\public-api.md
+    └── dto-only\models.md
 
 ```
 

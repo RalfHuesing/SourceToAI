@@ -21,10 +21,10 @@
 
 ## Selbstverifikation (Epic-Abschluss)
 
-- [ ] **`00-epic-master-checklist-selbstverifikation.md`**: **alle** Checkboxen abgehakt.
-- [ ] Zweiter Agent / Selbst-Review: Matrix Zeile für Zeile mit Git-Blame oder Dateiliste abgleichen (**bewusst Langsamer werden** — Überspringen vermeiden).
-- [ ] `dotnet test` mit `/p:TreatWarningsAsErrors=true` falls im Repo üblich — sonst normales `dotnet test`.
-- [ ] Alte Nutzer-Dokumentation: wenn es `README` im Repo gibt und Export-Pfade beschrieben sind — **ein** Absatz Update (nur wenn schon README-Pflege im Projekt; sonst in PR-Beschreibung).
+- [x] **`00-epic-master-checklist-selbstverifikation.md`**: **alle** Checkboxen abgehakt.
+- [x] Zweiter Agent / Selbst-Review: Matrix Zeile für Zeile mit Git-Blame oder Dateiliste abgleichen (**bewusst Langsamer werden** — Überspringen vermeiden).
+- [x] `dotnet test` mit `/p:TreatWarningsAsErrors=true` falls im Repo üblich — sonst normales `dotnet test`.
+- [x] Alte Nutzer-Dokumentation: wenn es `README` im Repo gibt und Export-Pfade beschrieben sind — **ein** Absatz Update (nur wenn schon README-Pflege im Projekt; sonst in PR-Beschreibung).
 
 ## Kein weiterer Task
 
