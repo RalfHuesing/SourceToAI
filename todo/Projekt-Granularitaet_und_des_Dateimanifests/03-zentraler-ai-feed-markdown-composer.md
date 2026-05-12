@@ -35,9 +35,9 @@
 
 ## Selbstverifikation (nach Umsetzung)
 
-- [ ] Composer ist die **einzige** Stelle, die Tabellenlayout und Überschriftenhierarchie A–D festlegt.
-- [ ] `dotnet test` grün.
-- [ ] `00`-Matrix abhaken.
+- [x] Composer ist die **einzige** Stelle, die Tabellenlayout und Überschriftenhierarchie A–D festlegt.
+- [x] `dotnet test` grün.
+- [x] `00`-Matrix abhaken.
 
 ## Nächster Schritt
 
