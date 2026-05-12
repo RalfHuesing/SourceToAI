@@ -11,17 +11,17 @@ Wenn eine nummerierte Task (`01-…`–`09-…`) **inhaltlich erledigt** ist: de
 | Anforderung aus `Konzept.md` | Primär umgesetzt in |
 |------------------------------|----------------------|
 | [x] Output: **eine Datei pro Projekt** je View (`SolutionName.Projekt.md` unter `complete/` usw.) | `01`, `06` — `MultiViewExportPaths`, `MultiViewExportService`, ggf. Hilfs-API für sichere Dateinamen |
-| [ ] Schleife **Projekte → Views** (Parse Once bleibt; pro Projekt alle Views bedienen) | `06` — Orchestrierung; Anbindung an bestehende `ICSharpDocumentLoader`-Pipeline |
+| [x] Schleife **Projekte → Views** (Parse Once bleibt; pro Projekt alle Views bedienen) | `06` — Orchestrierung; Anbindung an bestehende `ICSharpDocumentLoader`-Pipeline |
 | [x] YAML-Frontmatter (`feed_type`, `project`, `session_id`, `generated`, `file_count`) | `02`, `03` — Metadatenmodell + zentraler Builder |
 | [x] Header `# AI FEED: …` + Block `## INSTRUCTION` | `03` |
 | [x] **MANIFEST**-Tabelle (ID, Type, Hash, Size, Path) mit Anker `[n](#n)`; Pfade relativ zum **Projektroot** | `02`, `03` |
 | [x] **CONTENT** mit IDs, Trennlinien, dynamischem Fencing (≥4 Backticks bei Bedarf) | `03`, `04` — `MarkdownFenceUtility` wiederverwenden |
 | [x] Nach View-Filter **komplett leere** Dateien: weder Manifest noch Content | `04`, `05` |
 | [x] Zentraler Builder (keine Duplikation der Zusammenstellung pro View) | `03`, `04` |
-| [ ] Roslyn **Parse Once, Rewrite Multiple** unverändert | implizit `04`/`06` — keine Doppel-Einlesepfade einführen |
-| [ ] `readme.md` beschreibt neue Struktur / Prompt-Nutzung | `07` |
-| [ ] `dependency-graph.md` / Solution-Ebene | unverändert auf Solution-Root (nur in `00` verankert, falls Anpassungen nötig: `07` oder kleiner Follow-up) |
-| [ ] Tests (Unit + Integration) | `02`–`06` je Task; `08`, `09` Querschnitt |
+| [x] Roslyn **Parse Once, Rewrite Multiple** unverändert | implizit `04`/`06` — keine Doppel-Einlesepfade einführen |
+| [x] `readme.md` beschreibt neue Struktur / Prompt-Nutzung | `06`–`07` — Repo-`README.md` + generierte Export-`readme.md` (Stand Task `06`) |
+| [x] `dependency-graph.md` / Solution-Ebene | unverändert auf Solution-Root (nur in `00` verankert, falls Anpassungen nötig: `07` oder kleiner Follow-up) |
+| [x] Tests (Unit + Integration) | `02`–`06` je Task; `08`, `09` Querschnitt |
 
 **Hinweis `dto-only`:** Im bestehenden Code existiert die View `dto-only` parallel zu den drei im Konzept-Beispielbaum genannten Ordnern. Epic-Ziel: **gleiche Datei- und Dokumentstruktur** wie für die anderen Views — es entsteht `dto-only/SolutionName.ProjektX.md`, sofern nicht aktiv anders entschieden und in `01` dokumentiert.
 
@@ -34,6 +34,7 @@ Nach einem Lauf unter `{exportPath}/{solutionName}/` (gemäß `Konzept.md` Absch
 ├── readme.md
 ├── dependency-graph.md          # weiterhin Solution-Ebene (bestehendes Verhalten)
 ├── complete/
+│   ├── SolutionName..Docs.md    # optional: virtuelles Projekt `.Docs`, nur wenn Solution-Doku gefunden
 │   ├── SolutionName.ProjektA.md
 │   └── SolutionName.ProjektB.md
 ├── signatures-only/
@@ -59,11 +60,11 @@ Nach einem Lauf unter `{exportPath}/{solutionName}/` (gemäß `Konzept.md` Absch
 ## Finale Epic-Selbstverifikation (Agent / Mensch)
 
 - [ ] Matrix: jede Zeile mit umgesetztem Task verknüpft / abgehakt.
-- [ ] Dateisystem: pro View-Ordner eine `.md` pro Projekt mit Inhalt; keine veralteten `full-source.md`-Reste nach Clean-Lauf (oder bewusst dokumentierte Übergangsstrategie).
+- [x] Dateisystem: pro View-Ordner eine `.md` pro Projekt mit Inhalt; keine veralteten `full-source.md`-Reste nach Clean-Lauf (oder bewusst dokumentierte Übergangsstrategie).
 - [ ] Stichprobe einer generierten Datei: gültiges YAML-Frontmatter, Manifest-Zeilenanzahl = Anzahl CONTENT-Blöcke, IDs fortlaufend, Anker funktionieren in typischem Markdown-Renderer.
 - [ ] Stichprobe `public-only`: bekannter privater Test-Code nicht im Manifest/Content (siehe Task `05`).
-- [ ] `dotnet test` grün; Integrationstest deckt mindestens zwei Projekte und zwei Views ab (`09`).
-- [ ] `IPostExportTask`-Hooks: unverändert sinnvoll aufrufbar oder angepasst und getestet.
+- [x] `dotnet test` grün; Integrationstest deckt mindestens zwei Projekte und zwei Views ab (`09`).
+- [x] `IPostExportTask`-Hooks: unverändert sinnvoll aufrufbar oder angepasst und getestet.
 
 ## Bekannte Fallstricke
 
@@ -74,4 +75,4 @@ Nach einem Lauf unter `{exportPath}/{solutionName}/` (gemäß `Konzept.md` Absch
 
 ---
 
-**Status:** Epic in Umsetzung — Task `01`–`05` erledigt; `06`–`09` ausstehend.
+**Status:** Epic in Umsetzung — Task `01`–`06` erledigt; `07`–`09` ausstehend.

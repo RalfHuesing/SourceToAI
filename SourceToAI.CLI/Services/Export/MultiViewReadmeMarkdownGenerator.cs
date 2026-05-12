@@ -22,14 +22,14 @@ public sealed class MultiViewReadmeMarkdownGenerator : IMultiViewReadmeMarkdownG
         sb.AppendLine("|:---|:---|");
         sb.AppendLine("| `readme.md` | Diese Übersicht; Orientierung im Export-Baum. |");
         sb.AppendLine("| `dependency-graph.md` | Architektur-Überblick: csproj-Abhängigkeiten und NuGet-Pakete **ohne** Quellcode. |");
-        sb.AppendLine("| `complete/full-source.md` | **Vollständiger** Stand inkl. Nicht-`.cs`-Dateien (1:1-Texte). Ideal, wenn das Modell den gesamten Kontext braucht. **Solution-Dokumentation** (Root, `.cursor`, …) wird hier eingebettet (Projekt `.Docs`), nicht mehr als separater Legacy-`IFeedGenerator`-Feed. |");
-        sb.AppendLine("| `signatures-only/signatures.md` | Nur Signaturen — wenig Tokens, Schnittstellen & Typen für Architekturfragen. |");
-        sb.AppendLine("| `public-only/public-api.md` | Öffentliche API inkl. Bodies — wenn Implementierungsdetails **nur** für `public`/`protected` relevant sein sollen. |");
-        sb.AppendLine("| `dto-only/models.md` | Datenmodelle (DTOs, Records, Enums) — Domain- und API-Verträge ohne Service-Logik. |");
+        sb.AppendLine("| `complete/<Solution>.<Projekt>.md` | **Vollständiger** Stand pro Projekt inkl. Nicht-`.cs`-Dateien (1:1-Texte). **Solution-Dokumentation** (Root, `.cursor`, …) liegt als `<Solution>..Docs.md` (Projektname `.Docs`) in diesem Ordner. Weitere Dateinamen: Solution- und Projektname, sanitisiert — siehe Export auf der Platte. |");
+        sb.AppendLine("| `signatures-only/<Solution>.<Projekt>.md` | Nur Signaturen — wenig Tokens, Schnittstellen & Typen für Architekturfragen. |");
+        sb.AppendLine("| `public-only/<Solution>.<Projekt>.md` | Öffentliche API inkl. Bodies — wenn Implementierungsdetails **nur** für `public`/`protected` relevant sein sollen. |");
+        sb.AppendLine("| `dto-only/<Solution>.<Projekt>.md` | Datenmodelle (DTOs, Records, Enums) — Domain- und API-Verträge ohne Service-Logik. |");
         sb.AppendLine();
         sb.AppendLine("## Hinweise");
         sb.AppendLine();
-        sb.AppendLine("- Projekte erscheinen im Markdown untereinander mit der Überschrift `## Projekt: …`.");
+        sb.AppendLine("- Pro **Projekt** (und virtuellem `.Docs`) existiert **eine Markdown-Datei pro View-Ordner** — Orchestrierung: alle Views nacheinander aus derselben geparsten Quelle.");
         sb.AppendLine("- C#-Dateien werden pro Lauf nur einmal eingelesen und für alle Sichten aus demselben AST abgeleitet (Performance).");
         return sb.ToString();
     }

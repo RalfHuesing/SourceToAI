@@ -25,15 +25,12 @@ public abstract class MarkdownProjectViewBuilderBase(
     IFileTypeService fileTypeService,
     IEnumerable<IViewGenerator> viewGenerators,
     string viewKey,
-    string relativeOutputFile,
     bool includeNonCSharpFiles,
     bool passOriginalSourceTextForCSharp) : IMarkdownProjectViewBuilder
 {
     private readonly IViewGenerator _viewGenerator = viewGenerators.Single(g => g.ViewKey == viewKey);
 
     public string ViewKey => viewKey;
-
-    public string RelativeOutputFile => relativeOutputFile;
 
     public ExtractionResult<IReadOnlyList<AiFeedContentSegment>> BuildContentSegments(
         ProjectDefinition project,

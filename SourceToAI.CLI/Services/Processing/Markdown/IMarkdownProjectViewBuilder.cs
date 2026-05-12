@@ -11,9 +11,6 @@ public interface IMarkdownProjectViewBuilder
 {
     string ViewKey { get; }
 
-    /// <summary>Relativ zum Export-Projektordner, z. B. <c>complete/full-source.md</c>.</summary>
-    string RelativeOutputFile { get; }
-
     ExtractionResult<IReadOnlyList<AiFeedContentSegment>> BuildContentSegments(
         ProjectDefinition project,
         IReadOnlyList<string> absoluteFilePathsInDisplayOrder);
