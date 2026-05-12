@@ -15,7 +15,6 @@ Entwickelt speziell für Entwickler, die mit Visual Studio Solutions und Web-bas
 * **KI-Optimiertes Format (MarkdownFeed):** Generiert Dateien mit YAML-Frontmatter für Metadaten und einer vollständigen Manifest-Tabelle inkl. MD5-Hashes, Dateigrößen und relativen Pfaden.
 * **One-File-Per-Project:** Extrahiert den gesamten relevanten Code eines `.csproj`-Projekts in exakt *eine* Markdown-Datei.
 * **Intelligente Dokumentations-Erfassung (.Docs):** Bündelt automatisch deine Root `README.md` und eventuelle `.cursor/rules` in einem virtuellen Projekt, damit die KI sofort die Architektur- und Projektregeln versteht.
-* **Google Drive Sync:** Automatischer Upload der generierten KI-Feeds in einen Google Drive Ordner nach dem lokalen Export (Konfigurierbar, siehe [Google Drive Setup](SourceToAI.Docs-GoogleDrive.md)).
 * **Dynamic Fencing:** Verhindert Formatierungsfehler durch intelligente Backtick-Ermittlung bei Code-Blöcken (zählt die längste Sequenz von Backticks in einer Datei und fügt `n+1` Backticks für den Code-Block hinzu).
 * **Filter-Engine:** Ignoriert standardmäßig Build-Artefakte (`bin`, `obj`), Source-Control-Ordner (`.git`) und IDE-Metadaten (`.vs`, `.idea`).
 
