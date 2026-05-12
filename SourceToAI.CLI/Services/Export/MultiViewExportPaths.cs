@@ -1,19 +1,11 @@
 namespace SourceToAI.CLI.Services.Export;
 
 /// <summary>
-/// Zielpfade für den Multi-View-Export laut <c>konzept.md</c> (Unterordner
-/// <c>complete/</c>, <c>signatures-only/</c>, …).
+/// Zielpfade für den Multi-View-Export laut <c>konzept.md</c> Abschnitt 2 — alles direkt unter
+/// <c>{exportPath}/{solutionName}</c> (kein zusätzlicher Zwischenordner).
 /// </summary>
 public static class MultiViewExportPaths
 {
-    /// <summary>
-    /// Name des Unterordners unter <c>{exportPath}/{solutionName}</c>, der die gesamte
-    /// Multi-View-Baumstruktur enthält. So bleiben bestehende flache Legacy-Feeds
-    /// (<c>*.md</c> mit Datumssuffix) im Lösungsordner erhalten, bis Task 08 die
-    /// Orchestrierung final vereinheitlicht.
-    /// </summary>
-    public const string MultiViewFolderName = "multi-view";
-
     public const string CompleteFolderName = "complete";
 
     public const string SignaturesOnlyFolderName = "signatures-only";
@@ -24,12 +16,11 @@ public static class MultiViewExportPaths
 
     /// <summary>
     /// Wurzelverzeichnis für <c>readme.md</c>, <c>dependency-graph.md</c> und alle View-Unterordner.
-    /// Absolut: <c>Path.Combine(exportPath, solutionName, <see cref="MultiViewFolderName"/>)</c>.
+    /// Absolut: <c>Path.Combine(exportPath, solutionName)</c>.
     /// </summary>
     /// <remarks>
-    /// <strong>Clean vor Lauf (Task 08):</strong> Diesen Ordner vollständig löschen und neu anlegen,
-    /// damit keine veralteten View-Dateien aus vorherigen Läufen stehen bleiben.
+    /// Vor jedem Lauf vom Orchestrator vollständig leeren/neu anlegen, damit keine veralteten Dateien bleiben.
     /// </remarks>
-    public static string GetMultiViewRoot(string exportPath, string solutionName) =>
-        Path.Combine(exportPath, solutionName, MultiViewFolderName);
+    public static string GetSolutionExportRoot(string exportPath, string solutionName) =>
+        Path.Combine(exportPath, solutionName);
 }

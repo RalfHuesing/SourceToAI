@@ -3,11 +3,9 @@ using SourceToAI.CLI.Models;
 using SourceToAI.CLI.Services.Discovery;
 using SourceToAI.CLI.Services.Export;
 using SourceToAI.CLI.Services.Integration;
-using SourceToAI.CLI.Services.Processing;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace SourceToAI.CLI.App;
@@ -15,8 +13,9 @@ namespace SourceToAI.CLI.App;
 public class ConsoleOrchestrator(
     ISolutionDiscoveryService solutionDiscovery,
     IFileDiscoveryService fileDiscovery,
-    IFeedGenerator feedGenerator,
     IDependencyGraphMarkdownGenerator dependencyGraphMarkdownGenerator,
+    IMultiViewExportService multiViewExportService,
+    IMultiViewReadmeMarkdownGenerator readmeMarkdownGenerator,
     AppSettings settings,
     IEnumerable<IPostExportTask> postExportTasks)
 {
@@ -26,7 +25,6 @@ public class ConsoleOrchestrator(
         Console.WriteLine("🚀 SourceToAI - Standalone AI Feed Generator");
         Console.WriteLine("==================================================\n");
 
-        // 1. Solution Name ermitteln
         var solutionResult = solutionDiscovery.GetSolutionName(rootPath);
         if (!solutionResult.IsSuccess)
         {
@@ -36,7 +34,6 @@ public class ConsoleOrchestrator(
         var solutionName = solutionResult.Value!;
         Console.WriteLine($"[INFO] Solution erkannt: {solutionName}");
 
-        // 2. Projekte finden
         var projectsResult = solutionDiscovery.FindProjects(rootPath);
         if (!projectsResult.IsSuccess)
         {
@@ -46,43 +43,44 @@ public class ConsoleOrchestrator(
         var projects = projectsResult.Value!;
         Console.WriteLine($"[INFO] {projects.Count} Projekte gefunden.\n");
 
-        // 3. Ausgabe-Verzeichnis vorbereiten (Einmal pro Run)
-        var dateSuffix = DateTime.Now.ToString("yyyyMMdd");
-        var outputDir = Path.Combine(exportPath, solutionName);
+        var outputDir = MultiViewExportPaths.GetSolutionExportRoot(exportPath, solutionName);
+        var repositoryFolderName = new DirectoryInfo(Path.TrimEndingDirectorySeparator(rootPath)).Name;
 
         try
         {
             if (Directory.Exists(outputDir))
             {
-                Console.WriteLine($"[INFO] Ausgabeordner '{solutionName}' existiert bereits. Lösche alte .md-Dateien...");
-                // Sicherheitsfilter: Nur .md Dateien im Hauptverzeichnis (nicht rekursiv) löschen
-                var existingMdFiles = Directory.GetFiles(outputDir, "*.md", SearchOption.TopDirectoryOnly);
-                foreach (var file in existingMdFiles)
-                {
-                    File.Delete(file);
-                }
+                Console.WriteLine($"[INFO] Räume Ausgabeordner vollständig auf: {outputDir}");
+                Directory.Delete(outputDir, recursive: true);
             }
-            else
-            {
-                Directory.CreateDirectory(outputDir);
-                Console.WriteLine($"[INFO] Ausgabeordner erstellt: {outputDir}\n");
-            }
+            Directory.CreateDirectory(outputDir);
+            Console.WriteLine($"[INFO] Ausgabeordner bereit: {outputDir}\n");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[FEHLER] Konnte Ausgabeordner nicht erstellen: {ex.Message}");
+            Console.WriteLine($"[FEHLER] Konnte Ausgabeordner nicht vorbereiten: {ex.Message}");
             return;
         }
 
-        var multiViewRoot = MultiViewExportPaths.GetMultiViewRoot(exportPath, solutionName);
+        var generatedAt = DateTimeOffset.UtcNow;
         try
         {
-            Directory.CreateDirectory(multiViewRoot);
+            var readme = readmeMarkdownGenerator.Generate(repositoryFolderName, generatedAt);
+            File.WriteAllText(Path.Combine(outputDir, "readme.md"), readme);
+            Console.WriteLine($"[INFO] readme.md → {outputDir}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[WARN] readme.md konnte nicht geschrieben werden: {ex.Message}");
+        }
+
+        try
+        {
             var depGraphResult = dependencyGraphMarkdownGenerator.Generate(rootPath, projects);
             if (depGraphResult.IsSuccess)
             {
-                File.WriteAllText(Path.Combine(multiViewRoot, "dependency-graph.md"), depGraphResult.Value!);
-                Console.WriteLine($"[INFO] dependency-graph.md → {multiViewRoot}");
+                File.WriteAllText(Path.Combine(outputDir, "dependency-graph.md"), depGraphResult.Value!);
+                Console.WriteLine($"[INFO] dependency-graph.md → {outputDir}");
             }
             else
             {
@@ -94,64 +92,60 @@ public class ConsoleOrchestrator(
             Console.WriteLine($"[WARN] dependency-graph.md konnte nicht geschrieben werden: {ex.Message}");
         }
 
-        Console.WriteLine($"- Verarbeite Solution-Dokumentation (Root & .cursor)...");
+        IReadOnlyList<string>? solutionDocPaths = null;
         var docsResult = fileDiscovery.FindSolutionDocs(rootPath, settings);
-        int successCount = 0;
-
         if (docsResult.IsSuccess && docsResult.Value!.Count > 0)
         {
-            // Wir faken ein Projekt. Der Pfad "virtual.csproj" sorgt dafür, dass RootDirectory == rootPath ist!
-            var docProject = new ProjectDefinition(".Docs", Path.Combine(rootPath, "virtual.csproj"));
-            var docFeedResult = feedGenerator.GenerateFeed(solutionName, docProject, docsResult.Value);
-
-            if (docFeedResult.IsSuccess)
-            {
-                var docFileName = $"{solutionName}.Docs-{dateSuffix}.md";
-                File.WriteAllText(Path.Combine(outputDir, docFileName), docFeedResult.Value!);
-                Console.WriteLine($"   -> Gespeichert: {docFileName} ({docsResult.Value.Count} Dateien)\n");
-                successCount++;
-            }
-            else
-            {
-                Console.WriteLine($"   -> [FEHLER] Generierung fehlgeschlagen: {docFeedResult.ErrorMessage}\n");
-            }
+            solutionDocPaths = docsResult.Value;
+            Console.WriteLine(
+                $"[INFO] Solution-Dokumentation: {solutionDocPaths.Count} Datei(en) → Abschnitt in complete/full-source.md (Projekt „.Docs“).\n");
         }
         else
         {
-            Console.WriteLine($"   -> Übersprungen (Keine Solution-Docs gefunden).\n");
+            Console.WriteLine("   -> Keine Solution-Docs gefunden (Root/.cursor …).\n");
         }
 
-        // 4. Projekte verarbeiten
+        var projectsWithFiles = new List<(ProjectDefinition Project, IReadOnlyList<string> AbsoluteFilePaths)>();
         foreach (var project in projects)
         {
-            Console.WriteLine($"- Verarbeite Projekt: {project.ProjectName}...");
-
             var filesResult = fileDiscovery.FindFilesForProject(project, settings);
-            if (!filesResult.IsSuccess || filesResult.Value!.Count == 0)
+            if (!filesResult.IsSuccess)
             {
-                Console.WriteLine($"   -> Übersprungen (Keine relevanten Dateien gefunden).");
+                Console.WriteLine($"   -> [FEHLER] {project.ProjectName}: {filesResult.ErrorMessage}");
                 continue;
             }
 
-            var feedResult = feedGenerator.GenerateFeed(solutionName, project, filesResult.Value);
-            if (!feedResult.IsSuccess)
+            if (filesResult.Value!.Count == 0)
             {
-                Console.WriteLine($"   -> [FEHLER] Generierung fehlgeschlagen: {feedResult.ErrorMessage}");
+                Console.WriteLine($"   -> Übersprungen (Keine relevanten Dateien): {project.ProjectName}");
                 continue;
             }
 
-            // 5. Speichern
-            var fileName = $"{solutionName}.{project.ProjectName}-{dateSuffix}.md";
-            var filePath = Path.Combine(outputDir, fileName);
+            projectsWithFiles.Add((project, filesResult.Value));
+            Console.WriteLine($"   -> Multi-View-Quellen: {project.ProjectName} ({filesResult.Value.Count} Dateien)");
+        }
 
-            File.WriteAllText(filePath, feedResult.Value!);
-            Console.WriteLine($"   -> Gespeichert: {fileName} ({filesResult.Value.Count} Dateien)");
-            successCount++;
+        Console.WriteLine();
+        var multiViewResult = multiViewExportService.WriteMergedSolutionViews(
+            outputDir,
+            rootPath,
+            projectsWithFiles,
+            solutionDocPaths);
+
+        var successCount = projectsWithFiles.Count;
+        if (!multiViewResult.IsSuccess)
+        {
+            Console.WriteLine($"[FEHLER] Multi-View-Export: {multiViewResult.ErrorMessage}");
+            successCount = 0;
+        }
+        else
+        {
+            Console.WriteLine("[INFO] Multi-View-Export (complete, signatures-only, public-only, dto-only) abgeschlossen.");
         }
 
         Console.WriteLine("\n==================================================");
-        Console.WriteLine($"- Fertig! {successCount} von {projects.Count} Projekten erfolgreich exportiert.");
-        Console.WriteLine($"- Zu finden unter: {outputDir}");
+        Console.WriteLine($"- Fertig! {successCount} von {projects.Count} Projekten mit exportierbaren Dateien.");
+        Console.WriteLine($"- Ausgabe: {outputDir}");
         Console.WriteLine("==================================================");
 
         if (postExportTasks.Any())

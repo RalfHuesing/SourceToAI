@@ -45,6 +45,8 @@ services.AddTransient<IFileTypeService, FileTypeService>();
 services.AddTransient<IHashService, HashService>();
 services.AddTransient<IFeedGenerator, MarkdownFeedGenerator>();
 services.AddTransient<IDependencyGraphMarkdownGenerator, CsprojDependencyGraphMarkdownGenerator>();
+services.AddTransient<IMultiViewExportService, MultiViewExportService>();
+services.AddSingleton<IMultiViewReadmeMarkdownGenerator, MultiViewReadmeMarkdownGenerator>();
 services.AddViewGenerators();
 services.AddMarkdownProjectViewBuilders();
 
