@@ -1,4 +1,5 @@
 ﻿using SourceToAI.CLI.Models;
+using SourceToAI.CLI.Services;
 using SourceToAI.CLI.Services.Export.AiFeed;
 using SourceToAI.CLI.Services.Processing.Markdown;
 using System.Text;
@@ -31,6 +32,10 @@ public class MarkdownFeedGenerator(
             if (!parseResult.IsSuccess)
                 return ExtractionResult<string>.Failure(parseResult.ErrorMessage!);
 
+            var warnings = new List<string>();
+            if (parseResult.Warnings is { Count: > 0 } parseWarnings)
+                warnings.AddRange(parseWarnings);
+
             var parsedCSharpByFullPath = parseResult.Value!.ToDictionary(
                 d => Path.GetFullPath(d.AbsolutePath),
                 d => d,
@@ -48,10 +53,24 @@ public class MarkdownFeedGenerator(
                     content = parsed.SourceText;
                     size = parsed.SizeBytes;
                 }
+                else if (string.Equals(Path.GetExtension(fullPath), ".cs", StringComparison.OrdinalIgnoreCase))
+                {
+                    // Beim Parsen übersprungen — Hinweise stehen in parseResult.Warnings
+                    continue;
+                }
                 else
                 {
-                    content = File.ReadAllText(fullPath);
-                    size = new FileInfo(fullPath).Length;
+                    try
+                    {
+                        content = File.ReadAllText(fullPath);
+                        size = new FileInfo(fullPath).Length;
+                    }
+                    catch (Exception ex) when (SkippableLocalFileIoExceptions.Matches(ex))
+                    {
+                        warnings.Add(
+                            $"„{fullPath}“ übersprungen ({ex.GetType().Name}): {ex.Message}");
+                        continue;
+                    }
                 }
 
                 var extension = Path.GetExtension(fullPath);
@@ -121,7 +140,9 @@ public class MarkdownFeedGenerator(
                 sb.AppendLine();
             }
 
-            return ExtractionResult<string>.Success(sb.ToString());
+            return ExtractionResult<string>.Success(
+                sb.ToString(),
+                warnings.Count > 0 ? warnings : null);
         }
         catch (Exception ex)
         {

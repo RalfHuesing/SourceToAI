@@ -1,6 +1,6 @@
-﻿using System.Security;
-using SourceToAI.CLI.Configuration;
+﻿using SourceToAI.CLI.Configuration;
 using SourceToAI.CLI.Models;
+using SourceToAI.CLI.Services;
 
 namespace SourceToAI.CLI.Services.Discovery;
 
@@ -73,7 +73,7 @@ public class FileDiscoveryService(IDirectoryEnumerator directoryEnumerator) : IF
         {
             files = directoryEnumerator.EnumerateFiles(currentDir).ToArray();
         }
-        catch (Exception ex) when (IsSkippableEnumerationFailure(ex))
+        catch (Exception ex) when (SkippableLocalFileIoExceptions.Matches(ex))
         {
             warnings.Add($"Dateien in „{currentDir}“ nicht lesbar ({ex.GetType().Name}): {ex.Message}");
             return;
@@ -93,7 +93,7 @@ public class FileDiscoveryService(IDirectoryEnumerator directoryEnumerator) : IF
         {
             subDirs = directoryEnumerator.EnumerateDirectories(currentDir).ToArray();
         }
-        catch (Exception ex) when (IsSkippableEnumerationFailure(ex))
+        catch (Exception ex) when (SkippableLocalFileIoExceptions.Matches(ex))
         {
             warnings.Add($"Unterverzeichnisse von „{currentDir}“ nicht lesbar ({ex.GetType().Name}): {ex.Message}");
             return;
@@ -109,11 +109,4 @@ public class FileDiscoveryService(IDirectoryEnumerator directoryEnumerator) : IF
             }
         }
     }
-
-    /// <summary>
-    /// Fehler bei der Auflistung eines einzelnen Verzeichnisses (Berechtigung, Sperre, fehlendes Laufwerk usw.)
-    /// sollen nur diesen Zweig überspringen, nicht das gesamte Projekt.
-    /// </summary>
-    private static bool IsSkippableEnumerationFailure(Exception ex) =>
-        ex is UnauthorizedAccessException or SecurityException or IOException;
 }

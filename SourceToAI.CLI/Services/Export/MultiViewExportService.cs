@@ -84,6 +84,15 @@ public sealed class MultiViewExportService(
                         return;
                     }
 
+                    if (part.Warnings is { Count: > 0 } buildWarnings)
+                    {
+                        foreach (var line in buildWarnings)
+                        {
+                            Console.WriteLine(
+                                $"   -> [WARN] {slot.Project.ProjectName} ({slot.ViewKey}): {line}");
+                        }
+                    }
+
                     if (part.Value!.Count == 0)
                     {
                         composedBodies[i] = null;

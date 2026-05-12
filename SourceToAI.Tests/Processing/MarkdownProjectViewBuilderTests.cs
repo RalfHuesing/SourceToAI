@@ -204,4 +204,28 @@ public class MarkdownProjectViewBuilderTests
         Assert.True(result.IsSuccess, result.ErrorMessage);
         Assert.Equal(tricky, result.Value![0].TransformedText);
     }
+
+    [Fact]
+    public void Complete_build_merges_parse_skip_warnings_when_cs_file_is_locked()
+    {
+        using var sp = CreateServiceProvider();
+        var sut = sp.GetServices<IMarkdownProjectViewBuilder>().Single(b => b.ViewKey == "complete");
+
+        using var ws = new TempWorkspace();
+        var lockedCs = ws.WriteFile("src/Locked.cs", "class Locked { }");
+        var okCs = ws.WriteFile("src/Ok.cs", "class Ok { }");
+        var project = new ProjectDefinition("P", Path.Combine(ws.Root, "src", "P.csproj"));
+
+        using (var hold = new FileStream(lockedCs, FileMode.Open, FileAccess.Read, FileShare.None))
+        {
+            _ = hold;
+            var result = sut.BuildContentSegments(project, [lockedCs, okCs]);
+
+            Assert.True(result.IsSuccess, result.ErrorMessage);
+            Assert.NotNull(result.Warnings);
+            Assert.Contains(result.Warnings!, w => w.Contains("Locked.cs", StringComparison.OrdinalIgnoreCase));
+            Assert.Single(result.Value!);
+            Assert.EndsWith("Ok.cs", result.Value![0].RelativePathFromProjectRoot, StringComparison.OrdinalIgnoreCase);
+        }
+    }
 }

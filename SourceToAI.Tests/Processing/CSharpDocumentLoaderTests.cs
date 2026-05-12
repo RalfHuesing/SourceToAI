@@ -118,4 +118,26 @@ public class CSharpDocumentLoaderTests
         Assert.NotNull(doc.SyntaxTree);
         Assert.NotNull(doc.Root);
     }
+
+    [Fact]
+    public void LoadParsedDocuments_skips_exclusive_locked_cs_with_warning_and_loads_other_files()
+    {
+        using var ws = new TempWorkspace();
+        var lockedPath = ws.WriteFile("src/Locked.cs", "class Locked { }");
+        var okPath = ws.WriteFile("src/Ok.cs", "class Ok { }");
+        var project = new ProjectDefinition("App", Path.Combine(ws.Root, "src", "App.csproj"));
+        var sut = new CSharpDocumentLoader();
+
+        using (var hold = new FileStream(lockedPath, FileMode.Open, FileAccess.Read, FileShare.None))
+        {
+            _ = hold; // exklusiv — paralleles ReadAllText schlägt mit IOException fehl
+            var result = sut.LoadParsedDocuments(project, [lockedPath, okPath]);
+
+            Assert.True(result.IsSuccess, result.ErrorMessage);
+            Assert.NotNull(result.Warnings);
+            Assert.Contains(result.Warnings!, w => w.Contains("Locked.cs", StringComparison.OrdinalIgnoreCase));
+            Assert.Single(result.Value!);
+            Assert.EndsWith("Ok.cs", result.Value![0].AbsolutePath, StringComparison.OrdinalIgnoreCase);
+        }
+    }
 }
