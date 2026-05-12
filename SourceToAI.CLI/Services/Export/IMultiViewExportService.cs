@@ -8,11 +8,13 @@ namespace SourceToAI.CLI.Services.Export;
 public interface IMultiViewExportService
 {
     /// <summary>
-    /// Für jede registrierte Markdown-View-Builder-Sicht werden alle Projekte in eine Datei
-    /// (relativer Pfad je Builder) geschrieben. Solution-Dokumentation erscheint nur in der Sicht <c>complete</c>.
+    /// Für jede registrierte View wird pro Projekt (und ggf. virtuellem „.Docs“-Projekt in <c>complete</c>)
+    /// eine Markdown-Datei unter <see cref="MultiViewExportPaths.GetViewFolderNameForViewKey"/> geschrieben
+    /// (<c>SolutionName.ProjektName.md</c>, siehe <see cref="MultiViewExportPaths"/>).
     /// </summary>
     ExtractionResult<bool> WriteMergedSolutionViews(
         string outputRoot,
+        string solutionDisplayName,
         string solutionRootPath,
         IReadOnlyList<(ProjectDefinition Project, IReadOnlyList<string> AbsoluteFilePaths)> projectsWithFiles,
         IReadOnlyList<string>? solutionDocumentationAbsolutePaths);

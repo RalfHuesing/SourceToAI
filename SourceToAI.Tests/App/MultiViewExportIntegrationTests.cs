@@ -211,26 +211,33 @@ public sealed class MultiViewExportIntegrationTests
         // konzept.md Abschnitt 2 — alle Pfade relativ zu {export}/{solutionName}
         Assert.True(File.Exists(Path.Combine(outRoot, "readme.md")));
         Assert.True(File.Exists(Path.Combine(outRoot, "dependency-graph.md")));
-        Assert.True(File.Exists(Path.Combine(outRoot, "complete", "full-source.md")));
-        Assert.True(File.Exists(Path.Combine(outRoot, "signatures-only", "signatures.md")));
-        Assert.True(File.Exists(Path.Combine(outRoot, "public-only", "public-api.md")));
-        Assert.True(File.Exists(Path.Combine(outRoot, "dto-only", "models.md")));
+        Assert.True(File.Exists(Path.Combine(outRoot, "complete", "FixtureSol.Proj1.md")));
+        Assert.True(File.Exists(Path.Combine(outRoot, "complete", "FixtureSol.Proj2.md")));
+        Assert.True(File.Exists(Path.Combine(outRoot, "signatures-only", "FixtureSol.Proj1.md")));
+        Assert.True(File.Exists(Path.Combine(outRoot, "signatures-only", "FixtureSol.Proj2.md")));
+        Assert.True(File.Exists(Path.Combine(outRoot, "public-only", "FixtureSol.Proj1.md")));
+        Assert.True(File.Exists(Path.Combine(outRoot, "public-only", "FixtureSol.Proj2.md")));
+        Assert.True(File.Exists(Path.Combine(outRoot, "dto-only", "FixtureSol.Proj1.md")));
+        Assert.True(File.Exists(Path.Combine(outRoot, "dto-only", "FixtureSol.Proj2.md")));
 
         var signaturesMd = await File.ReadAllTextAsync(
-            Path.Combine(outRoot, "signatures-only", "signatures.md"),
-            TestContext.Current.CancellationToken);
+            Path.Combine(outRoot, "signatures-only", "FixtureSol.Proj1.md"),
+            TestContext.Current.CancellationToken)
+            + await File.ReadAllTextAsync(
+                Path.Combine(outRoot, "signatures-only", "FixtureSol.Proj2.md"),
+                TestContext.Current.CancellationToken);
         AssertAllSignatureBlocksParseWithoutErrors(signaturesMd);
         Assert.Contains("ExprBackedProp", signaturesMd, StringComparison.Ordinal);
         Assert.DoesNotContain("=>", signaturesMd, StringComparison.Ordinal);
 
         var publicApi = await File.ReadAllTextAsync(
-            Path.Combine(outRoot, "public-only", "public-api.md"),
+            Path.Combine(outRoot, "public-only", "FixtureSol.Proj1.md"),
             TestContext.Current.CancellationToken);
         Assert.DoesNotContain(PrivateFixtureMethodName, publicApi, StringComparison.Ordinal);
         Assert.Contains("PublicMethod", publicApi, StringComparison.Ordinal);
 
         var modelsMd = await File.ReadAllTextAsync(
-            Path.Combine(outRoot, "dto-only", "models.md"),
+            Path.Combine(outRoot, "dto-only", "FixtureSol.Proj1.md"),
             TestContext.Current.CancellationToken);
         Assert.Contains(FixtureDtoRecordName, modelsMd, StringComparison.Ordinal);
         Assert.Contains(FixtureEnumName, modelsMd, StringComparison.Ordinal);
@@ -243,7 +250,7 @@ public sealed class MultiViewExportIntegrationTests
         Assert.Contains("2.1.0", depGraph, StringComparison.Ordinal);
 
         var fullSource = await File.ReadAllTextAsync(
-            Path.Combine(outRoot, "complete", "full-source.md"),
+            Path.Combine(outRoot, "complete", "FixtureSol.Proj1.md"),
             TestContext.Current.CancellationToken);
         Assert.Contains(PrivateFixtureMethodName, fullSource, StringComparison.Ordinal);
         Assert.Contains("sidecar.json", fullSource, StringComparison.Ordinal);

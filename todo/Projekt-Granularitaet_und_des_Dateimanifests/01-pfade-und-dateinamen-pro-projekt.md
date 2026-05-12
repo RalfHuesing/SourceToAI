@@ -24,9 +24,9 @@
 
 ## Selbstverifikation (nach Umsetzung)
 
-- [ ] `dotnet build` / `dotnet test` grün.
-- [ ] `00-epic-master-checklist-selbstverifikation.md`: Matrix-Zeile „Output pro Projekt“ mit Task `01`/`06` verknüpft (nach erstem sichtbaren Export ggf. `06` mitverifizieren).
-- [ ] Keine Warnungen neu eingeführt.
+- [x] `dotnet build` / `dotnet test` grün.
+- [x] `00-epic-master-checklist-selbstverifikation.md`: Matrix-Zeile „Output pro Projekt“ mit Task `01`/`06` verknüpft (nach erstem sichtbaren Export ggf. `06` mitverifizieren).
+- [x] Keine Warnungen neu eingeführt.
 
 ## Nächster Schritt
 

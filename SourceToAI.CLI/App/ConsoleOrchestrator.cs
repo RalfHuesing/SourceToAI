@@ -98,7 +98,7 @@ public class ConsoleOrchestrator(
         {
             solutionDocPaths = docsResult.Value;
             Console.WriteLine(
-                $"[INFO] Solution-Dokumentation: {solutionDocPaths.Count} Datei(en) → Abschnitt in complete/full-source.md (Projekt „.Docs“).\n");
+                $"[INFO] Solution-Dokumentation: {solutionDocPaths.Count} Datei(en) → eigene Datei unter complete/ (Projekt „.Docs“).\n");
         }
         else
         {
@@ -128,6 +128,7 @@ public class ConsoleOrchestrator(
         Console.WriteLine();
         var multiViewResult = multiViewExportService.WriteMergedSolutionViews(
             outputDir,
+            solutionName,
             rootPath,
             projectsWithFiles,
             solutionDocPaths);
