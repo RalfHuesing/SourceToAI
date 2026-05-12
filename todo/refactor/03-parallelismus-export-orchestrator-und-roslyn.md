@@ -24,9 +24,16 @@
 
 ## Selbstverifikation (nach Umsetzung)
 
-- [ ] Begründung dokumentiert (warum Parallelität, wo gemessen).
-- [ ] `dotnet test` grün; keine neuen Warnungen.
-- [ ] `00-epic-master-checklist-selbstverifikation.md`: Matrix-Zeile „Parallelisierung“ abhaken oder explizit als „bewusst verschoben“ markieren.
+- [x] Begründung dokumentiert (warum Parallelität, wo gemessen).
+- [x] `dotnet test` grün; keine neuen Warnungen.
+- [x] `00-epic-master-checklist-selbstverifikation.md`: Matrix-Zeile „Parallelisierung“ abhaken oder explizit als „bewusst verschoben“ markieren.
+
+## Umsetzung (Stand)
+
+- **Begründung:** `konzept.md` Abschnitt 3 — sequentieller Engpass bei vielen Projekten/Views durch CPU-lastiges `BuildContentSegments` (Roslyn + Rewriter) und `Compose`. Kein separates Mikro-Benchmarking im Repo; Engpass qualitativ aus der Architektur (N×M sequentiell) abgeleitet.
+- **Code:** `MultiViewExportService` — Arbeitspakete = feste Reihenfolge der bisherigen Schleife (Export-Units × `ViewKeyOrder`). **Parallel** (max. 5): `BuildContentSegments` + `Compose`. **Sequenziell danach:** `AllocateUniqueFileStem` + `File.WriteAllText`, damit `usedStemsPerView` und Ausgabepfade deterministisch bleiben. Unerwartete Exceptions → `ConcurrentQueue<Exception>` → `AggregateException` als `ExtractionResult`-Fehlertext.
+- **Orchestrator:** unverändert sequentiell; I/O-Discovery parallel zu halten war nicht nötig für diese Task.
+- **Tests:** `MultiViewExportParallelDeterminismTests` — fünf Mini-Projekte, Eingabe absichtlich permutiert, acht Exportläufe, bit-identischer Fingerabdruck der View-Bäume.
 
 ## Nächster Schritt
 

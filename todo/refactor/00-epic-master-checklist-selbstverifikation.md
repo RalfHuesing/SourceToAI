@@ -12,7 +12,7 @@ Wenn eine nummerierte Task (`01-…`–`07-…`) **inhaltlich erledigt** ist: de
 |------------------------|---------------------|
 | [x] **Parse Once, Rewrite Multiple:** keine redundanten Einlese-/Parse-Zyklen pro `.cs`-Datei über alle Views eines Laufs hinweg | `01` — `CSharpDocumentLoader` + **gemeinsamer** Cache über alle View-Builder (Singleton-`ICSharpDocumentLoader`, Parse-Cache mit `Path.GetFullPath` + `OrdinalIgnoreCase`; `Clear()` zu Beginn von `WriteMergedSolutionViews` / `GenerateFeed`) |
 | [x] **Abbruch ganzer Projekte** bei I/O-/Berechtigungsfehlern in einzelnen Unterordnern | `02` — `FileDiscoveryService.ScanDirectory` granular (`UnauthorizedAccessException` und ggf. verwandte Fälle dokumentieren) |
-| [ ] **Parallelisierung** (Orchestrator / Export-Pfad) ohne Rate-Limit-/OOM-Risiko blind zu steigern | `03` — Konzept + begrenzte Parallelität (Projektrichtlinie: `SemaphoreSlim`, Fehler in `ConcurrentQueue`) |
+| [x] **Parallelisierung** (Orchestrator / Export-Pfad) ohne Rate-Limit-/OOM-Risiko blind zu steigern | `03` — `MultiViewExportService`: max. 5 parallele View-Builds (`SemaphoreSlim`), Fehler `ConcurrentQueue` + `AggregateException`; Stamm-/Schreibphase sequenziell |
 | [ ] **Roslyn-Allokationen** im `SignaturesRewriter` (optional, nach Messung) | `05` — nur wenn `03`/Profiling einen Bedarf zeigt; nicht voreilig komplex machen |
 | [ ] **YAML-Escaping** nicht doppelt pflegen (`EscapeYamlDoubleQuoted` u. Ä.) | `04` — kleine zentrale Hilfs-API, Aufrufer anpassen |
 | [ ] **YAML-Builder-Struktur** (großer Umbau) | **Nicht** Teil dieses Epics (YAGNI laut `konzept.md`) |
@@ -31,8 +31,8 @@ Wenn eine nummerierte Task (`01-…`–`07-…`) **inhaltlich erledigt** ist: de
 - [ ] Matrix: jede Zeile mit umgesetztem Task verknüpft / abgehakt.
 - [x] Nachweis **Parse Once:** z. B. Test mit zählerndem `IFileReader` oder Debugger-Breakpoint-Strategie dokumentiert in `06` — pro physischem `.cs`-Pfad maximal **ein** Read pro Projekt-Lauf über alle Views.
 - [x] `FileDiscoveryService`: gesperrter Unterordner führt nicht zum vollständigen Wegfall des Projekts (siehe `02`).
-- [ ] `dotnet test` grün; bestehende Integrationstests (`MultiViewExport…`, `AiFeedProjectGranularity…`) unverändert grün oder bewusst erweitert (`06`).
-- [ ] Optional `03`/`05`: nur wenn umgesetzt — kurz dokumentieren, welches Risiko (CPU, Speicher, Determinismus) adressiert wurde.
+- [x] `dotnet test` grün; bestehende Integrationstests (`MultiViewExport…`, `AiFeedProjectGranularity…`) unverändert grün oder bewusst erweitert (`06`).
+- [x] Optional `03`/`05`: `03` umgesetzt — **CPU**-Parallelität für View-Erzeugung (gedrosselt); **Determinismus** durch sortierte Export-Units und sequenzielle Stamm-/Schreibphase; **Speicher/OOM** nicht Ziel von `03` (optional `05`).
 
 ## Bekannte Fallstricke
 
