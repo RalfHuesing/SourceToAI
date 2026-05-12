@@ -18,10 +18,15 @@ public class AiFeedSegmentExportabilityTests
     [Fact]
     public void IsExportable_rewritten_csharp_whitespace_shell_namespace_only_is_false()
     {
-        var seg = new AiFeedContentSegment("InternalOnly.cs", "Code", "csharp", """
+        var seg = new AiFeedContentSegment(
+            "InternalOnly.cs",
+            "Code",
+            "csharp",
+            """
             namespace N;
 
-            """);
+            """,
+            CSharpRewrittenHasExportableSurface: false);
         Assert.False(AiFeedSegmentExportability.IsExportable(seg, AiFeedTransformedContentKind.RewrittenViewOutput));
     }
 
@@ -38,8 +43,21 @@ public class AiFeedSegmentExportabilityTests
     [Fact]
     public void IsExportable_rewritten_csharp_public_type_is_true()
     {
-        var seg = new AiFeedContentSegment("A.cs", "Code", "csharp", "public class A { }");
+        var seg = new AiFeedContentSegment(
+            "A.cs",
+            "Code",
+            "csharp",
+            "public class A { }",
+            CSharpRewrittenHasExportableSurface: true);
         Assert.True(AiFeedSegmentExportability.IsExportable(seg, AiFeedTransformedContentKind.RewrittenViewOutput));
+    }
+
+    [Fact]
+    public void IsExportable_rewritten_csharp_missing_surface_flag_throws()
+    {
+        var seg = new AiFeedContentSegment("x.cs", "Code", "csharp", "public class X { }");
+        Assert.Throws<InvalidOperationException>(() =>
+            AiFeedSegmentExportability.IsExportable(seg, AiFeedTransformedContentKind.RewrittenViewOutput));
     }
 
     [Fact]
@@ -47,10 +65,10 @@ public class AiFeedSegmentExportabilityTests
     {
         var segments = new[]
         {
-            new AiFeedContentSegment("a.cs", "Code", "csharp", "public class A { }"),
+            new AiFeedContentSegment("a.cs", "Code", "csharp", "public class A { }", true),
             new AiFeedContentSegment("empty.cs", "Code", "csharp", "  \n  "),
-            new AiFeedContentSegment("shell.cs", "Code", "csharp", "namespace X;\r\n"),
-            new AiFeedContentSegment("b.cs", "Code", "csharp", "public class B { }"),
+            new AiFeedContentSegment("shell.cs", "Code", "csharp", "namespace X;\r\n", false),
+            new AiFeedContentSegment("b.cs", "Code", "csharp", "public class B { }", true),
         };
 
         var filtered = AiFeedSegmentExportability.FilterToExportableList(

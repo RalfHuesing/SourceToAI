@@ -6,10 +6,6 @@ Zusätzlich konterkariert die fehlerhafte Implementierung des `Parse Once, Rewri
 
 **2. BLOCKER (Kritische Fehler)**
 
-* **Doppeltes Parsen (Redundanz):**
-Die Methode `CSharpTransformedHasExportableSurface` in `AiFeedSegmentExportability` parst den bereits von den Rewritern umgeschriebenen und als String exportierten Code (`transformedText`) *erneut* in einen SyntaxTree, um zu prüfen, ob der Inhalt leer ist. Jede C#-Datei wird in den Views `signatures-only`, `public-only` und `dto-only` somit ein zweites Mal geparst.
-
-
 * **Absturz bei gelockten Dateien im Load-Prozess:**
 Während der `FileDiscoveryService` Zugriffsfehler (z.B. `UnauthorizedAccessException`) isoliert als Warnung behandelt, führt ein I/O-Fehler beim tatsächlichen Einlesen im `CSharpDocumentLoader` zum `ExtractionResult.Failure` für das gesamte Projekt. Eine einzelne, vom OS gesperrte `.cs`-Datei bricht den kompletten View-Build für dieses Projekt ab.
 

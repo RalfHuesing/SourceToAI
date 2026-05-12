@@ -12,8 +12,9 @@ namespace SourceToAI.CLI.Services.Processing;
 /// erfolgen ausschließlich in <see cref="ICSharpDocumentLoader"/>; dieser Vertrag deckt nur Transformation bzw. spätere Rewrites ab.
 /// </para>
 /// <para>
-/// <strong>Rückgabe wie <see cref="IFeedGenerator"/>:</strong> <see cref="ExtractionResult{T}"/> mit <c>string</c>.
-/// Erfolg mit leerem <c>string</c> ist zulässig (z. B. leere Eingabe). Fehler nur bei echter Transformations- oder Validierungslogik.
+/// <strong>Rückgabe:</strong> <see cref="ExtractionResult{T}"/> mit <see cref="ViewGenerationResult"/> (Ausgabetext und
+/// <see cref="ViewGenerationResult.HasExportableSurface"/> für den AI-Feed-Filter ohne erneutes Parsen).
+/// Erfolg mit leerem <see cref="ViewGenerationResult.OutputText"/> ist zulässig. Fehler nur bei echter Transformations- oder Validierungslogik.
 /// </para>
 /// <para>
 /// <strong>Kein SemanticModel</strong> in der Basissignatur — nur Syntax; semantische Rewriter können später einen erweiterten Kontext erhalten.
@@ -24,5 +25,5 @@ public interface IViewGenerator
     /// <summary>Stabiler Schlüssel (Ordner-/Konzeptname), z. B. <c>complete</c>, <c>signatures-only</c>.</summary>
     string ViewKey { get; }
 
-    ExtractionResult<string> Generate(CompilationUnitSyntax root, ViewGeneratorContext context);
+    ExtractionResult<ViewGenerationResult> Generate(CompilationUnitSyntax root, ViewGeneratorContext context);
 }

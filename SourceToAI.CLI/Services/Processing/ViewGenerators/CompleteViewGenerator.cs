@@ -8,11 +8,13 @@ public sealed class CompleteViewGenerator : IViewGenerator
 {
     public string ViewKey => "complete";
 
-    public ExtractionResult<string> Generate(CompilationUnitSyntax root, ViewGeneratorContext context)
+    public ExtractionResult<ViewGenerationResult> Generate(CompilationUnitSyntax root, ViewGeneratorContext context)
     {
         if (context.OriginalSourceText is not null)
-            return ExtractionResult<string>.Success(context.OriginalSourceText);
+            return ExtractionResult<ViewGenerationResult>.Success(
+                new ViewGenerationResult(context.OriginalSourceText, HasExportableSurface: true));
 
-        return ExtractionResult<string>.Success(root.ToFullString());
+        var text = root.ToFullString();
+        return ExtractionResult<ViewGenerationResult>.Success(new ViewGenerationResult(text, HasExportableSurface: true));
     }
 }
