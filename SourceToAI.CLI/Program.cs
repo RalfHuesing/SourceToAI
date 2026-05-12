@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using SourceToAI.CLI.App;
 using SourceToAI.CLI.Configuration;
 using SourceToAI.CLI.Services.Discovery;
+using SourceToAI.CLI.Services.IO;
 using SourceToAI.CLI.Services.Processing;
 
 // 1. CLI Argumente prüfen (Jetzt 2 Argumente erforderlich)
@@ -36,6 +37,8 @@ services.AddTransient<ISolutionDiscoveryService, SolutionDiscoveryService>();
 services.AddTransient<IFileDiscoveryService, FileDiscoveryService>();
 
 // Processing Services registrieren
+services.AddSingleton<IFileReader, PhysicalFileReader>();
+services.AddTransient<ICSharpDocumentLoader, CSharpDocumentLoader>();
 services.AddTransient<IFileTypeService, FileTypeService>();
 services.AddTransient<IHashService, HashService>();
 services.AddTransient<IFeedGenerator, MarkdownFeedGenerator>();

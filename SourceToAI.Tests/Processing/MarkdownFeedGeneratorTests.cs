@@ -1,4 +1,5 @@
 using SourceToAI.CLI.Models;
+using SourceToAI.CLI.Services.IO;
 using SourceToAI.CLI.Services.Processing;
 using SourceToAI.Tests.Support;
 
@@ -6,7 +7,17 @@ namespace SourceToAI.Tests.Processing;
 
 public class MarkdownFeedGeneratorTests
 {
-    private readonly MarkdownFeedGenerator _sut = new(new FileTypeService(), new HashService());
+    private static MarkdownFeedGenerator CreateSut()
+    {
+        var fileReader = new PhysicalFileReader();
+        return new MarkdownFeedGenerator(
+            new FileTypeService(),
+            new HashService(),
+            fileReader,
+            new CSharpDocumentLoader(fileReader));
+    }
+
+    private readonly MarkdownFeedGenerator _sut = CreateSut();
 
     [Fact]
     public void GenerateFeed_includes_frontmatter_manifest_and_content()

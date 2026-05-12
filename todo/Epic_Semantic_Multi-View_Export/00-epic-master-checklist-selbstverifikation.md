@@ -6,7 +6,7 @@ Diese Datei ist die **Querschnitts-Referenz**. Jede nummerierte Task-Datei (`01-
 
 | Anforderung aus `konzept.md` | Primär umgesetzt in |
 |------------------------------|----------------------|
-| Parse Once, Rewrite Multiple | `01`, `06` |
+| Parse Once, Rewrite Multiple | `01` (`ICSharpDocumentLoader`, `ParsedCSharpDocument`, `CSharpDocumentLoader`), `06` |
 | `IViewGenerator` / `ICodeProcessor` + Strategy | `02` |
 | `SignaturesRewriter` (Bodies `;`, expression-bodied) | `03` |
 | `VisibilityRewriter` (kein private/internal im public-export) | `04` |
