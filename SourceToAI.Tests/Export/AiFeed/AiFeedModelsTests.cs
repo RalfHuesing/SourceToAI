@@ -73,6 +73,16 @@ public class AiFeedModelsTests
     }
 
     [Fact]
+    public void AiFeedManifestPath_mixed_separators_normalizes_to_backslashes()
+    {
+        Assert.Equal(@"a\b\c\D.cs", AiFeedManifestPath.NormalizeForManifestTable(@"a/b\c/D.cs"));
+    }
+
+    [Fact]
+    public void AiFeedManifestPath_null_throws() =>
+        Assert.Throws<ArgumentNullException>(() => AiFeedManifestPath.NormalizeForManifestTable(null!));
+
+    [Fact]
     public void AiFeedExportedUtf8Size_counts_utf8_not_char_length()
     {
         // „€“ = 3 Bytes in UTF-8

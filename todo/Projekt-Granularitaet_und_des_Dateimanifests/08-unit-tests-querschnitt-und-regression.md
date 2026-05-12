@@ -26,9 +26,9 @@
 
 ## Selbstverifikation (nach Umsetzung)
 
-- [ ] `dotnet test` ohne failures.
-- [ ] Kurze Liste in PR/Chat: welche Testklassen geändert wurden.
-- [ ] `00`-Matrix Zeile „Tests überall“ teilweise/ vollständig abhaken (Rest `09`).
+- [x] `dotnet test` ohne failures.
+- [x] Kurze Liste in PR/Chat: welche Testklassen geändert wurden.
+- [x] `00`-Matrix Zeile „Tests überall“ teilweise/ vollständig abhaken (Rest `09`).
 
 ## Nächster Schritt
 
