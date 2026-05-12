@@ -1,0 +1,86 @@
+using Microsoft.CodeAnalysis.CSharp.Syntax;
+using SourceToAI.CLI.Models;
+using SourceToAI.CLI.Services.IO;
+using SourceToAI.CLI.Services.Processing;
+using SourceToAI.Tests.Support;
+
+namespace SourceToAI.Tests.Processing;
+
+public class CSharpDocumentLoaderTests
+{
+    [Fact]
+    public void LoadParsedDocuments_returns_one_entry_per_unique_cs_file_and_reads_each_once()
+    {
+        using var ws = new TempWorkspace();
+        var p1 = ws.WriteFile("src/A.cs", "namespace N; class A { }");
+        var p2 = ws.WriteFile("src/B.cs", "namespace N; class B { }");
+        var project = new ProjectDefinition("App", Path.Combine(ws.Root, "src", "App.csproj"));
+
+        var inner = new PhysicalFileReader();
+        var counter = new CountingFileReader(inner);
+        var sut = new CSharpDocumentLoader(counter);
+
+        var result = sut.LoadParsedDocuments(project, [p1, p2]);
+
+        Assert.True(result.IsSuccess, result.ErrorMessage);
+        Assert.Equal(2, result.Value!.Count);
+        Assert.Equal(1, counter.ReadCounts[Path.GetFullPath(p1)]);
+        Assert.Equal(1, counter.ReadCounts[Path.GetFullPath(p2)]);
+    }
+
+    [Fact]
+    public void LoadParsedDocuments_reuses_same_syntax_tree_for_two_notional_consumers()
+    {
+        using var ws = new TempWorkspace();
+        var path = ws.WriteFile("src/C.cs", "class C { int X => 1; }");
+        var project = new ProjectDefinition("App", Path.Combine(ws.Root, "src", "App.csproj"));
+        var sut = new CSharpDocumentLoader(new PhysicalFileReader());
+
+        var doc = sut.LoadParsedDocuments(project, [path]).Value!.Single();
+
+        CompilationUnitSyntax consumer1 = doc.Root;
+        CompilationUnitSyntax consumer2 = doc.Root;
+
+        Assert.Same(consumer1, consumer2);
+        Assert.True(consumer1.Members.Any());
+    }
+
+    [Fact]
+    public void LoadParsedDocuments_deduplicates_identical_path_so_file_reader_is_called_once()
+    {
+        using var ws = new TempWorkspace();
+        var path = ws.WriteFile("src/D.cs", "class D { }");
+        var project = new ProjectDefinition("App", Path.Combine(ws.Root, "src", "App.csproj"));
+        var counter = new CountingFileReader(new PhysicalFileReader());
+        var sut = new CSharpDocumentLoader(counter);
+
+        var result = sut.LoadParsedDocuments(project, [path, path]);
+
+        Assert.True(result.IsSuccess, result.ErrorMessage);
+        Assert.Single(result.Value!);
+        Assert.Equal(1, counter.ReadCounts[Path.GetFullPath(path)]);
+    }
+
+    /// <summary>
+    /// Ungültiges C#: siehe XML-Dokumentation auf <see cref="ParsedCSharpDocument"/> —
+    /// Dokument bleibt erhalten, <see cref="ParsedCSharpDocument.HasParseErrors"/> ist wahr.
+    /// </summary>
+    [Fact]
+    public void LoadParsedDocuments_invalid_csharp_sets_HasParseErrors_but_keeps_tree_and_source()
+    {
+        using var ws = new TempWorkspace();
+        var path = ws.WriteFile("src/Broken.cs", "class Broken { void M( }"); // Syntaxfehler
+        var project = new ProjectDefinition("App", Path.Combine(ws.Root, "src", "App.csproj"));
+        var sut = new CSharpDocumentLoader(new PhysicalFileReader());
+
+        var result = sut.LoadParsedDocuments(project, [path]);
+
+        Assert.True(result.IsSuccess, result.ErrorMessage);
+        var doc = result.Value!.Single();
+        Assert.True(doc.HasParseErrors);
+        Assert.NotEmpty(doc.ParseErrorMessages);
+        Assert.Contains("class Broken", doc.SourceText, StringComparison.Ordinal);
+        Assert.NotNull(doc.SyntaxTree);
+        Assert.NotNull(doc.Root);
+    }
+}

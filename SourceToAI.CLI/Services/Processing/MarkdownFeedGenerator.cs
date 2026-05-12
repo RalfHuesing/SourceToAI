@@ -1,11 +1,14 @@
 ﻿using SourceToAI.CLI.Models;
+using SourceToAI.CLI.Services.IO;
 using System.Text;
 
 namespace SourceToAI.CLI.Services.Processing;
 
 public class MarkdownFeedGenerator(
     IFileTypeService fileTypeService,
-    IHashService hashService) : IFeedGenerator
+    IHashService hashService,
+    IFileReader fileReader,
+    ICSharpDocumentLoader csharpDocumentLoader) : IFeedGenerator
 {
     public ExtractionResult<string> GenerateFeed(string solutionName, ProjectDefinition project, List<string> filePaths)
     {
@@ -23,14 +26,35 @@ public class MarkdownFeedGenerator(
                 .ThenBy(p => p)
                 .ToList();
 
-            // 1. Dateien einlesen und analysieren
+            var parseResult = csharpDocumentLoader.LoadParsedDocuments(project, sortedPaths);
+            if (!parseResult.IsSuccess)
+                return ExtractionResult<string>.Failure(parseResult.ErrorMessage!);
+
+            var parsedCSharpByFullPath = parseResult.Value!.ToDictionary(
+                d => Path.GetFullPath(d.AbsolutePath),
+                d => d,
+                StringComparer.OrdinalIgnoreCase);
+
+            // 1. Dateien einlesen und analysieren (.cs über Parse-Pipeline, übrige Extensions einmalig via IFileReader)
             int idCounter = 1;
             foreach (var path in sortedPaths)
             {
-                var content = File.ReadAllText(path);
-                var extension = Path.GetExtension(path);
-                var size = new FileInfo(path).Length;
-                var relativePath = Path.GetRelativePath(project.RootDirectory, path);
+                var fullPath = Path.GetFullPath(path);
+                string content;
+                long size;
+                if (parsedCSharpByFullPath.TryGetValue(fullPath, out var parsed))
+                {
+                    content = parsed.SourceText;
+                    size = parsed.SizeBytes;
+                }
+                else
+                {
+                    content = fileReader.ReadAllText(fullPath);
+                    size = new FileInfo(fullPath).Length;
+                }
+
+                var extension = Path.GetExtension(fullPath);
+                var relativePath = Path.GetRelativePath(project.RootDirectory, fullPath);
 
                 var (type, language) = fileTypeService.GetFileTypeAndLanguage(extension);
                 var hash = hashService.ComputeShortHash(content);
