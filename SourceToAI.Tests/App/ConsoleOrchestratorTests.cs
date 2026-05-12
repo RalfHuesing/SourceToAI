@@ -178,6 +178,9 @@ public class ConsoleOrchestratorTests
         var folderName = new DirectoryInfo(Path.TrimEndingDirectorySeparator(solution.Root)).Name;
         Assert.Contains(folderName, readmeText, StringComparison.Ordinal);
         Assert.Matches(@"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z", readmeText);
+        Assert.Contains("MANIFEST", readmeText, StringComparison.Ordinal);
+        Assert.Contains("pro Projekt", readmeText, StringComparison.Ordinal);
+        Assert.DoesNotContain("full-source.md", readmeText, StringComparison.OrdinalIgnoreCase);
 
         var depGraphPath = Path.Combine(outRoot, "dependency-graph.md");
         Assert.True(File.Exists(depGraphPath));
