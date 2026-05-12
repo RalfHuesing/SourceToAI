@@ -44,6 +44,7 @@ services.AddTransient<IFileTypeService, FileTypeService>();
 services.AddTransient<IHashService, HashService>();
 services.AddTransient<IFeedGenerator, MarkdownFeedGenerator>();
 services.AddViewGenerators();
+services.AddMarkdownProjectViewBuilders();
 
 // App registrieren
 services.AddTransient<ConsoleOrchestrator>();

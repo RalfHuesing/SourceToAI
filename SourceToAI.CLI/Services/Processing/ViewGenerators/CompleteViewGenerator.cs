@@ -3,11 +3,16 @@ using SourceToAI.CLI.Models;
 
 namespace SourceToAI.CLI.Services.Processing.ViewGenerators;
 
-/// <summary>Stub: später 1:1 Complete-View; aktuell Syntax-Rückgabe ohne Semantik.</summary>
+/// <summary>Complete-View: bevorzugt Originaltext aus dem Loader, sonst <c>ToFullString()</c>.</summary>
 public sealed class CompleteViewGenerator : IViewGenerator
 {
     public string ViewKey => "complete";
 
-    public ExtractionResult<string> Generate(CompilationUnitSyntax root, ViewGeneratorContext context) =>
-        ExtractionResult<string>.Success(root.ToFullString());
+    public ExtractionResult<string> Generate(CompilationUnitSyntax root, ViewGeneratorContext context)
+    {
+        if (context.OriginalSourceText is not null)
+            return ExtractionResult<string>.Success(context.OriginalSourceText);
+
+        return ExtractionResult<string>.Success(root.ToFullString());
+    }
 }

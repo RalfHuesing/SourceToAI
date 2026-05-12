@@ -43,4 +43,15 @@ public class ViewGeneratorDiTests
             Assert.True(string.IsNullOrWhiteSpace(result.Value), $"ViewKey={g.ViewKey}");
         }
     }
+
+    [Fact]
+    public void Complete_view_prefers_original_source_text_when_context_supplies_it()
+    {
+        var root = SyntaxFactory.ParseCompilationUnit("class X { }");
+        var ctx = new ViewGeneratorContext("f.cs", "// preserved\n");
+        var sut = new CompleteViewGenerator();
+        var r = sut.Generate(root, ctx);
+        Assert.True(r.IsSuccess);
+        Assert.Equal("// preserved\n", r.Value);
+    }
 }
