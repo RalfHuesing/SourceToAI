@@ -1,4 +1,5 @@
 ﻿using SourceToAI.CLI.Models;
+using SourceToAI.CLI.Services.Export.AiFeed;
 using SourceToAI.CLI.Services.IO;
 using SourceToAI.CLI.Services.Processing.Markdown;
 using System.Text;
@@ -74,7 +75,7 @@ public class MarkdownFeedGenerator(
             // YAML Frontmatter
             sb.AppendLine("---");
             sb.AppendLine("feed_type: source_export");
-            sb.AppendLine($"project: {feedName}");
+            sb.AppendLine($"project: \"{YamlDoubleQuotedEscaping.EscapeYamlDoubleQuoted(feedName)}\"");
             sb.AppendLine($"session_id: {sessionId}");
             sb.AppendLine($"generated: {timestamp}");
             sb.AppendLine("part: 1");

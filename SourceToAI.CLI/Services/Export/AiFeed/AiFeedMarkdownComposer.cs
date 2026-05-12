@@ -69,22 +69,11 @@ public sealed class AiFeedMarkdownComposer : IAiFeedMarkdownComposer
     {
         sb.AppendLine("---");
         sb.AppendLine($"feed_type: {fm.FeedType}");
-        sb.AppendLine($"project: \"{EscapeYamlDoubleQuoted(fm.Project)}\"");
+        sb.AppendLine($"project: \"{YamlDoubleQuotedEscaping.EscapeYamlDoubleQuoted(fm.Project)}\"");
         sb.AppendLine($"session_id: {fm.SessionId:D}");
         sb.AppendLine($"generated: \"{fm.Generated.ToString("O", CultureInfo.InvariantCulture)}\"");
         sb.AppendLine($"file_count: {fm.FileCount}");
         sb.AppendLine("---");
-    }
-
-    /// <summary>Escaping für YAML-Doppelquoted <c>project</c> (Sonderzeichen / Zeilenumbrüche).</summary>
-    private static string EscapeYamlDoubleQuoted(string value)
-    {
-        return value
-            .Replace("\\", "\\\\", StringComparison.Ordinal)
-            .Replace("\"", "\\\"", StringComparison.Ordinal)
-            .Replace("\r", "\\r", StringComparison.Ordinal)
-            .Replace("\n", "\\n", StringComparison.Ordinal)
-            .Replace("\t", "\\t", StringComparison.Ordinal);
     }
 
     private static void AppendHeaderAndInstruction(StringBuilder sb, string displayTitle, string projectDisplayName)
