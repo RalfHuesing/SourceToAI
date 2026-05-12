@@ -59,10 +59,10 @@ Nach einem Lauf unter `{exportPath}/{solutionName}/` (gemäß `Konzept.md` Absch
 
 ## Finale Epic-Selbstverifikation (Agent / Mensch)
 
-- [ ] Matrix: jede Zeile mit umgesetztem Task verknüpft / abgehakt.
+- [x] Matrix: jede Zeile mit umgesetztem Task verknüpft / abgehakt.
 - [x] Dateisystem: pro View-Ordner eine `.md` pro Projekt mit Inhalt; keine veralteten `full-source.md`-Reste nach Clean-Lauf (oder bewusst dokumentierte Übergangsstrategie).
-- [ ] Stichprobe einer generierten Datei: gültiges YAML-Frontmatter, Manifest-Zeilenanzahl = Anzahl CONTENT-Blöcke, IDs fortlaufend, Anker funktionieren in typischem Markdown-Renderer.
-- [ ] Stichprobe `public-only`: bekannter privater Test-Code nicht im Manifest/Content (siehe Task `05`).
+- [x] Stichprobe einer generierten Datei: gültiges YAML-Frontmatter, Manifest-Zeilenanzahl = Anzahl CONTENT-Blöcke, IDs fortlaufend, Anker funktionieren in typischem Markdown-Renderer.
+- [x] Stichprobe `public-only`: bekannter privater Test-Code nicht im Manifest/Content (siehe Task `05`).
 - [x] `dotnet test` grün; Integrationstest deckt mindestens zwei Projekte und zwei Views ab (`09`).
 - [x] `IPostExportTask`-Hooks: unverändert sinnvoll aufrufbar oder angepasst und getestet.
 
@@ -75,4 +75,4 @@ Nach einem Lauf unter `{exportPath}/{solutionName}/` (gemäß `Konzept.md` Absch
 
 ---
 
-**Status:** Epic in Umsetzung — Task `01`–`08` erledigt; `09` ausstehend.
+**Status:** Epic abgeschlossen — Tasks `01`–`09` erledigt und verifiziert.

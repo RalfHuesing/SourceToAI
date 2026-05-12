@@ -24,10 +24,10 @@
 
 ## Selbstverifikation (Epic-Abschluss)
 
-- [ ] `00-epic-master-checklist-selbstverifikation.md`: **alle** Checkboxen abgehakt.
-- [ ] Matrix in `00` Zeile für Zeile mit dem tatsächlichen Code abgeglichen.
-- [ ] `dotnet test` (mit Warnungs-Strenge wie im Repo üblich).
-- [ ] Kein weiterer Task — Epic fertig.
+- [x] `00-epic-master-checklist-selbstverifikation.md`: **alle** Checkboxen abgehakt.
+- [x] Matrix in `00` Zeile für Zeile mit dem tatsächlichen Code abgeglichen.
+- [x] `dotnet test` (mit Warnungs-Strenge wie im Repo üblich).
+- [x] Kein weiterer Task — Epic fertig.
 
 ## Kein weiterer Task
 

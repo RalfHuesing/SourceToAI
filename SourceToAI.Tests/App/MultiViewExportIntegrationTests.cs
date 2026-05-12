@@ -1,16 +1,10 @@
-using System.Text;
-using System.Text.RegularExpressions;
-using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using SourceToAI.CLI.App;
 using SourceToAI.CLI.Configuration;
-using SourceToAI.CLI.Infrastructure;
 using SourceToAI.CLI.Models;
 using SourceToAI.CLI.Services.Discovery;
 using SourceToAI.CLI.Services.Export;
-using SourceToAI.CLI.Services.Export.AiFeed;
 using SourceToAI.CLI.Services.Integration;
 using SourceToAI.CLI.Services.IO;
 using SourceToAI.CLI.Services.Processing;
@@ -28,72 +22,12 @@ public sealed class MultiViewExportIntegrationTests
     public const string FixtureEnumName = "IntegrationFixtureStatus";
     public const string FixtureNuGetPackageId = "IntegrationFixture.NuGetPkg";
 
-    private static ServiceProvider CreateMultiViewServiceProvider()
-    {
-        var services = new ServiceCollection();
-        services.AddSingleton<IFileReader, PhysicalFileReader>();
-        services.AddTransient<ICSharpDocumentLoader, CSharpDocumentLoader>();
-        services.AddTransient<IFileTypeService, FileTypeService>();
-        services.AddViewGenerators();
-        services.AddMarkdownProjectViewBuilders();
-        services.AddSingleton<IAiFeedMarkdownComposer, AiFeedMarkdownComposer>();
-        services.AddTransient<IMultiViewExportService, MultiViewExportService>();
-        services.AddSingleton<IMultiViewReadmeMarkdownGenerator, MultiViewReadmeMarkdownGenerator>();
-        return services.BuildServiceProvider();
-    }
-
-    /// <summary>
-    /// Extrahiert Inhalte aus <c>```…csharp</c>-Blöcken (variable Fence-Länge wie in der CLI).
-    /// </summary>
-    internal static IEnumerable<string> ExtractCSharpFenceContents(string markdown)
-    {
-        using var reader = new StringReader(markdown);
-        string? line;
-        while ((line = reader.ReadLine()) != null)
-        {
-            var m = Regex.Match(line, @"^(?<fence>`{3,})csharp\s*$");
-            if (!m.Success)
-                continue;
-
-            var fence = m.Groups["fence"].Value;
-            var sb = new StringBuilder();
-            while ((line = reader.ReadLine()) != null)
-            {
-                if (line == fence)
-                {
-                    var code = sb.ToString().TrimEnd('\r', '\n');
-                    if (!string.IsNullOrWhiteSpace(code))
-                        yield return code;
-                    break;
-                }
-
-                sb.AppendLine(line);
-            }
-        }
-    }
-
-    private static void AssertAllSignatureBlocksParseWithoutErrors(string signaturesMarkdown)
-    {
-        var blocks = ExtractCSharpFenceContents(signaturesMarkdown).ToList();
-        Assert.NotEmpty(blocks);
-        foreach (var code in blocks)
-        {
-            var tree = CSharpSyntaxTree.ParseText(
-                code,
-                CSharpParseOptions.Default,
-                path: "signatures-fragment.cs",
-                encoding: Encoding.UTF8);
-            var errors = tree.GetDiagnostics().Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
-            Assert.True(errors.Count == 0, string.Join(Environment.NewLine, errors));
-        }
-    }
-
     [Fact]
     public async Task RunAsync_multi_view_tree_matches_konzept_and_content_samples()
     {
         using var export = new TempWorkspace();
         using var solution = new TempWorkspace();
-        using var multiViewSp = CreateMultiViewServiceProvider();
+        using var multiViewSp = MultiViewExportTestHost.CreateServiceProvider();
 
         const string solutionName = "FixtureSol";
 
@@ -275,7 +209,7 @@ public sealed class MultiViewExportIntegrationTests
             + await File.ReadAllTextAsync(
                 Path.Combine(outRoot, "signatures-only", "FixtureSol.Proj3.md"),
                 TestContext.Current.CancellationToken);
-        AssertAllSignatureBlocksParseWithoutErrors(signaturesMd);
+        AiFeedExportIntegrationAsserts.AssertSignatureFencesParseWithoutSyntaxErrors(signaturesMd);
         Assert.Contains("ExprBackedProp", signaturesMd, StringComparison.Ordinal);
         Assert.DoesNotContain("=>", signaturesMd, StringComparison.Ordinal);
 
