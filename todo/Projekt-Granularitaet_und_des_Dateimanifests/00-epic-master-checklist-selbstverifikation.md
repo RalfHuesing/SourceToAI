@@ -16,7 +16,7 @@ Wenn eine nummerierte Task (`01-…`–`09-…`) **inhaltlich erledigt** ist: de
 | [x] Header `# AI FEED: …` + Block `## INSTRUCTION` | `03` |
 | [x] **MANIFEST**-Tabelle (ID, Type, Hash, Size, Path) mit Anker `[n](#n)`; Pfade relativ zum **Projektroot** | `02`, `03` |
 | [x] **CONTENT** mit IDs, Trennlinien, dynamischem Fencing (≥4 Backticks bei Bedarf) | `03`, `04` — `MarkdownFenceUtility` wiederverwenden |
-| [ ] Nach View-Filter **komplett leere** Dateien: weder Manifest noch Content | `04`, `05` |
+| [x] Nach View-Filter **komplett leere** Dateien: weder Manifest noch Content | `04`, `05` |
 | [x] Zentraler Builder (keine Duplikation der Zusammenstellung pro View) | `03`, `04` |
 | [ ] Roslyn **Parse Once, Rewrite Multiple** unverändert | implizit `04`/`06` — keine Doppel-Einlesepfade einführen |
 | [ ] `readme.md` beschreibt neue Struktur / Prompt-Nutzung | `07` |
@@ -74,4 +74,4 @@ Nach einem Lauf unter `{exportPath}/{solutionName}/` (gemäß `Konzept.md` Absch
 
 ---
 
-**Status:** Epic in Umsetzung — Task `01`–`04` erledigt; `05`–`09` ausstehend.
+**Status:** Epic in Umsetzung — Task `01`–`05` erledigt; `06`–`09` ausstehend.

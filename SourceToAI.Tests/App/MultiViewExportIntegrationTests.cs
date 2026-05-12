@@ -114,6 +114,35 @@ public sealed class MultiViewExportIntegrationTests
             {
                 public static int Value => 1;
             }
+
+            public record LibRowDto(int Id);
+            """,
+            TestContext.Current.CancellationToken);
+
+        var proj2InternalOnly = Path.Combine(solution.Root, "Proj2", "FixtureInternalOnlyShell.cs");
+        await File.WriteAllTextAsync(
+            proj2InternalOnly,
+            """
+            namespace Fixture.Lib;
+
+            internal static class FixtureInternalOnlyMarker { }
+            """,
+            TestContext.Current.CancellationToken);
+
+        var proj3Csproj = Path.Combine(solution.Root, "Proj3", "Proj3.csproj");
+        Directory.CreateDirectory(Path.GetDirectoryName(proj3Csproj)!);
+        await File.WriteAllTextAsync(
+            proj3Csproj,
+            """<Project Sdk="Microsoft.NET.Sdk"></Project>""",
+            TestContext.Current.CancellationToken);
+
+        var proj3OnlyInternal = Path.Combine(solution.Root, "Proj3", "OnlyInternal.cs");
+        await File.WriteAllTextAsync(
+            proj3OnlyInternal,
+            """
+            namespace Fixture.Proj3Internal;
+
+            internal static class Proj3InternalOnlyType { }
             """,
             TestContext.Current.CancellationToken);
 
@@ -171,12 +200,13 @@ public sealed class MultiViewExportIntegrationTests
 
         var project1 = new ProjectDefinition("Proj1", proj1Csproj);
         var project2 = new ProjectDefinition("Proj2", proj2Csproj);
+        var project3 = new ProjectDefinition("Proj3", proj3Csproj);
 
         var solutionDiscovery = new Mock<ISolutionDiscoveryService>();
         solutionDiscovery.Setup(s => s.GetSolutionName(solution.Root)).Returns(ExtractionResult<string>.Success(solutionName));
         solutionDiscovery
             .Setup(s => s.FindProjects(solution.Root))
-            .Returns(ExtractionResult<List<ProjectDefinition>>.Success([project1, project2]));
+            .Returns(ExtractionResult<List<ProjectDefinition>>.Success([project1, project2, project3]));
 
         var fileDiscovery = new Mock<IFileDiscoveryService>();
         fileDiscovery.Setup(f => f.FindSolutionDocs(solution.Root, It.IsAny<AppSettings>())).Returns(ExtractionResult<List<string>>.Success([]));
@@ -191,7 +221,10 @@ public sealed class MultiViewExportIntegrationTests
                 ]));
         fileDiscovery
             .Setup(f => f.FindFilesForProject(project2, It.IsAny<AppSettings>()))
-            .Returns(ExtractionResult<List<string>>.Success([libCs]));
+            .Returns(ExtractionResult<List<string>>.Success([libCs, proj2InternalOnly]));
+        fileDiscovery
+            .Setup(f => f.FindFilesForProject(project3, It.IsAny<AppSettings>()))
+            .Returns(ExtractionResult<List<string>>.Success([proj3OnlyInternal]));
 
         var post = new Mock<IPostExportTask>();
         post.Setup(p => p.ExecuteAsync(It.IsAny<string>(), It.IsAny<string>())).Returns(Task.CompletedTask);
@@ -215,18 +248,25 @@ public sealed class MultiViewExportIntegrationTests
         Assert.True(File.Exists(Path.Combine(outRoot, "dependency-graph.md")));
         Assert.True(File.Exists(Path.Combine(outRoot, "complete", "FixtureSol.Proj1.md")));
         Assert.True(File.Exists(Path.Combine(outRoot, "complete", "FixtureSol.Proj2.md")));
+        Assert.True(File.Exists(Path.Combine(outRoot, "complete", "FixtureSol.Proj3.md")));
         Assert.True(File.Exists(Path.Combine(outRoot, "signatures-only", "FixtureSol.Proj1.md")));
         Assert.True(File.Exists(Path.Combine(outRoot, "signatures-only", "FixtureSol.Proj2.md")));
+        Assert.True(File.Exists(Path.Combine(outRoot, "signatures-only", "FixtureSol.Proj3.md")));
         Assert.True(File.Exists(Path.Combine(outRoot, "public-only", "FixtureSol.Proj1.md")));
         Assert.True(File.Exists(Path.Combine(outRoot, "public-only", "FixtureSol.Proj2.md")));
+        Assert.False(File.Exists(Path.Combine(outRoot, "public-only", "FixtureSol.Proj3.md")));
         Assert.True(File.Exists(Path.Combine(outRoot, "dto-only", "FixtureSol.Proj1.md")));
         Assert.True(File.Exists(Path.Combine(outRoot, "dto-only", "FixtureSol.Proj2.md")));
+        Assert.False(File.Exists(Path.Combine(outRoot, "dto-only", "FixtureSol.Proj3.md")));
 
         var signaturesMd = await File.ReadAllTextAsync(
             Path.Combine(outRoot, "signatures-only", "FixtureSol.Proj1.md"),
             TestContext.Current.CancellationToken)
             + await File.ReadAllTextAsync(
                 Path.Combine(outRoot, "signatures-only", "FixtureSol.Proj2.md"),
+                TestContext.Current.CancellationToken)
+            + await File.ReadAllTextAsync(
+                Path.Combine(outRoot, "signatures-only", "FixtureSol.Proj3.md"),
                 TestContext.Current.CancellationToken);
         AssertAllSignatureBlocksParseWithoutErrors(signaturesMd);
         Assert.Contains("ExprBackedProp", signaturesMd, StringComparison.Ordinal);
@@ -237,6 +277,22 @@ public sealed class MultiViewExportIntegrationTests
             TestContext.Current.CancellationToken);
         Assert.DoesNotContain(PrivateFixtureMethodName, publicApi, StringComparison.Ordinal);
         Assert.Contains("PublicMethod", publicApi, StringComparison.Ordinal);
+
+        var publicProj2 = await File.ReadAllTextAsync(
+            Path.Combine(outRoot, "public-only", "FixtureSol.Proj2.md"),
+            TestContext.Current.CancellationToken);
+        Assert.Contains("LibMarker", publicProj2, StringComparison.Ordinal);
+        Assert.DoesNotContain("FixtureInternalOnlyShell.cs", publicProj2, StringComparison.Ordinal);
+
+        var completeProj2 = await File.ReadAllTextAsync(
+            Path.Combine(outRoot, "complete", "FixtureSol.Proj2.md"),
+            TestContext.Current.CancellationToken);
+        Assert.Contains("FixtureInternalOnlyMarker", completeProj2, StringComparison.Ordinal);
+
+        var completeProj3 = await File.ReadAllTextAsync(
+            Path.Combine(outRoot, "complete", "FixtureSol.Proj3.md"),
+            TestContext.Current.CancellationToken);
+        Assert.Contains("Proj3InternalOnlyType", completeProj3, StringComparison.Ordinal);
 
         var modelsMd = await File.ReadAllTextAsync(
             Path.Combine(outRoot, "dto-only", "FixtureSol.Proj1.md"),

@@ -59,6 +59,8 @@ SourceToAI.exe C:\Daten\MeineSolution\
 
 Unter dem gewählten Export-Pfad legt das Tool pro erkanntem Solution-Namen einen **eigenen Unterordner** an (bei erneutem Lauf wird dieser Ordner zuvor vollständig geleert). Darin liegt der **semantische Multi-View-Baum**: neben `readme.md` und `dependency-graph.md` die Sichten `complete/full-source.md` (1:1-Quellen inkl. Nicht-`.cs`), `signatures-only/signatures.md`, `public-only/public-api.md` und `dto-only/models.md` — Details und Prompt-Hinweise stehen in der generierten `readme.md`.
 
+**Leere Dateien pro View:** Wenn eine Datei in einer View keinen exportierbaren Inhalt mehr hat (nur Whitespace bzw. bei umgeschriebenem C# keine sichtbaren Typ-/Member-Deklarationen mehr), erscheint sie weder im Manifest noch im CONTENT; die verbleibenden IDs sind fortlaufend. Gibt es für eine Kombination **Projekt + View** nach diesem Filter **keine** Datei mehr, wird **keine** Markdown-Datei geschrieben (kein Stub).
+
 ```text
 C:\AI_Feeds\Exports\MeineSolution\
     ├── readme.md

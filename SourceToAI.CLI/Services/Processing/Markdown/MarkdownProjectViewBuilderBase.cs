@@ -17,6 +17,7 @@ namespace SourceToAI.CLI.Services.Processing.Markdown;
 /// <item><description><b>dto-only</b> — nur <c>DtoRewriter</c> (<c>DtoOnlyViewGenerator</c>).</description></item>
 /// </list>
 /// Nicht-<c>.cs</c>-Dateien erscheinen nur in <b>complete</b> (wie Konzept „alles 1:1“); andere Views nur <c>.cs</c>.
+/// Segmente ohne exportierbaren Inhalt (Task 05) werden vor der Rückgabe entfernt — siehe <see cref="AiFeedSegmentExportability"/>.
 /// </remarks>
 public abstract class MarkdownProjectViewBuilderBase(
     ICSharpDocumentLoader csharpDocumentLoader,
@@ -87,7 +88,12 @@ public abstract class MarkdownProjectViewBuilderBase(
                 segments.Add(new AiFeedContentSegment(relativePath, typeCategory, language, content));
             }
 
-            return ExtractionResult<IReadOnlyList<AiFeedContentSegment>>.Success(segments);
+            var kind = passOriginalSourceTextForCSharp
+                ? AiFeedTransformedContentKind.OriginalAsTransformed
+                : AiFeedTransformedContentKind.RewrittenViewOutput;
+
+            return ExtractionResult<IReadOnlyList<AiFeedContentSegment>>.Success(
+                AiFeedSegmentExportability.FilterToExportableList(segments, kind));
         }
         catch (Exception ex)
         {

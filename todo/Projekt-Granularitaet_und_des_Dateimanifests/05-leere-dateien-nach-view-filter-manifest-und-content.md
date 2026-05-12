@@ -24,9 +24,9 @@
 
 ## Selbstverifikation (nach Umsetzung)
 
-- [ ] Verhalten für „Projekt ohne exportierbare Dateien in dieser View“ dokumentiert und getestet.
-- [ ] `dotnet test` grün.
-- [ ] `00`-Matrix: Zeile „leere Dateien“ abhaken.
+- [x] Verhalten für „Projekt ohne exportierbare Dateien in dieser View“ dokumentiert und getestet.
+- [x] `dotnet test` grün.
+- [x] `00`-Matrix: Zeile „leere Dateien“ abhaken.
 
 ## Nächster Schritt
 
