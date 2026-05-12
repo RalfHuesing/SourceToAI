@@ -22,6 +22,19 @@ public class ViewGeneratorDiTests
     }
 
     [Fact]
+    public void AddViewGenerators_registers_keyed_services_matching_view_keys()
+    {
+        var services = new ServiceCollection();
+        services.AddViewGenerators();
+        using var sp = services.BuildServiceProvider();
+
+        Assert.Equal("complete", sp.GetRequiredKeyedService<IViewGenerator>(MarkdownViewKeys.Complete).ViewKey);
+        Assert.Equal("signatures-only", sp.GetRequiredKeyedService<IViewGenerator>(MarkdownViewKeys.SignaturesOnly).ViewKey);
+        Assert.Equal("public-only", sp.GetRequiredKeyedService<IViewGenerator>(MarkdownViewKeys.PublicOnly).ViewKey);
+        Assert.Equal("dto-only", sp.GetRequiredKeyedService<IViewGenerator>(MarkdownViewKeys.DtoOnly).ViewKey);
+    }
+
+    [Fact]
     public void View_generators_empty_compilation_unit_succeeds_with_whitespace_only_or_empty()
     {
         var root = SyntaxFactory.ParseCompilationUnit("");

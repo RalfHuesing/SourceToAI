@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using SourceToAI.CLI.Models;
+using SourceToAI.CLI.Services;
 using System.Text;
 
 namespace SourceToAI.CLI.Services.Processing;
@@ -19,6 +20,7 @@ public sealed class CSharpDocumentLoader : ICSharpDocumentLoader
         try
         {
             var documents = new List<ParsedCSharpDocument>();
+            var warnings = new List<string>();
             var seenInThisInvocation = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var path in absoluteFilePathsInDisplayOrder)
@@ -30,11 +32,27 @@ public sealed class CSharpDocumentLoader : ICSharpDocumentLoader
                 if (!seenInThisInvocation.Add(fullPath))
                     continue;
 
-                var lazyParse = _parseCache.GetOrAdd(
-                    fullPath,
-                    key => new Lazy<CachedCSharpParse>(
-                        () => ReadAndParse(key),
-                        LazyThreadSafetyMode.ExecutionAndPublication));
+                if (!_parseCache.TryGetValue(fullPath, out var lazyParse))
+                {
+                    CachedCSharpParse parsed;
+                    try
+                    {
+                        parsed = ReadAndParse(fullPath);
+                    }
+                    catch (Exception ex) when (SkippableLocalFileIoExceptions.Matches(ex))
+                    {
+                        warnings.Add(
+                            $"„{fullPath}“ übersprungen ({ex.GetType().Name}): {ex.Message}");
+                        continue;
+                    }
+
+                    lazyParse = new Lazy<CachedCSharpParse>(
+                        () => parsed,
+                        LazyThreadSafetyMode.ExecutionAndPublication);
+
+                    if (!_parseCache.TryAdd(fullPath, lazyParse))
+                        lazyParse = _parseCache[fullPath];
+                }
 
                 var cached = lazyParse.Value;
 
@@ -48,7 +66,9 @@ public sealed class CSharpDocumentLoader : ICSharpDocumentLoader
                     cached.ParseErrorMessages));
             }
 
-            return ExtractionResult<IReadOnlyList<ParsedCSharpDocument>>.Success(documents);
+            return ExtractionResult<IReadOnlyList<ParsedCSharpDocument>>.Success(
+                documents,
+                warnings.Count > 0 ? warnings : null);
         }
         catch (Exception ex)
         {

@@ -4,18 +4,7 @@ Das Design von SourceToAI weist eine klare funktionale Trennung in Discovery, Ve
 
 Zusätzlich konterkariert die fehlerhafte Implementierung des `Parse Once, Rewrite Multiple`-Prinzips die Bemühungen um Performance. Die Parallelisierung über `SemaphoreSlim` im Export-Service wird durch fundamentale Threading-Fehler im Document-Loader vollständig blockiert.
 
-**2. BLOCKER (Kritische Fehler)**
-
-* **Absturz bei gelockten Dateien im Load-Prozess:**
-Während der `FileDiscoveryService` Zugriffsfehler (z.B. `UnauthorizedAccessException`) isoliert als Warnung behandelt, führt ein I/O-Fehler beim tatsächlichen Einlesen im `CSharpDocumentLoader` zum `ExtractionResult.Failure` für das gesamte Projekt. Eine einzelne, vom OS gesperrte `.cs`-Datei bricht den kompletten View-Build für dieses Projekt ab.
-
-
-* **DI Anti-Pattern im Konstruktor:**
-Die `MarkdownProjectViewBuilderBase` injiziert eine `IEnumerable<IViewGenerator>` und sucht sich im Konstruktor via `.Single(g => g.ViewKey == viewKey)` die passende Implementierung heraus. Jede Instanziierung iteriert über die Liste. Bei lokal begrenzten View-Buildern ist das eine unnötige Laufzeitbindung.
-
-
-
-**3. Refactoring-Vorschläge**
+**2. Refactoring-Vorschläge**
 
 **A. Lock-Freies Parsen im CSharpDocumentLoader**
 

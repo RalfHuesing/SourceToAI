@@ -18,6 +18,8 @@ public interface ICSharpDocumentLoader
     /// Liefert pro <strong>einzigartigem</strong> <c>.cs</c>-Pfad (case-insensitive) genau ein
     /// <see cref="ParsedCSharpDocument"/> in der Reihenfolge des ersten Auftretens in
     /// <paramref name="absoluteFilePathsInDisplayOrder"/>.
+    /// Nicht lesbare oder gesperrte <c>.cs</c>-Dateien werden übersprungen; bei Erfolg können
+    /// Warnungen mitgeliefert werden (Liste der übersprungenen Pfade).
     /// </summary>
     ExtractionResult<IReadOnlyList<ParsedCSharpDocument>> LoadParsedDocuments(
         ProjectDefinition project,

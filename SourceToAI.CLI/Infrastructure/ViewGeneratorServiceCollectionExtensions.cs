@@ -12,6 +12,11 @@ public static class ViewGeneratorServiceCollectionExtensions
         services.AddTransient<IViewGenerator, SignaturesOnlyViewGenerator>();
         services.AddTransient<IViewGenerator, PublicOnlyViewGenerator>();
         services.AddTransient<IViewGenerator, DtoOnlyViewGenerator>();
+
+        services.AddKeyedTransient<IViewGenerator, CompleteViewGenerator>(MarkdownViewKeys.Complete);
+        services.AddKeyedTransient<IViewGenerator, SignaturesOnlyViewGenerator>(MarkdownViewKeys.SignaturesOnly);
+        services.AddKeyedTransient<IViewGenerator, PublicOnlyViewGenerator>(MarkdownViewKeys.PublicOnly);
+        services.AddKeyedTransient<IViewGenerator, DtoOnlyViewGenerator>(MarkdownViewKeys.DtoOnly);
         return services;
     }
 }

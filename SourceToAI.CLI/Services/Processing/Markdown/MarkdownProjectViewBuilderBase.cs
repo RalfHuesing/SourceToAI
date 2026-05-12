@@ -1,6 +1,6 @@
 using SourceToAI.CLI.Models;
+using SourceToAI.CLI.Services;
 using SourceToAI.CLI.Services.Export.AiFeed;
-using SourceToAI.CLI.Services.Processing;
 
 namespace SourceToAI.CLI.Services.Processing.Markdown;
 
@@ -21,14 +21,13 @@ namespace SourceToAI.CLI.Services.Processing.Markdown;
 public abstract class MarkdownProjectViewBuilderBase(
     ICSharpDocumentLoader csharpDocumentLoader,
     IFileTypeService fileTypeService,
-    IEnumerable<IViewGenerator> viewGenerators,
-    string viewKey,
+    IViewGenerator viewGenerator,
     bool includeNonCSharpFiles,
     bool passOriginalSourceTextForCSharp) : IMarkdownProjectViewBuilder
 {
-    private readonly IViewGenerator _viewGenerator = viewGenerators.Single(g => g.ViewKey == viewKey);
+    private readonly IViewGenerator _viewGenerator = viewGenerator;
 
-    public string ViewKey => viewKey;
+    public string ViewKey => _viewGenerator.ViewKey;
 
     public ExtractionResult<IReadOnlyList<AiFeedContentSegment>> BuildContentSegments(
         ProjectDefinition project,
@@ -44,6 +43,10 @@ public abstract class MarkdownProjectViewBuilderBase(
             var parseResult = csharpDocumentLoader.LoadParsedDocuments(project, sortedPaths);
             if (!parseResult.IsSuccess)
                 return ExtractionResult<IReadOnlyList<AiFeedContentSegment>>.Failure(parseResult.ErrorMessage!);
+
+            var mergedWarnings = new List<string>();
+            if (parseResult.Warnings is { Count: > 0 } parseWarnings)
+                mergedWarnings.AddRange(parseWarnings);
 
             var parsedCSharpByFullPath = parseResult.Value!.ToDictionary(
                 d => Path.GetFullPath(d.AbsolutePath),
@@ -68,7 +71,7 @@ public abstract class MarkdownProjectViewBuilderBase(
                     if (!gen.IsSuccess)
                     {
                         return ExtractionResult<IReadOnlyList<AiFeedContentSegment>>.Failure(
-                            gen.ErrorMessage ?? $"View {viewKey} für {relativePath} fehlgeschlagen.");
+                            gen.ErrorMessage ?? $"View {_viewGenerator.ViewKey} für {relativePath} fehlgeschlagen.");
                     }
 
                     segments.Add(new AiFeedContentSegment(
@@ -83,7 +86,18 @@ public abstract class MarkdownProjectViewBuilderBase(
                 if (!includeNonCSharpFiles)
                     continue;
 
-                var content = File.ReadAllText(fullPath);
+                string content;
+                try
+                {
+                    content = File.ReadAllText(fullPath);
+                }
+                catch (Exception ex) when (SkippableLocalFileIoExceptions.Matches(ex))
+                {
+                    mergedWarnings.Add(
+                        $"„{fullPath}“ übersprungen ({ex.GetType().Name}): {ex.Message}");
+                    continue;
+                }
+
                 var (typeCategory, language) = fileTypeService.GetFileTypeAndLanguage(extension);
                 segments.Add(new AiFeedContentSegment(relativePath, typeCategory, language, content));
             }
@@ -93,12 +107,13 @@ public abstract class MarkdownProjectViewBuilderBase(
                 : AiFeedTransformedContentKind.RewrittenViewOutput;
 
             return ExtractionResult<IReadOnlyList<AiFeedContentSegment>>.Success(
-                AiFeedSegmentExportability.FilterToExportableList(segments, kind));
+                AiFeedSegmentExportability.FilterToExportableList(segments, kind),
+                mergedWarnings.Count > 0 ? mergedWarnings : null);
         }
         catch (Exception ex)
         {
             return ExtractionResult<IReadOnlyList<AiFeedContentSegment>>.Failure(
-                $"Markdown-View {viewKey} für {project.ProjectName}: {ex.Message}");
+                $"Markdown-View {_viewGenerator.ViewKey} für {project.ProjectName}: {ex.Message}");
         }
     }
 }
