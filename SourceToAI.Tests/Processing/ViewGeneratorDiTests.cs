@@ -22,7 +22,7 @@ public class ViewGeneratorDiTests
     }
 
     [Fact]
-    public void Stub_generators_empty_compilation_unit_succeeds_with_whitespace_only_or_empty()
+    public void View_generators_empty_compilation_unit_succeeds_with_whitespace_only_or_empty()
     {
         var root = SyntaxFactory.ParseCompilationUnit("");
         var context = new ViewGeneratorContext("empty.cs");

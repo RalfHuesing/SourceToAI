@@ -24,10 +24,10 @@
 
 ## Selbstverifikation
 
-- [ ] Heuristik in einem Satz in XML-Doc am öffentlichen Entry-Point dokumentiert.
-- [ ] `models.md` wird nicht mit vollen Services gefüllt (Tests).
-- [ ] `00`-Matrix Zeile DTO abgehakt.
-- [ ] `dotnet test` grün.
+- [x] Heuristik in einem Satz in XML-Doc am öffentlichen Entry-Point dokumentiert.
+- [x] `models.md` wird nicht mit vollen Services gefüllt (Tests).
+- [x] `00`-Matrix Zeile DTO abgehakt.
+- [x] `dotnet test` grün.
 
 ## Nächster Schritt
 
