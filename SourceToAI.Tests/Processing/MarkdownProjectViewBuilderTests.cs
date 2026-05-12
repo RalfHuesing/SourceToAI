@@ -23,16 +23,17 @@ public class MarkdownProjectViewBuilderTests
     }
 
     [Fact]
-    public void All_builders_expose_expected_relative_output_paths()
+    public void All_builders_register_distinct_view_keys()
     {
         using var sp = CreateServiceProvider();
         var builders = sp.GetServices<IMarkdownProjectViewBuilder>().ToList();
 
         Assert.Equal(4, builders.Count);
-        Assert.Contains(builders, b => b.RelativeOutputFile == "complete/full-source.md");
-        Assert.Contains(builders, b => b.RelativeOutputFile == "signatures-only/signatures.md");
-        Assert.Contains(builders, b => b.RelativeOutputFile == "public-only/public-api.md");
-        Assert.Contains(builders, b => b.RelativeOutputFile == "dto-only/models.md");
+        var keys = builders.Select(b => b.ViewKey).ToHashSet(StringComparer.Ordinal);
+        Assert.Contains("complete", keys);
+        Assert.Contains("signatures-only", keys);
+        Assert.Contains("public-only", keys);
+        Assert.Contains("dto-only", keys);
     }
 
     [Fact]

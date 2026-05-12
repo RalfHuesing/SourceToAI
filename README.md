@@ -25,7 +25,7 @@ Entwickelt speziell für Entwickler, die mit Visual Studio Solutions und Web-bas
 So nutzt du SourceToAI am besten mit ChatGPT, Gemini und Co.:
 
 1. **Code exportieren:** Lass das Tool über deine Solution laufen.
-2. **Dateien hochladen:** Lade die generierte `.Docs`-Datei (für den Gesamtkontext) sowie die relevanten Projekt-Dateien (`ProjektA.md`, `ProjektB.md`) in den Chat deiner Web-KI hoch.
+2. **Dateien hochladen:** Lade aus `complete/` z. B. `MeineSolution..Docs.md` (virtuelles Projekt `.Docs` = Solution-Doku) sowie die relevanten `MeineSolution.<Projekt>.md`-Dateien in den Chat deiner Web-KI hoch.
 3. **Prompten:** Nutze Prompts, die das Manifest und die Struktur referenzieren. Beispiel:
    > *"Im angehängten KI-Feed findest du die Architektur-Doku und den Code von Projekt X. Bitte analysiere Datei [ID 5] und Datei [ID 12] aus dem Manifest und schreibe mir Unit-Tests dafür. Beachte dabei die in der .Docs-Datei definierten Architekturregeln."*
 
@@ -57,7 +57,7 @@ SourceToAI.exe C:\Daten\MeineSolution\
 
 ### Ordner- & Datei-Struktur (Output)
 
-Unter dem gewählten Export-Pfad legt das Tool pro erkanntem Solution-Namen einen **eigenen Unterordner** an (bei erneutem Lauf wird dieser Ordner zuvor vollständig geleert). Darin liegt der **semantische Multi-View-Baum**: neben `readme.md` und `dependency-graph.md` die Sichten `complete/full-source.md` (1:1-Quellen inkl. Nicht-`.cs`), `signatures-only/signatures.md`, `public-only/public-api.md` und `dto-only/models.md` — Details und Prompt-Hinweise stehen in der generierten `readme.md`.
+Unter dem gewählten Export-Pfad legt das Tool pro erkanntem Solution-Namen einen **eigenen Unterordner** an (bei erneutem Lauf wird dieser Ordner zuvor vollständig geleert). Darin liegt der **semantische Multi-View-Baum**: neben `readme.md` und `dependency-graph.md` die Ordner `complete/`, `signatures-only/`, `public-only/` und `dto-only/` — in jedem Ordner **eine Markdown-Datei pro Projekt** (`<SolutionName>.<ProjektName>.md`, Sonderzeichen bereinigt; virtuelle Solution-Doku als `<SolutionName>..Docs.md` wegen des Projektnamens `.Docs`, nur unter `complete/`). Details und Prompt-Hinweise stehen in der generierten `readme.md`.
 
 **Leere Dateien pro View:** Wenn eine Datei in einer View keinen exportierbaren Inhalt mehr hat (nur Whitespace bzw. bei umgeschriebenem C# keine sichtbaren Typ-/Member-Deklarationen mehr), erscheint sie weder im Manifest noch im CONTENT; die verbleibenden IDs sind fortlaufend. Gibt es für eine Kombination **Projekt + View** nach diesem Filter **keine** Datei mehr, wird **keine** Markdown-Datei geschrieben (kein Stub).
 
@@ -65,10 +65,17 @@ Unter dem gewählten Export-Pfad legt das Tool pro erkanntem Solution-Namen eine
 C:\AI_Feeds\Exports\MeineSolution\
     ├── readme.md
     ├── dependency-graph.md
-    ├── complete\full-source.md
-    ├── signatures-only\signatures.md
-    ├── public-only\public-api.md
-    └── dto-only\models.md
+    ├── complete\
+    │   ├── MeineSolution..Docs.md
+    │   ├── MeineSolution.ProjektA.md
+    │   └── MeineSolution.ProjektB.md
+    ├── signatures-only\
+    │   ├── MeineSolution.ProjektA.md
+    │   └── MeineSolution.ProjektB.md
+    ├── public-only\
+    │   └── …
+    └── dto-only\
+        └── …
 
 ```
 

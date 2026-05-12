@@ -25,9 +25,9 @@
 
 ## Selbstverifikation (nach Umsetzung)
 
-- [ ] Keine alten Pfade `full-source.md` / `signatures.md` als Pflicht mehr (README/Task `07`).
-- [ ] `dotnet test` grün.
-- [ ] `00`-Matrix und Verzeichnisbaum-Beispiel in `00` mit Realität abgleichen.
+- [x] Keine alten Pfade `full-source.md` / `signatures.md` als Pflicht mehr (README/Task `07`).
+- [x] `dotnet test` grün.
+- [x] `00`-Matrix und Verzeichnisbaum-Beispiel in `00` mit Realität abgehakt/abgeglichen.
 
 ## Nächster Schritt
 

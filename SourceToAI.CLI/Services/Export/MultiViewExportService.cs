@@ -22,45 +22,40 @@ public sealed class MultiViewExportService(
         try
         {
             var buildersByKey = viewBuilders.ToDictionary(b => b.ViewKey, StringComparer.Ordinal);
+            var usedStemsPerView = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
+            foreach (var vk in ViewKeyOrder)
+                usedStemsPerView[vk] = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-            foreach (var viewKey in ViewKeyOrder)
+            var orderedProjects = projectsWithFiles
+                .OrderBy(p => p.Project.ProjectName, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            var exportUnits = new List<(ProjectDefinition Project, IReadOnlyList<string> Paths, bool DocsOnlyInCompleteView)>();
+            if (solutionDocumentationAbsolutePaths is { Count: > 0 })
             {
-                if (!buildersByKey.TryGetValue(viewKey, out var builder))
-                    return ExtractionResult<bool>.Failure($"Kein Markdown-View-Builder für „{viewKey}“ registriert.");
+                var docProject = new ProjectDefinition(".Docs", Path.Combine(solutionRootPath, "virtual.csproj"));
+                exportUnits.Add((docProject, solutionDocumentationAbsolutePaths, true));
+            }
 
-                var viewFolder = MultiViewExportPaths.GetViewFolderNameForViewKey(viewKey);
-                var usedStems = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var (project, paths) in orderedProjects)
+            {
+                if (paths.Count == 0)
+                    continue;
+                exportUnits.Add((project, paths, false));
+            }
 
-                if (viewKey.Equals("complete", StringComparison.Ordinal)
-                    && solutionDocumentationAbsolutePaths is { Count: > 0 })
+            foreach (var (project, paths, docsOnlyInCompleteView) in exportUnits)
+            {
+                foreach (var viewKey in ViewKeyOrder)
                 {
-                    var docProject = new ProjectDefinition(".Docs", Path.Combine(solutionRootPath, "virtual.csproj"));
-                    var docResult = builder.BuildContentSegments(docProject, solutionDocumentationAbsolutePaths);
-                    if (!docResult.IsSuccess)
-                        return ExtractionResult<bool>.Failure(docResult.ErrorMessage!);
-
-                    if (docResult.Value!.Count == 0)
+                    if (docsOnlyInCompleteView && !viewKey.Equals("complete", StringComparison.Ordinal))
                         continue;
 
-                    var docBody = markdownComposer.Compose(
-                        solutionDisplayName,
-                        docProject.ProjectName,
-                        sessionId,
-                        generated,
-                        docResult.Value!);
+                    if (!buildersByKey.TryGetValue(viewKey, out var builder))
+                        return ExtractionResult<bool>.Failure($"Kein Markdown-View-Builder für „{viewKey}“ registriert.");
 
-                    var stem = MultiViewExportPaths.AllocateUniqueFileStem(
-                        MultiViewExportPaths.BuildSanitizedExportFileStem(solutionDisplayName, docProject.ProjectName),
-                        usedStems);
-                    WriteProjectViewFile(outputRoot, viewFolder, stem, docBody);
-                }
-
-                foreach (var (project, paths) in projectsWithFiles.OrderBy(
-                             p => p.Project.ProjectName,
-                             StringComparer.OrdinalIgnoreCase))
-                {
-                    if (paths.Count == 0)
-                        continue;
+                    var viewFolder = MultiViewExportPaths.GetViewFolderNameForViewKey(viewKey);
+                    var usedStems = usedStemsPerView[viewKey];
 
                     var part = builder.BuildContentSegments(project, paths);
                     if (!part.IsSuccess)

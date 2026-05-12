@@ -14,7 +14,6 @@ public sealed class CompleteMarkdownProjectViewBuilder(
         fileTypeService,
         viewGenerators,
         viewKey: "complete",
-        relativeOutputFile: "complete/full-source.md",
         includeNonCSharpFiles: true,
         passOriginalSourceTextForCSharp: true);
 
@@ -29,7 +28,6 @@ public sealed class SignaturesOnlyMarkdownProjectViewBuilder(
         fileTypeService,
         viewGenerators,
         viewKey: "signatures-only",
-        relativeOutputFile: "signatures-only/signatures.md",
         includeNonCSharpFiles: false,
         passOriginalSourceTextForCSharp: false);
 
@@ -44,7 +42,6 @@ public sealed class PublicOnlyMarkdownProjectViewBuilder(
         fileTypeService,
         viewGenerators,
         viewKey: "public-only",
-        relativeOutputFile: "public-only/public-api.md",
         includeNonCSharpFiles: false,
         passOriginalSourceTextForCSharp: false);
 
@@ -59,6 +56,5 @@ public sealed class DtoOnlyMarkdownProjectViewBuilder(
         fileTypeService,
         viewGenerators,
         viewKey: "dto-only",
-        relativeOutputFile: "dto-only/models.md",
         includeNonCSharpFiles: false,
         passOriginalSourceTextForCSharp: false);
