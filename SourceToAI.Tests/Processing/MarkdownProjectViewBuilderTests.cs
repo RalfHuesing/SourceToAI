@@ -15,7 +15,7 @@ public class MarkdownProjectViewBuilderTests
     {
         var services = new ServiceCollection();
         services.AddSingleton<IFileReader, PhysicalFileReader>();
-        services.AddTransient<ICSharpDocumentLoader, CSharpDocumentLoader>();
+        services.AddSingleton<ICSharpDocumentLoader, CSharpDocumentLoader>();
         services.AddTransient<IFileTypeService, FileTypeService>();
         services.AddViewGenerators();
         services.AddMarkdownProjectViewBuilders();
@@ -27,6 +27,10 @@ public class MarkdownProjectViewBuilderTests
     {
         using var sp = CreateServiceProvider();
         var builders = sp.GetServices<IMarkdownProjectViewBuilder>().ToList();
+
+        var loaderA = sp.GetRequiredService<ICSharpDocumentLoader>();
+        var loaderB = sp.GetRequiredService<ICSharpDocumentLoader>();
+        Assert.Same(loaderA, loaderB);
 
         Assert.Equal(4, builders.Count);
         var keys = builders.Select(b => b.ViewKey).ToHashSet(StringComparer.Ordinal);

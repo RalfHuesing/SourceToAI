@@ -16,6 +16,11 @@
 
 - Sollte **nach** den inhaltlichen Tasks `01`/`02`/`04` (und optional `03`/`05`) als Abschluss-Querschnitt durchlaufen werden.
 
+## Parse-Once — Nachweis (Teilabschluss Task 01)
+
+- **Automatisiert:** `SourceToAI.Tests/Processing/CSharpDocumentLoaderTests.cs` — u. a. `LoadParsedDocuments_second_invocation_reuses_parse_cache_so_file_reader_reads_once` (Zähler-`IFileReader`), `Clear_discards_parse_cache_so_subsequent_load_reads_again`.
+- **Produktion:** `ICSharpDocumentLoader` als Singleton in `Program.cs`; zu Beginn eines Multi-View-Laufs `Clear()` in `MultiViewExportService.WriteMergedSolutionViews`; analog `Clear()` in `MarkdownFeedGenerator.GenerateFeed` bei Nutzung desselben Singletons.
+
 ## Tests (Pflicht)
 
 - `dotnet test` auf Solution-Ebene grün.

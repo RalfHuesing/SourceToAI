@@ -24,10 +24,10 @@
 
 ## Selbstverifikation (nach Umsetzung)
 
-- [ ] `dotnet build` / `dotnet test` grün.
-- [ ] `00-epic-master-checklist-selbstverifikation.md`: Matrix-Zeile „Parse Once“ abhaken.
-- [ ] Keine Warnungen neu eingeführt.
-- [ ] Kurz verifiziert: **pro .cs-Datei** im Projekt maximal ein Read+Parse über **alle** Views im selben Lauf.
+- [x] `dotnet build` / `dotnet test` grün.
+- [x] `00-epic-master-checklist-selbstverifikation.md`: Matrix-Zeile „Parse Once“ abhaken.
+- [x] Keine Warnungen neu eingeführt.
+- [x] Kurz verifiziert: **pro .cs-Datei** im Projekt maximal ein Read+Parse über **alle** Views im selben Lauf.
 
 ## Nächster Schritt
 

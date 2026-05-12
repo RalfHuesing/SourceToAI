@@ -1,11 +1,13 @@
 using System.Linq;
 using SourceToAI.CLI.Models;
 using SourceToAI.CLI.Services.Export.AiFeed;
+using SourceToAI.CLI.Services.Processing;
 using SourceToAI.CLI.Services.Processing.Markdown;
 namespace SourceToAI.CLI.Services.Export;
 
 public sealed class MultiViewExportService(
     IEnumerable<IMarkdownProjectViewBuilder> viewBuilders,
+    ICSharpDocumentLoader csharpDocumentLoader,
     IAiFeedMarkdownComposer markdownComposer) : IMultiViewExportService
 {
     private static readonly string[] ViewKeyOrder = ["complete", "signatures-only", "public-only", "dto-only"];
@@ -21,6 +23,8 @@ public sealed class MultiViewExportService(
     {
         try
         {
+            csharpDocumentLoader.Clear();
+
             var buildersByKey = viewBuilders.ToDictionary(b => b.ViewKey, StringComparer.Ordinal);
             var usedStemsPerView = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
             foreach (var vk in ViewKeyOrder)
