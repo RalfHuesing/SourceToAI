@@ -1,5 +1,7 @@
 # Task 08: Orchestrierung + `readme.md` + Output-Cleanup
 
+> **Pflicht bei Umsetzung:** Wenn diese Task umgesetzt oder nachträglich verifiziert wurde, alle zutreffenden `- [ ]` in **dieser** Datei auf `- [x]` setzen. Betrifft es die Master-Checkliste `00-epic-master-checklist-selbstverifikation.md`, dort die passenden Punkte **ebenfalls** abhaken — nicht nur im Chat oder im Commit beschreiben.
+
 ## Ziel
 
 - `ConsoleOrchestrator` (oder neuer dedizierter `MultiViewExportService`, vom Orchestrator aufgerufen — **keine** Logik-Spaghetthi ohne Tests) verbindet:
