@@ -1,5 +1,7 @@
 # Task 09: Integrationstests + finale Selbstverifikation des Epics
 
+> **Pflicht bei Umsetzung:** Wenn diese Task umgesetzt oder nachträglich verifiziert wurde, alle zutreffenden `- [ ]` in **dieser** Datei auf `- [x]` setzen. Betrifft es die Master-Checkliste `00-epic-master-checklist-selbstverifikation.md`, dort die passenden Punkte **ebenfalls** abhaken — nicht nur im Chat oder im Commit beschreiben.
+
 ## Ziel
 
 - **End-to-End-Test** (oder mehrere): temporäre Mini-Solution mit 2 `.csproj`, Referenzen, mehreren `.cs`-Dateien (public/private, DTO, `record`, expression-bodied).

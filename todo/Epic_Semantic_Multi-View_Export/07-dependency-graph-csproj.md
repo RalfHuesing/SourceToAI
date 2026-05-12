@@ -1,5 +1,7 @@
 # Task 07: `dependency-graph.md` — `.csproj`-Analyse
 
+> **Pflicht bei Umsetzung:** Wenn diese Task umgesetzt oder nachträglich verifiziert wurde, alle zutreffenden `- [ ]` in **dieser** Datei auf `- [x]` setzen. Betrifft es die Master-Checkliste `00-epic-master-checklist-selbstverifikation.md`, dort die passenden Punkte **ebenfalls** abhaken — nicht nur im Chat oder im Commit beschreiben.
+
 ## Ziel
 
 - Parser/Reader für **alle** relevanten `.csproj`-Dateien der Solution (bestehende `FindProjects` / `ProjectDefinition`-Liste nutzen).

@@ -2,6 +2,10 @@
 
 Diese Datei ist die **Querschnitts-Referenz**. Jede nummerierte Task-Datei (`01-…` bis `09-…`) enthält eigene **Schritt-Selbstverifikation**. Vor Epic-Abschluss hier **alles** abhaken.
 
+## Pflicht für umsetzende Agenten (Cursor o. Ä.)
+
+Wenn eine nummerierte Task (`01-…`–`09-…`) **inhaltlich erledigt** ist: den Fortschritt **in den Markdown-Dateien** nachziehen — nicht nur im Chat. Konkret die **Selbstverifikation**-Checkboxen der betroffenen Task-Datei von `- [ ]` auf `- [x]` setzen. Betrifft die Arbeit auch Checkboxen oder dokumentierte Kriterien **in dieser** Master-Datei, diese dort **ebenfalls** abhaken bzw. den Text anpassen. Ein abgeschlossener Task nur in der Konversation, ohne aktualisierte `.md`, gilt als **unvollständig**.
+
 ## Abdeckungs-Matrix (Konzept → Tasks)
 
 | Anforderung aus `konzept.md` | Primär umgesetzt in |

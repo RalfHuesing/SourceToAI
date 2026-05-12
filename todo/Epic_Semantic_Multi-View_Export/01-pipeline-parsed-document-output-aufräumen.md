@@ -1,5 +1,7 @@
 # Task 01: Pipeline — einmaliges Einlesen/Parsen + Output-Basis
 
+> **Pflicht bei Umsetzung:** Wenn diese Task umgesetzt oder nachträglich verifiziert wurde, alle zutreffenden `- [ ]` in **dieser** Datei auf `- [x]` setzen. Betrifft es die Master-Checkliste `00-epic-master-checklist-selbstverifikation.md`, dort die passenden Punkte **ebenfalls** abhaken — nicht nur im Chat oder im Commit beschreiben.
+
 ## Ziel
 
 - Trennung: **Einlesen + Parsen** (und Halten im Speicher) vs. **Schreiben** der Markdown-Ausgaben (kommt in späteren Tasks).
@@ -27,11 +29,11 @@
 
 ## Selbstverifikation (nach Umsetzung — nicht überspringen)
 
-- [ ] `dotnet build` und `dotnet test` grün.
-- [ ] Keine `.cs`-Datei wird in diesem Task für mehrere Parse-Zwecke zweimal von der Platte gelesen (Code-Review eigenes `foreach`).
-- [ ] `Microsoft.CodeAnalysis.CSharp` erscheint in `SourceToAI.CLI.csproj`.
-- [ ] `00-epic-master-checklist-selbstverifikation.md`: Zeile „Parse Once“ mit diesem Task verknüpft.
-- [ ] Kurz im Code-Kommentar oder XML-Doc: wo der Multi-View-Root relativ zu `exportPath`/`solutionName` liegt (für `08`).
+- [x] `dotnet build` und `dotnet test` grün.
+- [x] Keine `.cs`-Datei wird in diesem Task für mehrere Parse-Zwecke zweimal von der Platte gelesen (Code-Review eigenes `foreach`).
+- [x] `Microsoft.CodeAnalysis.CSharp` erscheint in `SourceToAI.CLI.csproj`.
+- [x] `00-epic-master-checklist-selbstverifikation.md`: Zeile „Parse Once“ mit diesem Task verknüpft.
+- [x] Kurz im Code-Kommentar oder XML-Doc: wo der Multi-View-Root relativ zu `exportPath`/`solutionName` liegt (für `08`).
 
 ## Nächster Schritt
 
