@@ -81,19 +81,5 @@ Dadurch entfällt der teure zweite Parse-Vorgang für tausende Dateien komplett.
 
 **C. Enterprise-Bloat entfernen**
 
-Entferne `IFileReader`, `PhysicalFileReader`, `IHashService` und `HashService` vollständig. Ein CLI-Tool, das direkt auf dem Dateisystem operiert, benötigt diese Abstraktionen nicht. Nutze statische Methoden für reine Funktionen.
-
-```csharp
-// Ersatz für HashService
-public static class HashUtility
-{
-    public static string ComputeShortHash(string content)
-    {
-        if (string.IsNullOrEmpty(content)) return "D41D8CD9";
-        return Convert.ToHexString(System.Security.Cryptography.MD5.HashData(System.Text.Encoding.UTF8.GetBytes(content)))[..8];
-    }
-}
-
-```
 
 Zudem sollte der DI-Container für die View-Generatoren gestrafft werden. Statt `IEnumerable<IViewGenerator>` zu injizieren, sollten spezifische Fabriken genutzt oder die Zuordnung von Generator zu View-Key direkt als Delegate im Setup registriert werden.

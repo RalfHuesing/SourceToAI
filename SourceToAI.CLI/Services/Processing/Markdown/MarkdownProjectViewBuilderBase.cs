@@ -1,6 +1,5 @@
 using SourceToAI.CLI.Models;
 using SourceToAI.CLI.Services.Export.AiFeed;
-using SourceToAI.CLI.Services.IO;
 using SourceToAI.CLI.Services.Processing;
 
 namespace SourceToAI.CLI.Services.Processing.Markdown;
@@ -21,7 +20,6 @@ namespace SourceToAI.CLI.Services.Processing.Markdown;
 /// </remarks>
 public abstract class MarkdownProjectViewBuilderBase(
     ICSharpDocumentLoader csharpDocumentLoader,
-    IFileReader fileReader,
     IFileTypeService fileTypeService,
     IEnumerable<IViewGenerator> viewGenerators,
     string viewKey,
@@ -80,7 +78,7 @@ public abstract class MarkdownProjectViewBuilderBase(
                 if (!includeNonCSharpFiles)
                     continue;
 
-                var content = fileReader.ReadAllText(fullPath);
+                var content = File.ReadAllText(fullPath);
                 var (typeCategory, language) = fileTypeService.GetFileTypeAndLanguage(extension);
                 segments.Add(new AiFeedContentSegment(relativePath, typeCategory, language, content));
             }

@@ -2,7 +2,6 @@ using Microsoft.Extensions.DependencyInjection;
 using SourceToAI.CLI.Infrastructure;
 using SourceToAI.CLI.Models;
 using SourceToAI.CLI.Services.Export.AiFeed;
-using SourceToAI.CLI.Services.IO;
 using SourceToAI.CLI.Services.Processing;
 using SourceToAI.CLI.Services.Processing.Markdown;
 using SourceToAI.Tests.Support;
@@ -14,7 +13,6 @@ public class MarkdownProjectViewBuilderTests
     private static ServiceProvider CreateServiceProvider()
     {
         var services = new ServiceCollection();
-        services.AddSingleton<IFileReader, PhysicalFileReader>();
         services.AddSingleton<ICSharpDocumentLoader, CSharpDocumentLoader>();
         services.AddTransient<IFileTypeService, FileTypeService>();
         services.AddViewGenerators();

@@ -1,12 +1,11 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using SourceToAI.CLI.Models;
-using SourceToAI.CLI.Services.IO;
 using System.Text;
 
 namespace SourceToAI.CLI.Services.Processing;
 
-public sealed class CSharpDocumentLoader(IFileReader fileReader) : ICSharpDocumentLoader
+public sealed class CSharpDocumentLoader : ICSharpDocumentLoader
 {
     private readonly Dictionary<string, CachedCSharpParse> _parseCache = new(StringComparer.OrdinalIgnoreCase);
     private readonly object _sync = new();
@@ -70,7 +69,7 @@ public sealed class CSharpDocumentLoader(IFileReader fileReader) : ICSharpDocume
 
     private CachedCSharpParse ReadAndParse(string fullPath)
     {
-        var sourceText = fileReader.ReadAllText(fullPath);
+        var sourceText = File.ReadAllText(fullPath);
         var sizeBytes = Encoding.UTF8.GetByteCount(sourceText);
         var syntaxTree = CSharpSyntaxTree.ParseText(
             sourceText,

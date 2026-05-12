@@ -6,7 +6,6 @@ using SourceToAI.CLI.Models;
 using SourceToAI.CLI.Services.Discovery;
 using SourceToAI.CLI.Services.Export;
 using SourceToAI.CLI.Services.Integration;
-using SourceToAI.CLI.Services.IO;
 using SourceToAI.CLI.Services.Processing;
 using SourceToAI.Tests.Support;
 

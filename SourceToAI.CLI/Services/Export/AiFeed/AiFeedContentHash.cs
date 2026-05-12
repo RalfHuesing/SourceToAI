@@ -6,7 +6,7 @@ namespace SourceToAI.CLI.Services.Export.AiFeed;
 
 /// <summary>
 /// Hash-Berechnung für Manifest-Spalte „Hash“: vollständiger MD5 als Hex,
-/// gekürzt auf die ersten 8 Zeichen in Großbuchstaben (Konzept / Abgleich mit <see cref="SourceToAI.CLI.Services.Processing.HashService"/>).
+/// gekürzt auf die ersten 8 Zeichen in Großbuchstaben (Konzept / Abgleich mit <see cref="SourceToAI.CLI.Services.Processing.HashUtility"/>).
 /// </summary>
 public static class AiFeedContentHash
 {
