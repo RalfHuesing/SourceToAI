@@ -14,7 +14,7 @@ alwaysApply: true
 
 ## Quellcode-Dateigröße (hart)
 
-- **≥200 Zeilen:** Datei wird langsam zu groß → Refactoring **empfohlen** (Aufteilen, Extrahieren, klarere Zuständigkeiten), bevor weiter gewuchert wird.
+- **≥300 Zeilen:** Datei wird langsam zu groß → Refactoring **empfohlen** (Aufteilen, Extrahieren, klarere Zuständigkeiten), bevor weiter gewuchert wird.
 - **≥500 Zeilen:** **Blocker** – keine sinnvolle Weiterarbeit an dieser Monolith-Datei ohne vorheriges, sinnvolles Refactoring (Zerlegung in kleinere Typen/Dateien, klare Grenzen).
 
 ## Compiler-Warnungen (hart)
