@@ -5,11 +5,14 @@
         <TargetFramework>net10.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
+        <EnableConfigurationBindingGenerator>true</EnableConfigurationBindingGenerator>
+    </PropertyGroup>
 
-        <PublishSingleFile>true</PublishSingleFile>
+    <!-- Publish-only: sonst NETSDK1151 bei ProjectReference von xUnit-v3-Testprojekten (Exe → Exe).
+         Standalone wie zuvor: dotnet publish -c Release -r win-x64 -p:PublishSingleFile=true -->
+    <PropertyGroup Condition="'$(PublishSingleFile)' == 'true'">
         <SelfContained>true</SelfContained>
         <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
-        <EnableConfigurationBindingGenerator>true</EnableConfigurationBindingGenerator>
         <PublishTrimmed>true</PublishTrimmed>
         <TrimMode>partial</TrimMode>
     </PropertyGroup>
