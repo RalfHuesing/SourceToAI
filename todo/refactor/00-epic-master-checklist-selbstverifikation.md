@@ -14,7 +14,7 @@ Wenn eine nummerierte Task (`01-…`–`07-…`) **inhaltlich erledigt** ist: de
 | [x] **Abbruch ganzer Projekte** bei I/O-/Berechtigungsfehlern in einzelnen Unterordnern | `02` — `FileDiscoveryService.ScanDirectory` granular (`UnauthorizedAccessException` und ggf. verwandte Fälle dokumentieren) |
 | [x] **Parallelisierung** (Orchestrator / Export-Pfad) ohne Rate-Limit-/OOM-Risiko blind zu steigern | `03` — `MultiViewExportService`: max. 5 parallele View-Builds (`SemaphoreSlim`), Fehler `ConcurrentQueue` + `AggregateException`; Stamm-/Schreibphase sequenziell |
 | [ ] **Roslyn-Allokationen** im `SignaturesRewriter` (optional, nach Messung) | `05` — nur wenn `03`/Profiling einen Bedarf zeigt; nicht voreilig komplex machen |
-| [ ] **YAML-Escaping** nicht doppelt pflegen (`EscapeYamlDoubleQuoted` u. Ä.) | `04` — kleine zentrale Hilfs-API, Aufrufer anpassen |
+| [x] **YAML-Escaping** nicht doppelt pflegen (`EscapeYamlDoubleQuoted` u. Ä.) | `04` — kleine zentrale Hilfs-API, Aufrufer anpassen |
 | [ ] **YAML-Builder-Struktur** (großer Umbau) | **Nicht** Teil dieses Epics (YAGNI laut `konzept.md`) |
 | [ ] **Tests** (Unit + Integration, Regression Export-Verhalten) | `01`, `02`, `04` je Task; `06` Querschnitt |
 | [ ] **Nutzerhinweise** (z. B. teilweise erfasste Dateien bei gesperrten Ordnern) | `07` — `README.md` / Konsolenausgabe nur falls Verhalten sichtbar ändert |

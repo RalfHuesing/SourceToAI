@@ -21,9 +21,9 @@
 
 ## Selbstverifikation (nach Umsetzung)
 
-- [ ] `dotnet build` / `dotnet test` grün.
-- [ ] `00-epic-master-checklist-selbstverifikation.md`: Matrix-Zeile „YAML-Escaping“ abhaken.
-- [ ] Keine Warnungen neu eingeführt.
+- [x] `dotnet build` / `dotnet test` grün.
+- [x] `00-epic-master-checklist-selbstverifikation.md`: Matrix-Zeile „YAML-Escaping“ abhaken.
+- [x] Keine Warnungen neu eingeführt.
 
 ## Nächster Schritt
 

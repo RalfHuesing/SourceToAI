@@ -4,7 +4,7 @@ namespace SourceToAI.CLI.Services.Export.AiFeed;
 /// Metadaten für das YAML-Frontmatter des AI-Feeds (DTO; kein YAML-String).
 /// </summary>
 /// <param name="FeedType">Immer <see cref="DefaultFeedType"/> für diesen Export.</param>
-/// <param name="Project">Anzeige gemäß Konzept: <c>SolutionName (ProjektName)</c> — Wert ohne YAML-Quotes (Escaping erfolgt später im Composer).</param>
+/// <param name="Project">Anzeige gemäß Konzept: <c>SolutionName (ProjektName)</c> — Wert ohne YAML-Quotes (<see cref="YamlDoubleQuotedEscaping"/> im Composer).</param>
 /// <param name="SessionId">Neue Guid pro generiertem Dokument.</param>
 /// <param name="Generated">Zeitstempel; ISO-8601-Formatierung erfolgt im Composer.</param>
 /// <param name="FileCount">Anzahl der Manifestzeilen = enthaltene Dateien.</param>

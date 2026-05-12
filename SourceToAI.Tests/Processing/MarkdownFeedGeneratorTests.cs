@@ -33,12 +33,26 @@ public class MarkdownFeedGeneratorTests
 
         Assert.Contains("feed_type: source_export", md);
         Assert.Contains("file_count: 1", md);
-        Assert.Contains("project: Sol (MyApp)", md);
+        Assert.Contains("project: \"Sol (MyApp)\"", md);
         Assert.Contains("| [1](#1) |", md);
         Assert.Contains("Program.cs", md);
         Assert.Contains("## CONTENT", md);
         Assert.Contains("````csharp", md); // mindestens 4 Backticks
         Assert.Contains("// entry", md);
+    }
+
+    [Fact]
+    public void GenerateFeed_project_frontmatter_yaml_escapes_special_characters()
+    {
+        using var ws = new TempWorkspace();
+        var csPath = ws.WriteFile("src/Program.cs", "// x");
+        var project = new ProjectDefinition("P\nline2", Path.Combine(ws.Root, "src", "P.csproj"));
+
+        var result = _sut.GenerateFeed("S: \"x\"", project, [csPath]);
+
+        Assert.True(result.IsSuccess, result.ErrorMessage);
+        var md = result.Value!;
+        Assert.Contains("project: \"S: \\\"x\\\" (P\\nline2)\"", md);
     }
 
     [Fact]
