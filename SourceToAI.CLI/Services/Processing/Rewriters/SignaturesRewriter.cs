@@ -16,37 +16,33 @@ public sealed class SignaturesRewriter : CSharpSyntaxRewriter
         (CompilationUnitSyntax)new SignaturesRewriter().Visit(root)!;
 
     public override SyntaxNode? VisitMethodDeclaration(MethodDeclarationSyntax node) =>
-        base.VisitMethodDeclaration(StripBaseMethodLike(node));
+        base.VisitMethodDeclaration((MethodDeclarationSyntax)StripBaseMethodLike(node));
 
     public override SyntaxNode? VisitConstructorDeclaration(ConstructorDeclarationSyntax node) =>
-        base.VisitConstructorDeclaration(StripBaseMethodLike(node));
+        base.VisitConstructorDeclaration((ConstructorDeclarationSyntax)StripBaseMethodLike(node));
 
     public override SyntaxNode? VisitDestructorDeclaration(DestructorDeclarationSyntax node)
     {
         if (node.Body is null && node.ExpressionBody is null)
             return base.VisitDestructorDeclaration(node);
 
-        var stripped = node
-            .WithBody(null)
-            .WithExpressionBody(null)
+        var stripped = StripBodySlots(node)
             .WithSemicolonToken(SemicolonToken);
         return base.VisitDestructorDeclaration(stripped);
     }
 
     public override SyntaxNode? VisitOperatorDeclaration(OperatorDeclarationSyntax node) =>
-        base.VisitOperatorDeclaration(StripBaseMethodLike(node));
+        base.VisitOperatorDeclaration((OperatorDeclarationSyntax)StripBaseMethodLike(node));
 
     public override SyntaxNode? VisitConversionOperatorDeclaration(ConversionOperatorDeclarationSyntax node) =>
-        base.VisitConversionOperatorDeclaration(StripBaseMethodLike(node));
+        base.VisitConversionOperatorDeclaration((ConversionOperatorDeclarationSyntax)StripBaseMethodLike(node));
 
     public override SyntaxNode? VisitAccessorDeclaration(AccessorDeclarationSyntax node)
     {
         if (node.Body is null && node.ExpressionBody is null)
             return base.VisitAccessorDeclaration(node);
 
-        var stripped = node
-            .WithBody(null)
-            .WithExpressionBody(null)
+        var stripped = StripBodySlots(node)
             .WithSemicolonToken(SemicolonToken);
         return base.VisitAccessorDeclaration(stripped);
     }
@@ -95,54 +91,58 @@ public sealed class SignaturesRewriter : CSharpSyntaxRewriter
         if (node.Body is null && node.ExpressionBody is null)
             return base.VisitLocalFunctionStatement(node);
 
-        var stripped = node
-            .WithBody(null)
-            .WithExpressionBody(null)
+        var stripped = StripBodySlots(node)
             .WithSemicolonToken(SemicolonToken);
         return base.VisitLocalFunctionStatement(stripped);
     }
 
-    private static MethodDeclarationSyntax StripBaseMethodLike(MethodDeclarationSyntax node)
+    /// <summary>Nur nicht-leere Body-Slots per <c>With*</c> entfernen (typisch max. ein Update statt zwei).</summary>
+    private static BaseMethodDeclarationSyntax StripBaseMethodLike(BaseMethodDeclarationSyntax node)
     {
         if (node.Body is null && node.ExpressionBody is null)
             return node;
 
-        return node
-            .WithBody(null)
-            .WithExpressionBody(null)
-            .WithSemicolonToken(SemicolonToken);
+        var stripped = StripBodySlots(node);
+        return stripped.WithSemicolonToken(SemicolonToken);
     }
 
-    private static ConstructorDeclarationSyntax StripBaseMethodLike(ConstructorDeclarationSyntax node)
+    private static DestructorDeclarationSyntax StripBodySlots(DestructorDeclarationSyntax node)
     {
-        if (node.Body is null && node.ExpressionBody is null)
-            return node;
-
-        return node
-            .WithBody(null)
-            .WithExpressionBody(null)
-            .WithSemicolonToken(SemicolonToken);
+        var n = node;
+        if (n.Body is not null)
+            n = n.WithBody(null);
+        if (n.ExpressionBody is not null)
+            n = n.WithExpressionBody(null);
+        return n;
     }
 
-    private static OperatorDeclarationSyntax StripBaseMethodLike(OperatorDeclarationSyntax node)
+    private static AccessorDeclarationSyntax StripBodySlots(AccessorDeclarationSyntax node)
     {
-        if (node.Body is null && node.ExpressionBody is null)
-            return node;
-
-        return node
-            .WithBody(null)
-            .WithExpressionBody(null)
-            .WithSemicolonToken(SemicolonToken);
+        var n = node;
+        if (n.Body is not null)
+            n = n.WithBody(null);
+        if (n.ExpressionBody is not null)
+            n = n.WithExpressionBody(null);
+        return n;
     }
 
-    private static ConversionOperatorDeclarationSyntax StripBaseMethodLike(ConversionOperatorDeclarationSyntax node)
+    private static LocalFunctionStatementSyntax StripBodySlots(LocalFunctionStatementSyntax node)
     {
-        if (node.Body is null && node.ExpressionBody is null)
-            return node;
+        var n = node;
+        if (n.Body is not null)
+            n = n.WithBody(null);
+        if (n.ExpressionBody is not null)
+            n = n.WithExpressionBody(null);
+        return n;
+    }
 
-        return node
-            .WithBody(null)
-            .WithExpressionBody(null)
-            .WithSemicolonToken(SemicolonToken);
+    private static BaseMethodDeclarationSyntax StripBodySlots(BaseMethodDeclarationSyntax node)
+    {
+        var n = node;
+        if (n.Body is not null)
+            n = n.WithBody(null);
+        if (n.ExpressionBody is not null)
+            n = n.WithExpressionBody(null);
+        return n;
     }
 }
