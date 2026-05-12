@@ -11,7 +11,7 @@ Wenn eine nummerierte Task (`01-…`–`07-…`) **inhaltlich erledigt** ist: de
 | Thema aus `konzept.md` | Primär umgesetzt in |
 |------------------------|---------------------|
 | [x] **Parse Once, Rewrite Multiple:** keine redundanten Einlese-/Parse-Zyklen pro `.cs`-Datei über alle Views eines Laufs hinweg | `01` — `CSharpDocumentLoader` + **gemeinsamer** Cache über alle View-Builder (Singleton-`ICSharpDocumentLoader`, Parse-Cache mit `Path.GetFullPath` + `OrdinalIgnoreCase`; `Clear()` zu Beginn von `WriteMergedSolutionViews` / `GenerateFeed`) |
-| [ ] **Abbruch ganzer Projekte** bei I/O-/Berechtigungsfehlern in einzelnen Unterordnern | `02` — `FileDiscoveryService.ScanDirectory` granular (`UnauthorizedAccessException` und ggf. verwandte Fälle dokumentieren) |
+| [x] **Abbruch ganzer Projekte** bei I/O-/Berechtigungsfehlern in einzelnen Unterordnern | `02` — `FileDiscoveryService.ScanDirectory` granular (`UnauthorizedAccessException` und ggf. verwandte Fälle dokumentieren) |
 | [ ] **Parallelisierung** (Orchestrator / Export-Pfad) ohne Rate-Limit-/OOM-Risiko blind zu steigern | `03` — Konzept + begrenzte Parallelität (Projektrichtlinie: `SemaphoreSlim`, Fehler in `ConcurrentQueue`) |
 | [ ] **Roslyn-Allokationen** im `SignaturesRewriter` (optional, nach Messung) | `05` — nur wenn `03`/Profiling einen Bedarf zeigt; nicht voreilig komplex machen |
 | [ ] **YAML-Escaping** nicht doppelt pflegen (`EscapeYamlDoubleQuoted` u. Ä.) | `04` — kleine zentrale Hilfs-API, Aufrufer anpassen |
@@ -30,7 +30,7 @@ Wenn eine nummerierte Task (`01-…`–`07-…`) **inhaltlich erledigt** ist: de
 
 - [ ] Matrix: jede Zeile mit umgesetztem Task verknüpft / abgehakt.
 - [x] Nachweis **Parse Once:** z. B. Test mit zählerndem `IFileReader` oder Debugger-Breakpoint-Strategie dokumentiert in `06` — pro physischem `.cs`-Pfad maximal **ein** Read pro Projekt-Lauf über alle Views.
-- [ ] `FileDiscoveryService`: gesperrter Unterordner führt nicht zum vollständigen Wegfall des Projekts (siehe `02`).
+- [x] `FileDiscoveryService`: gesperrter Unterordner führt nicht zum vollständigen Wegfall des Projekts (siehe `02`).
 - [ ] `dotnet test` grün; bestehende Integrationstests (`MultiViewExport…`, `AiFeedProjectGranularity…`) unverändert grün oder bewusst erweitert (`06`).
 - [ ] Optional `03`/`05`: nur wenn umgesetzt — kurz dokumentieren, welches Risiko (CPU, Speicher, Determinismus) adressiert wurde.
 

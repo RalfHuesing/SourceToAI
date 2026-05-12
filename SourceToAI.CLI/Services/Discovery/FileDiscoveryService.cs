@@ -1,9 +1,10 @@
-﻿using SourceToAI.CLI.Configuration;
+﻿using System.Security;
+using SourceToAI.CLI.Configuration;
 using SourceToAI.CLI.Models;
 
 namespace SourceToAI.CLI.Services.Discovery;
 
-public class FileDiscoveryService : IFileDiscoveryService
+public class FileDiscoveryService(IDirectoryEnumerator directoryEnumerator) : IFileDiscoveryService
 {
     public ExtractionResult<List<string>> FindSolutionDocs(string rootPath, AppSettings settings)
     {
@@ -50,11 +51,14 @@ public class FileDiscoveryService : IFileDiscoveryService
             return ExtractionResult<List<string>>.Failure($"Projektverzeichnis {project.RootDirectory} existiert nicht.");
 
         var foundFiles = new List<string>();
+        var warnings = new List<string>();
 
         try
         {
-            ScanDirectory(project.RootDirectory, foundFiles, settings);
-            return ExtractionResult<List<string>>.Success(foundFiles);
+            ScanDirectory(project.RootDirectory, foundFiles, settings, warnings);
+            return ExtractionResult<List<string>>.Success(
+                foundFiles,
+                warnings.Count > 0 ? warnings : null);
         }
         catch (Exception ex)
         {
@@ -62,10 +66,20 @@ public class FileDiscoveryService : IFileDiscoveryService
         }
     }
 
-    private void ScanDirectory(string currentDir, List<string> foundFiles, AppSettings settings)
+    private void ScanDirectory(string currentDir, List<string> foundFiles, AppSettings settings, List<string> warnings)
     {
-        // 1. Dateien im aktuellen Verzeichnis prüfen
-        foreach (var file in Directory.GetFiles(currentDir))
+        string[] files;
+        try
+        {
+            files = directoryEnumerator.EnumerateFiles(currentDir).ToArray();
+        }
+        catch (Exception ex) when (IsSkippableEnumerationFailure(ex))
+        {
+            warnings.Add($"Dateien in „{currentDir}“ nicht lesbar ({ex.GetType().Name}): {ex.Message}");
+            return;
+        }
+
+        foreach (var file in files)
         {
             var ext = Path.GetExtension(file).ToLowerInvariant();
             if (settings.IncludedExtensions.Contains(ext))
@@ -74,16 +88,32 @@ public class FileDiscoveryService : IFileDiscoveryService
             }
         }
 
-        // 2. Unterverzeichnisse prüfen (und ggf. ignorieren)
-        foreach (var dir in Directory.GetDirectories(currentDir))
+        string[] subDirs;
+        try
+        {
+            subDirs = directoryEnumerator.EnumerateDirectories(currentDir).ToArray();
+        }
+        catch (Exception ex) when (IsSkippableEnumerationFailure(ex))
+        {
+            warnings.Add($"Unterverzeichnisse von „{currentDir}“ nicht lesbar ({ex.GetType().Name}): {ex.Message}");
+            return;
+        }
+
+        foreach (var dir in subDirs)
         {
             var dirName = new DirectoryInfo(dir).Name;
 
-            // Wenn der Ordner nicht auf der Blacklist steht, rekursiv weiter abtauchen
             if (!settings.ExcludedDirectories.Contains(dirName, StringComparer.OrdinalIgnoreCase))
             {
-                ScanDirectory(dir, foundFiles, settings);
+                ScanDirectory(dir, foundFiles, settings, warnings);
             }
         }
     }
+
+    /// <summary>
+    /// Fehler bei der Auflistung eines einzelnen Verzeichnisses (Berechtigung, Sperre, fehlendes Laufwerk usw.)
+    /// sollen nur diesen Zweig überspringen, nicht das gesamte Projekt.
+    /// </summary>
+    private static bool IsSkippableEnumerationFailure(Exception ex) =>
+        ex is UnauthorizedAccessException or SecurityException or IOException;
 }

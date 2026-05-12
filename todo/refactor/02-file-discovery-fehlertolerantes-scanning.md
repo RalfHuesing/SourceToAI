@@ -6,6 +6,7 @@
 
 - `FileDiscoveryService.ScanDirectory` so gestalten, dass **ein** nicht lesbares Verzeichnis oder eine gesperrte Datei nicht den gesamten `FindFilesForProject`-Pfad als Fehler beendet (`konzept.md` Abschnitt 2).
 - Konkret: `UnauthorizedAccessException` (und nach sinnvoller Prüfung ggf. weitere I/O-Fehler) **lokal** abfangen, überspringen, mit dem Rest fortfahren.
+  - Umsetzung: zusätzlich `IOException` und `SecurityException` bei der Auflistung einzelner Verzeichnisse (gleiche Skip-Logik).
 - Optional: strukturierte Warnung (Logging-Konzept des Projekts prüfen — falls noch `Console.WriteLine`, konsistent halten) statt stiller Ignorierung, ohne das CLI unübersichtlich zu fluten.
 
 ## Nicht-Ziel
@@ -23,10 +24,10 @@
 
 ## Selbstverifikation (nach Umsetzung)
 
-- [ ] `dotnet build` / `dotnet test` grün.
-- [ ] `00-epic-master-checklist-selbstverifikation.md`: Matrix-Zeile „Abbruch ganzer Projekte“ abhaken.
-- [ ] Keine Warnungen neu eingeführt.
-- [ ] Verhalten in `07-readme-und-nutzerhinweise.md` erwähnt, falls Nutzer sichtbare Ausgabe/Warnung bekommt.
+- [x] `dotnet build` / `dotnet test` grün.
+- [x] `00-epic-master-checklist-selbstverifikation.md`: Matrix-Zeile „Abbruch ganzer Projekte“ abhaken.
+- [x] Keine Warnungen neu eingeführt.
+- [x] Verhalten in `07-readme-und-nutzerhinweise.md` erwähnt, falls Nutzer sichtbare Ausgabe/Warnung bekommt.
 
 ## Nächster Schritt
 

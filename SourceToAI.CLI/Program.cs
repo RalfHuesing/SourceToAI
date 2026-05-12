@@ -37,6 +37,7 @@ services.AddSingleton(appSettings);
 
 // Discovery Services registrieren
 services.AddTransient<ISolutionDiscoveryService, SolutionDiscoveryService>();
+services.AddSingleton<IDirectoryEnumerator, DefaultDirectoryEnumerator>();
 services.AddTransient<IFileDiscoveryService, FileDiscoveryService>();
 
 // Processing Services registrieren

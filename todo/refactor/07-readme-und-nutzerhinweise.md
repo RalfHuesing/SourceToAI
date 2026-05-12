@@ -13,6 +13,11 @@
 
 - Keine Umbenennung der View-Ordner oder Export-Struktur (liegt außerhalb dieses Epics).
 
+## Querschnitt Task 02 (bereits umgesetzt)
+
+- **Repo-`README.md`:** Kurzbeschreibung „Fehlertolerantes Projekt-Scanning“ in den Features (Teilmenge statt komplettem Ausfall).
+- **CLI:** `ConsoleOrchestrator` gibt bei übersprungenen Pfaden `[WARN]` pro Projektzeile aus (`ExtractionResult.Warnings` von `FindFilesForProject`).
+
 ## Abhängigkeiten
 
 - Nach `02` und ggf. `03` prüfen, ob Nutzerhinweis nötig ist; sonst Task als „nicht anwendbar“ in `00` vermerken und hier alle Checkboxen mit Begründung abhaken.
