@@ -1,5 +1,6 @@
 ﻿using SourceToAI.CLI.Models;
 using SourceToAI.CLI.Services.IO;
+using SourceToAI.CLI.Services.Processing.Markdown;
 using System.Text;
 
 namespace SourceToAI.CLI.Services.Processing;
@@ -111,7 +112,7 @@ public class MarkdownFeedGenerator(
                 sb.AppendLine($"### [{file.FileId}] {file.RelativePath}");
 
                 // Dynamic Fencing: Bestimme, wie viele Backticks wir brauchen (mindestens 4, mehr wenn im Code schon welche sind)
-                int requiredBackticks = CalculateRequiredBackticks(file.Content);
+                int requiredBackticks = MarkdownFenceUtility.CalculateRequiredBackticks(file.Content);
                 string fence = new string('`', requiredBackticks);
 
                 sb.AppendLine($"{fence}{file.Language}");
@@ -126,31 +127,5 @@ public class MarkdownFeedGenerator(
         {
             return ExtractionResult<string>.Failure($"Fehler bei der Feed-Generierung für {project.ProjectName}: {ex.Message}");
         }
-    }
-
-    /// <summary>
-    /// Analysiert den Code nach vorhandenen Backticks und gibt eine sichere Anzahl für den Block zurück.
-    /// </summary>
-    private int CalculateRequiredBackticks(string content)
-    {
-        int maxConsecutiveBackticks = 0;
-        int currentConsecutive = 0;
-
-        foreach (char c in content)
-        {
-            if (c == '`')
-            {
-                currentConsecutive++;
-                if (currentConsecutive > maxConsecutiveBackticks)
-                    maxConsecutiveBackticks = currentConsecutive;
-            }
-            else
-            {
-                currentConsecutive = 0;
-            }
-        }
-
-        // Mindestens 4 Backticks, ansonsten (Maximal gefundene + 1)
-        return Math.Max(4, maxConsecutiveBackticks + 1);
     }
 }

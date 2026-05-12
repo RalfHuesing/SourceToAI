@@ -11,7 +11,7 @@
     - **signatures-only:** `SignaturesRewriter` (`03`).
     - **public-only:** `VisibilityRewriter` (`04`); Body-Inhalte bleiben laut Konzept — **kein** `SignaturesRewriter` hier, außer ihr definiert explizit eine kombinierte View (Konzept sagt: public API **inkl. Bodies**).
     - **dto-only:** `DtoFilter` (`05`) — ggf. vorher andere Member entfernen, dann Output.
-  - Markdown-Aufbau analog bisherigem Feed: Überschriften mit Dateipfad, **Code-Fence** mit Sprache `csharp`, **dynamische Backtick-Länge** (Logik aus `MarkdownFeedGenerator.CalculateRequiredBackticks` — **extrahieren** in gemeinsame Hilfsklasse und von altem Generator + neuen Buildern nutzen, ohne Duplikat).
+  - Markdown-Aufbau analog bisherigem Feed: Überschriften mit Dateipfad, **Code-Fence** mit Sprache `csharp`, **dynamische Backtick-Länge** (`MarkdownFenceUtility.CalculateRequiredBackticks` — gemeinsame Hilfsklasse; nutzen durch `MarkdownFeedGenerator` und View-Builder, ohne Duplikat).
 - Ausgabe-Dateinamen und Pfade exakt:
   - `complete/full-source.md`
   - `signatures-only/signatures.md`
@@ -33,11 +33,11 @@
 
 ## Selbstverifikation
 
-- [ ] Reihenfolge Rewriter für jede View schriftlich in einer README-Kommentarzeile in `readme`-Generator-Task oder Code (`08`) — hier schon festlegen und abgleichen.
-- [ ] Kein `File.ReadAllText` in den Buildern für bereits eingelesene `.cs`.
-- [ ] `CalculateRequiredBackticks` nur einmal im Codebase (DRY).
-- [ ] `00`: alle vier Pfade der Code-Views erfüllt.
-- [ ] `dotnet test` grün.
+- [x] Reihenfolge Rewriter für jede View schriftlich in einer README-Kommentarzeile in `readme`-Generator-Task oder Code (`08`) — hier schon festlegen und abgleichen.
+- [x] Kein `File.ReadAllText` in den Buildern für bereits eingelesene `.cs`.
+- [x] `CalculateRequiredBackticks` nur einmal im Codebase (DRY).
+- [x] `00`: alle vier Pfade der Code-Views erfüllt.
+- [x] `dotnet test` grün.
 
 ## Nächster Schritt
 

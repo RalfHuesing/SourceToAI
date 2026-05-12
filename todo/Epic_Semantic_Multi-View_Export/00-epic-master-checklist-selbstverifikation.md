@@ -15,7 +15,7 @@ Wenn eine nummerierte Task (`01-…`–`09-…`) **inhaltlich erledigt** ist: de
 | [x] `SignaturesRewriter` (Bodies `;`, expression-bodied) | `03` — `SourceToAI.CLI/Services/Processing/Rewriters/SignaturesRewriter.cs` |
 | [x] `VisibilityRewriter` (kein private/internal im public-export) | `04` — `SourceToAI.CLI/Services/Processing/Rewriters/VisibilityRewriter.cs` |
 | `DtoFilter` (records, enums, property-only-Klassen) | [x] `05` — `SourceToAI.CLI/Services/Processing/Rewriters/DtoRewriter.cs` |
-| View-Builder + Markdown (`csharp`-Fences, Pfade) | `06` |
+| View-Builder + Markdown (`csharp`-Fences, Pfade) | [x] `06` — `SourceToAI.CLI/Services/Processing/Markdown/` |
 | `dependency-graph.md` (csproj) | `07` |
 | Orchestrierung, Ordner, `readme.md` | `08` |
 | Output-Struktur exakt wie Konzept | `01`, `08` |
@@ -71,7 +71,7 @@ Nach einem Lauf (pro Solution/Export-Root wie in der Architektur festgelegt):
 - `file`-scoped namespaces, `partial`, `record struct`, Primary Constructors (.NET 8+).
 - `internal` in `public`-Klassen: Member müssen verschwinden, nicht nur Klassen.
 - DTO-Heuristik: false positives/negatives — Tests mit Gegenbeispielen.
-- Markdown-Fencing: Backticks im Quelltext (Logik aus `MarkdownFeedGenerator.CalculateRequiredBackticks` **wiederverwenden** oder zentral extrahieren).
+- Markdown-Fencing: Backticks im Quelltext (`MarkdownFenceUtility.CalculateRequiredBackticks`, zentral extrahiert).
 
 ---
 
