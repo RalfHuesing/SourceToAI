@@ -10,6 +10,7 @@ using SourceToAI.CLI.Infrastructure;
 using SourceToAI.CLI.Models;
 using SourceToAI.CLI.Services.Discovery;
 using SourceToAI.CLI.Services.Export;
+using SourceToAI.CLI.Services.Export.AiFeed;
 using SourceToAI.CLI.Services.Integration;
 using SourceToAI.CLI.Services.IO;
 using SourceToAI.CLI.Services.Processing;
@@ -35,6 +36,7 @@ public sealed class MultiViewExportIntegrationTests
         services.AddTransient<IFileTypeService, FileTypeService>();
         services.AddViewGenerators();
         services.AddMarkdownProjectViewBuilders();
+        services.AddSingleton<IAiFeedMarkdownComposer, AiFeedMarkdownComposer>();
         services.AddTransient<IMultiViewExportService, MultiViewExportService>();
         services.AddSingleton<IMultiViewReadmeMarkdownGenerator, MultiViewReadmeMarkdownGenerator>();
         return services.BuildServiceProvider();

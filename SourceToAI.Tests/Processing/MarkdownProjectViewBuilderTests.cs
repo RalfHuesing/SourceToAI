@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using SourceToAI.CLI.Infrastructure;
 using SourceToAI.CLI.Models;
+using SourceToAI.CLI.Services.Export.AiFeed;
 using SourceToAI.CLI.Services.IO;
 using SourceToAI.CLI.Services.Processing;
 using SourceToAI.CLI.Services.Processing.Markdown;
@@ -35,7 +36,7 @@ public class MarkdownProjectViewBuilderTests
     }
 
     [Fact]
-    public void Complete_build_orders_markdown_before_cs_and_includes_both()
+    public void Complete_build_orders_markdown_before_cs_and_includes_both_as_segments()
     {
         using var sp = CreateServiceProvider();
         var sut = sp.GetServices<IMarkdownProjectViewBuilder>().Single(b => b.ViewKey == "complete");
@@ -45,25 +46,27 @@ public class MarkdownProjectViewBuilderTests
         var mdPath = ws.WriteFile("src/B.md", "# doc");
         var project = new ProjectDefinition("P", Path.Combine(ws.Root, "src", "P.csproj"));
 
-        var result = sut.BuildMarkdown(project, [csPath, mdPath]);
+        var result = sut.BuildContentSegments(project, [csPath, mdPath]);
 
         Assert.True(result.IsSuccess, result.ErrorMessage);
-        var md = result.Value!;
-        var bMd = md.IndexOf("### B.md", StringComparison.Ordinal);
-        var aCs = md.IndexOf("### A.cs", StringComparison.Ordinal);
-        Assert.True(bMd >= 0 && aCs > bMd);
-        Assert.Contains("````markdown", md);
-        Assert.Contains("````csharp", md);
-        Assert.Contains("# doc", md);
-        Assert.Contains("// code", md);
+        var segs = result.Value!;
+        Assert.Equal(2, segs.Count);
+        Assert.EndsWith("B.md", segs[0].RelativePathFromProjectRoot, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("Doc", segs[0].FileTypeCategory);
+        Assert.Equal("markdown", segs[0].FenceLanguage);
+        Assert.Contains("# doc", segs[0].TransformedText, StringComparison.Ordinal);
+
+        Assert.EndsWith("A.cs", segs[1].RelativePathFromProjectRoot, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("Code", segs[1].FileTypeCategory);
+        Assert.Equal("csharp", segs[1].FenceLanguage);
+        Assert.Contains("// code", segs[1].TransformedText, StringComparison.Ordinal);
     }
 
     [Theory]
     [InlineData("complete")]
     [InlineData("signatures-only")]
     [InlineData("public-only")]
-    [InlineData("dto-only")]
-    public void Each_view_builder_emits_path_header_and_csharp_fence_for_cs(string viewKey)
+    public void Each_view_single_cs_file_yields_one_code_segment(string viewKey)
     {
         using var sp = CreateServiceProvider();
         var sut = sp.GetServices<IMarkdownProjectViewBuilder>().Single(b => b.ViewKey == viewKey);
@@ -72,16 +75,44 @@ public class MarkdownProjectViewBuilderTests
         var csPath = ws.WriteFile("src/X.cs", "public class X { }");
         var project = new ProjectDefinition("P", Path.Combine(ws.Root, "src", "P.csproj"));
 
-        var result = sut.BuildMarkdown(project, [csPath]);
+        var result = sut.BuildContentSegments(project, [csPath]);
 
         Assert.True(result.IsSuccess, result.ErrorMessage);
-        var md = result.Value!;
-        Assert.Contains("### X.cs", md);
-        Assert.Contains("````csharp", md);
+        var segs = result.Value!;
+        Assert.Single(segs);
+        Assert.EndsWith("X.cs", segs[0].RelativePathFromProjectRoot, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("Code", segs[0].FileTypeCategory);
+        Assert.Equal("csharp", segs[0].FenceLanguage);
+        Assert.Contains("public class X", segs[0].TransformedText, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void Public_only_view_contains_public_method_name_but_not_private_method_name()
+    public void Dto_only_single_file_yields_one_segment_when_dto_shapes_exist()
+    {
+        using var sp = CreateServiceProvider();
+        var sut = sp.GetServices<IMarkdownProjectViewBuilder>().Single(b => b.ViewKey == "dto-only");
+
+        const string source = """
+            namespace N;
+
+            public record OrderDto(System.Guid Id, string Label);
+            """;
+
+        using var ws = new TempWorkspace();
+        var csPath = ws.WriteFile("src/Models.cs", source);
+        var project = new ProjectDefinition("P", Path.Combine(ws.Root, "src", "P.csproj"));
+
+        var result = sut.BuildContentSegments(project, [csPath]);
+
+        Assert.True(result.IsSuccess, result.ErrorMessage);
+        var segs = result.Value!;
+        Assert.Single(segs);
+        Assert.EndsWith("Models.cs", segs[0].RelativePathFromProjectRoot, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("OrderDto", segs[0].TransformedText, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Public_only_view_segment_contains_public_method_name_but_not_private_method_name()
     {
         using var sp = CreateServiceProvider();
         var sut = sp.GetServices<IMarkdownProjectViewBuilder>().Single(b => b.ViewKey == "public-only");
@@ -101,16 +132,16 @@ public class MarkdownProjectViewBuilderTests
         var csPath = ws.WriteFile("src/Api.cs", source);
         var project = new ProjectDefinition("P", Path.Combine(ws.Root, "src", "P.csproj"));
 
-        var result = sut.BuildMarkdown(project, [csPath]);
+        var result = sut.BuildContentSegments(project, [csPath]);
 
         Assert.True(result.IsSuccess, result.ErrorMessage);
-        var md = result.Value!;
-        Assert.Contains("VisibleToExportTests", md);
-        Assert.DoesNotContain("UniquePrivateMarkerForPublicViewTest", md);
+        var text = result.Value![0].TransformedText;
+        Assert.Contains("VisibleToExportTests", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("UniquePrivateMarkerForPublicViewTest", text, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void Non_cs_files_are_omitted_from_signatures_only_output()
+    public void Non_cs_files_are_omitted_from_signatures_only_segments()
     {
         using var sp = CreateServiceProvider();
         var sut = sp.GetServices<IMarkdownProjectViewBuilder>().Single(b => b.ViewKey == "signatures-only");
@@ -120,15 +151,17 @@ public class MarkdownProjectViewBuilderTests
         var csPath = ws.WriteFile("src/Z.cs", "public class Z { }");
         var project = new ProjectDefinition("P", Path.Combine(ws.Root, "src", "P.csproj"));
 
-        var result = sut.BuildMarkdown(project, [csPath, Path.Combine(ws.Root, "src/note.md")]);
+        var result = sut.BuildContentSegments(project, [csPath, Path.Combine(ws.Root, "src/note.md")]);
 
         Assert.True(result.IsSuccess, result.ErrorMessage);
-        Assert.DoesNotContain("note.md", result.Value!);
-        Assert.Contains("### Z.cs", result.Value!);
+        var segs = result.Value!;
+        Assert.Single(segs);
+        Assert.EndsWith("Z.cs", segs[0].RelativePathFromProjectRoot, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("note.md", segs[0].RelativePathFromProjectRoot, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
-    public void Builder_uses_longer_fence_when_cs_content_has_many_backticks()
+    public void Complete_segment_preserves_tricky_backtick_runs_for_composer_fencing()
     {
         using var sp = CreateServiceProvider();
         var sut = sp.GetServices<IMarkdownProjectViewBuilder>().Single(b => b.ViewKey == "complete");
@@ -138,11 +171,9 @@ public class MarkdownProjectViewBuilderTests
         var csPath = ws.WriteFile("src/Tick.cs", tricky);
         var project = new ProjectDefinition("P", Path.Combine(ws.Root, "src", "P.csproj"));
 
-        var result = sut.BuildMarkdown(project, [csPath]);
+        var result = sut.BuildContentSegments(project, [csPath]);
 
         Assert.True(result.IsSuccess, result.ErrorMessage);
-        Assert.Contains("``````csharp", result.Value!);
-        Assert.Contains("### Tick.cs", result.Value!);
-        Assert.Contains(tricky, result.Value!);
+        Assert.Equal(tricky, result.Value![0].TransformedText);
     }
 }

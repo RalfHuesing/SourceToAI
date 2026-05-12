@@ -24,9 +24,9 @@
 
 ## Selbstverifikation (nach Umsetzung)
 
-- [ ] Keine Layout-Duplikation zwischen `CompleteMarkdownProjectViewBuilder` und anderen konkreten Buildern (gemeinsame Basisklasse oder gemeinsamer Nachbearbeitungspfad).
-- [ ] `dotnet test` grün.
-- [ ] `00`-Matrix.
+- [x] Keine Layout-Duplikation zwischen `CompleteMarkdownProjectViewBuilder` und anderen konkreten Buildern (gemeinsame Basisklasse oder gemeinsamer Nachbearbeitungspfad).
+- [x] `dotnet test` grün.
+- [x] `00`-Matrix.
 
 ## Nächster Schritt
 

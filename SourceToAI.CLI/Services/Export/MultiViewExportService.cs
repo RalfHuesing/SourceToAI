@@ -1,10 +1,13 @@
 using System.Linq;
 using SourceToAI.CLI.Models;
+using SourceToAI.CLI.Services.Export.AiFeed;
 using SourceToAI.CLI.Services.Processing.Markdown;
 
 namespace SourceToAI.CLI.Services.Export;
 
-public sealed class MultiViewExportService(IEnumerable<IMarkdownProjectViewBuilder> viewBuilders) : IMultiViewExportService
+public sealed class MultiViewExportService(
+    IEnumerable<IMarkdownProjectViewBuilder> viewBuilders,
+    IAiFeedMarkdownComposer markdownComposer) : IMultiViewExportService
 {
     private static readonly string[] ViewKeyOrder = ["complete", "signatures-only", "public-only", "dto-only"];
 
@@ -12,6 +15,8 @@ public sealed class MultiViewExportService(IEnumerable<IMarkdownProjectViewBuild
         string outputRoot,
         string solutionDisplayName,
         string solutionRootPath,
+        Guid sessionId,
+        DateTimeOffset generated,
         IReadOnlyList<(ProjectDefinition Project, IReadOnlyList<string> AbsoluteFilePaths)> projectsWithFiles,
         IReadOnlyList<string>? solutionDocumentationAbsolutePaths)
     {
@@ -31,14 +36,21 @@ public sealed class MultiViewExportService(IEnumerable<IMarkdownProjectViewBuild
                     && solutionDocumentationAbsolutePaths is { Count: > 0 })
                 {
                     var docProject = new ProjectDefinition(".Docs", Path.Combine(solutionRootPath, "virtual.csproj"));
-                    var docResult = builder.BuildMarkdown(docProject, solutionDocumentationAbsolutePaths);
+                    var docResult = builder.BuildContentSegments(docProject, solutionDocumentationAbsolutePaths);
                     if (!docResult.IsSuccess)
                         return ExtractionResult<bool>.Failure(docResult.ErrorMessage!);
+
+                    var docBody = markdownComposer.Compose(
+                        solutionDisplayName,
+                        docProject.ProjectName,
+                        sessionId,
+                        generated,
+                        docResult.Value!);
 
                     var stem = MultiViewExportPaths.AllocateUniqueFileStem(
                         MultiViewExportPaths.BuildSanitizedExportFileStem(solutionDisplayName, docProject.ProjectName),
                         usedStems);
-                    WriteProjectViewFile(outputRoot, viewFolder, stem, docResult.Value!);
+                    WriteProjectViewFile(outputRoot, viewFolder, stem, docBody);
                 }
 
                 foreach (var (project, paths) in projectsWithFiles.OrderBy(
@@ -48,14 +60,21 @@ public sealed class MultiViewExportService(IEnumerable<IMarkdownProjectViewBuild
                     if (paths.Count == 0)
                         continue;
 
-                    var part = builder.BuildMarkdown(project, paths);
+                    var part = builder.BuildContentSegments(project, paths);
                     if (!part.IsSuccess)
                         return ExtractionResult<bool>.Failure(part.ErrorMessage!);
+
+                    var body = markdownComposer.Compose(
+                        solutionDisplayName,
+                        project.ProjectName,
+                        sessionId,
+                        generated,
+                        part.Value!);
 
                     var stem = MultiViewExportPaths.AllocateUniqueFileStem(
                         MultiViewExportPaths.BuildSanitizedExportFileStem(solutionDisplayName, project.ProjectName),
                         usedStems);
-                    WriteProjectViewFile(outputRoot, viewFolder, stem, part.Value!);
+                    WriteProjectViewFile(outputRoot, viewFolder, stem, body);
                 }
             }
 

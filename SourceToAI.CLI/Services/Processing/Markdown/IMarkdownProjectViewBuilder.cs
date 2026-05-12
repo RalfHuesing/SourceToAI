@@ -1,10 +1,11 @@
 using SourceToAI.CLI.Models;
+using SourceToAI.CLI.Services.Export.AiFeed;
 using SourceToAI.CLI.Services.Processing;
 
 namespace SourceToAI.CLI.Services.Processing.Markdown;
 
 /// <summary>
-/// Erzeugt eine Markdown-Datei für eine Code-View eines Projekts (Pfad-Sections + dynamische Fences).
+/// Erzeugt gefilterte Inhaltssegmente für eine Code-View eines Projekts; Layout (Frontmatter, MANIFEST, CONTENT) liefert <see cref="IAiFeedMarkdownComposer"/>.
 /// </summary>
 public interface IMarkdownProjectViewBuilder
 {
@@ -13,7 +14,7 @@ public interface IMarkdownProjectViewBuilder
     /// <summary>Relativ zum Export-Projektordner, z. B. <c>complete/full-source.md</c>.</summary>
     string RelativeOutputFile { get; }
 
-    ExtractionResult<string> BuildMarkdown(
+    ExtractionResult<IReadOnlyList<AiFeedContentSegment>> BuildContentSegments(
         ProjectDefinition project,
         IReadOnlyList<string> absoluteFilePathsInDisplayOrder);
 }

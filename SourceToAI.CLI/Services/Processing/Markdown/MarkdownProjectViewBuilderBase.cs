@@ -1,12 +1,12 @@
-using System.Text;
 using SourceToAI.CLI.Models;
+using SourceToAI.CLI.Services.Export.AiFeed;
 using SourceToAI.CLI.Services.IO;
 using SourceToAI.CLI.Services.Processing;
 
 namespace SourceToAI.CLI.Services.Processing.Markdown;
 
 /// <summary>
-/// Markdown-Aggregation pro Projekt und View-Key (Parse Once über <see cref="ICSharpDocumentLoader"/>).
+/// Inhaltssegmente pro Projekt und View-Key (Parse Once über <see cref="ICSharpDocumentLoader"/>); fertiges Markdown baut <see cref="IAiFeedMarkdownComposer"/>.
 /// </summary>
 /// <remarks>
 /// Rewriter-Reihenfolge je View (Task 06, Abgleich Konzept):
@@ -34,7 +34,7 @@ public abstract class MarkdownProjectViewBuilderBase(
 
     public string RelativeOutputFile => relativeOutputFile;
 
-    public ExtractionResult<string> BuildMarkdown(
+    public ExtractionResult<IReadOnlyList<AiFeedContentSegment>> BuildContentSegments(
         ProjectDefinition project,
         IReadOnlyList<string> absoluteFilePathsInDisplayOrder)
     {
@@ -47,14 +47,14 @@ public abstract class MarkdownProjectViewBuilderBase(
 
             var parseResult = csharpDocumentLoader.LoadParsedDocuments(project, sortedPaths);
             if (!parseResult.IsSuccess)
-                return ExtractionResult<string>.Failure(parseResult.ErrorMessage!);
+                return ExtractionResult<IReadOnlyList<AiFeedContentSegment>>.Failure(parseResult.ErrorMessage!);
 
             var parsedCSharpByFullPath = parseResult.Value!.ToDictionary(
                 d => Path.GetFullPath(d.AbsolutePath),
                 d => d,
                 StringComparer.OrdinalIgnoreCase);
 
-            var sb = new StringBuilder();
+            var segments = new List<AiFeedContentSegment>();
 
             foreach (var path in sortedPaths)
             {
@@ -70,9 +70,12 @@ public abstract class MarkdownProjectViewBuilderBase(
 
                     var gen = _viewGenerator.Generate(parsed.Root, ctx);
                     if (!gen.IsSuccess)
-                        return ExtractionResult<string>.Failure(gen.ErrorMessage ?? $"View {viewKey} für {relativePath} fehlgeschlagen.");
+                    {
+                        return ExtractionResult<IReadOnlyList<AiFeedContentSegment>>.Failure(
+                            gen.ErrorMessage ?? $"View {viewKey} für {relativePath} fehlgeschlagen.");
+                    }
 
-                    AppendSection(sb, relativePath, gen.Value!, "csharp");
+                    segments.Add(new AiFeedContentSegment(relativePath, "Code", "csharp", gen.Value!));
                     continue;
                 }
 
@@ -80,30 +83,16 @@ public abstract class MarkdownProjectViewBuilderBase(
                     continue;
 
                 var content = fileReader.ReadAllText(fullPath);
-                var (_, language) = fileTypeService.GetFileTypeAndLanguage(extension);
-                AppendSection(sb, relativePath, content, language);
+                var (typeCategory, language) = fileTypeService.GetFileTypeAndLanguage(extension);
+                segments.Add(new AiFeedContentSegment(relativePath, typeCategory, language, content));
             }
 
-            return ExtractionResult<string>.Success(sb.ToString());
+            return ExtractionResult<IReadOnlyList<AiFeedContentSegment>>.Success(segments);
         }
         catch (Exception ex)
         {
-            return ExtractionResult<string>.Failure(
+            return ExtractionResult<IReadOnlyList<AiFeedContentSegment>>.Failure(
                 $"Markdown-View {viewKey} für {project.ProjectName}: {ex.Message}");
         }
-    }
-
-    private static void AppendSection(StringBuilder sb, string relativePath, string content, string language)
-    {
-        sb.AppendLine("---");
-        sb.AppendLine($"### {relativePath}");
-
-        int requiredBackticks = MarkdownFenceUtility.CalculateRequiredBackticks(content);
-        string fence = new string('`', requiredBackticks);
-
-        sb.AppendLine($"{fence}{language}");
-        sb.AppendLine(content);
-        sb.AppendLine(fence);
-        sb.AppendLine();
     }
 }
