@@ -15,6 +15,8 @@ public class MarkdownFeedGenerator(
     {
         try
         {
+            csharpDocumentLoader.Clear();
+
             var sessionId = Guid.NewGuid().ToString();
             var timestamp = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss");
             var feedName = $"{solutionName} ({project.ProjectName})";

@@ -46,6 +46,39 @@ public class CSharpDocumentLoaderTests
     }
 
     [Fact]
+    public void LoadParsedDocuments_second_invocation_reuses_parse_cache_so_file_reader_reads_once()
+    {
+        using var ws = new TempWorkspace();
+        var path = ws.WriteFile("src/E.cs", "class E { }");
+        var project = new ProjectDefinition("App", Path.Combine(ws.Root, "src", "App.csproj"));
+        var counter = new CountingFileReader(new PhysicalFileReader());
+        var sut = new CSharpDocumentLoader(counter);
+
+        var r1 = sut.LoadParsedDocuments(project, [path]);
+        var r2 = sut.LoadParsedDocuments(project, [path]);
+
+        Assert.True(r1.IsSuccess && r2.IsSuccess, r1.ErrorMessage ?? r2.ErrorMessage);
+        Assert.Equal(1, counter.ReadCounts[Path.GetFullPath(path)]);
+        Assert.Same(r1.Value![0].SyntaxTree, r2.Value![0].SyntaxTree);
+    }
+
+    [Fact]
+    public void Clear_discards_parse_cache_so_subsequent_load_reads_again()
+    {
+        using var ws = new TempWorkspace();
+        var path = ws.WriteFile("src/F.cs", "class F { }");
+        var project = new ProjectDefinition("App", Path.Combine(ws.Root, "src", "App.csproj"));
+        var counter = new CountingFileReader(new PhysicalFileReader());
+        var sut = new CSharpDocumentLoader(counter);
+
+        sut.LoadParsedDocuments(project, [path]);
+        sut.Clear();
+        sut.LoadParsedDocuments(project, [path]);
+
+        Assert.Equal(2, counter.ReadCounts[Path.GetFullPath(path)]);
+    }
+
+    [Fact]
     public void LoadParsedDocuments_deduplicates_identical_path_so_file_reader_is_called_once()
     {
         using var ws = new TempWorkspace();

@@ -20,7 +20,7 @@ public class ConsoleOrchestratorTests
     {
         var services = new ServiceCollection();
         services.AddSingleton<IFileReader, PhysicalFileReader>();
-        services.AddTransient<ICSharpDocumentLoader, CSharpDocumentLoader>();
+        services.AddSingleton<ICSharpDocumentLoader, CSharpDocumentLoader>();
         services.AddTransient<IFileTypeService, FileTypeService>();
         services.AddViewGenerators();
         services.AddMarkdownProjectViewBuilders();

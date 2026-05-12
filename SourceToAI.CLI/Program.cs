@@ -41,7 +41,7 @@ services.AddTransient<IFileDiscoveryService, FileDiscoveryService>();
 
 // Processing Services registrieren
 services.AddSingleton<IFileReader, PhysicalFileReader>();
-services.AddTransient<ICSharpDocumentLoader, CSharpDocumentLoader>();
+services.AddSingleton<ICSharpDocumentLoader, CSharpDocumentLoader>();
 services.AddTransient<IFileTypeService, FileTypeService>();
 services.AddTransient<IHashService, HashService>();
 services.AddTransient<IFeedGenerator, MarkdownFeedGenerator>();
