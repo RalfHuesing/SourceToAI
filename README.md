@@ -17,6 +17,7 @@ Entwickelt speziell für Entwickler, die mit Visual Studio Solutions und Web-bas
 * **Intelligente Dokumentations-Erfassung (.Docs):** Bündelt automatisch deine Root `README.md` und eventuelle `.cursor/rules` in einem virtuellen Projekt, damit die KI sofort die Architektur- und Projektregeln versteht.
 * **Dynamic Fencing:** Verhindert Formatierungsfehler durch intelligente Backtick-Ermittlung bei Code-Blöcken (zählt die längste Sequenz von Backticks in einer Datei und fügt `n+1` Backticks für den Code-Block hinzu).
 * **Filter-Engine:** Ignoriert standardmäßig Build-Artefakte (`bin`, `obj`), Source-Control-Ordner (`.git`) und IDE-Metadaten (`.vs`, `.idea`).
+* **Fehlertolerantes Projekt-Scanning:** Fehlen Leserechte auf einen Unterordner oder schlägt die Dateiliste fehl, wird dieser Zweig übersprungen; übrige Dateien des Projekts werden weiter erfasst. Die CLI gibt dazu `[WARN]`-Zeilen pro Projekt aus (Teilmenge statt komplettem Ausfall).
 
 ---
 

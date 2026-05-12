@@ -116,6 +116,14 @@ public class ConsoleOrchestrator(
                 continue;
             }
 
+            if (filesResult.Warnings is { Count: > 0 } scanWarnings)
+            {
+                foreach (var line in scanWarnings)
+                {
+                    Console.WriteLine($"   -> [WARN] {project.ProjectName}: {line}");
+                }
+            }
+
             if (filesResult.Value!.Count == 0)
             {
                 Console.WriteLine($"   -> Übersprungen (Keine relevanten Dateien): {project.ProjectName}");

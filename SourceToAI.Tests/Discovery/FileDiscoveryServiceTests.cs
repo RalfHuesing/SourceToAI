@@ -1,3 +1,4 @@
+using Moq;
 using SourceToAI.CLI.Models;
 using SourceToAI.CLI.Services.Discovery;
 using SourceToAI.Tests.Support;
@@ -6,7 +7,8 @@ namespace SourceToAI.Tests.Discovery;
 
 public class FileDiscoveryServiceTests
 {
-    private readonly FileDiscoveryService _sut = new();
+    private static FileDiscoveryService CreateSut(IDirectoryEnumerator? enumerator = null) =>
+        new(enumerator ?? new DefaultDirectoryEnumerator());
 
     private static bool CollectionContainsPath(IReadOnlyList<string> paths, string expected) =>
         paths.Any(p => string.Equals(Path.GetFullPath(p), Path.GetFullPath(expected), StringComparison.OrdinalIgnoreCase));
@@ -20,7 +22,7 @@ public class FileDiscoveryServiceTests
         var workflow = ws.WriteFile(".github/workflows/ci.yml", "on: push");
         var settings = TestAppSettingsFactory.Default();
 
-        var result = _sut.FindSolutionDocs(ws.Root, settings);
+        var result = CreateSut().FindSolutionDocs(ws.Root, settings);
 
         Assert.True(result.IsSuccess, result.ErrorMessage);
         Assert.NotNull(result.Value);
@@ -39,7 +41,7 @@ public class FileDiscoveryServiceTests
         var project = new ProjectDefinition("App", Path.Combine(ws.Root, "App", "App.csproj"));
         var settings = TestAppSettingsFactory.Default();
 
-        var result = _sut.FindFilesForProject(project, settings);
+        var result = CreateSut().FindFilesForProject(project, settings);
 
         Assert.True(result.IsSuccess, result.ErrorMessage);
         Assert.NotNull(result.Value);
@@ -58,9 +60,40 @@ public class FileDiscoveryServiceTests
             Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "missing", "x.csproj"));
         var settings = TestAppSettingsFactory.Default();
 
-        var result = _sut.FindFilesForProject(project, settings);
+        var result = CreateSut().FindFilesForProject(project, settings);
 
         Assert.False(result.IsSuccess);
         Assert.NotNull(result.ErrorMessage);
+    }
+
+    [Fact]
+    public void FindFilesForProject_skips_subdirectory_when_enumeration_throws_but_keeps_other_files()
+    {
+        using var ws = new TempWorkspace();
+        var appRoot = Path.Combine(ws.Root, "App");
+        Directory.CreateDirectory(appRoot);
+        var csproj = Path.Combine(appRoot, "App.csproj");
+        File.WriteAllText(csproj, "<Project></Project>");
+        var goodCs = Path.Combine(appRoot, "Good.cs");
+        File.WriteAllText(goodCs, "// ok");
+        var blocked = Path.Combine(appRoot, "Blocked");
+        Directory.CreateDirectory(blocked);
+
+        var mock = new Mock<IDirectoryEnumerator>(MockBehavior.Strict);
+        mock.Setup(e => e.EnumerateFiles(appRoot)).Returns([goodCs]);
+        mock.Setup(e => e.EnumerateDirectories(appRoot)).Returns([blocked]);
+        mock.Setup(e => e.EnumerateFiles(blocked)).Throws<UnauthorizedAccessException>();
+
+        var project = new ProjectDefinition("App", csproj);
+        var settings = TestAppSettingsFactory.Default();
+
+        var result = CreateSut(mock.Object).FindFilesForProject(project, settings);
+
+        Assert.True(result.IsSuccess, result.ErrorMessage);
+        Assert.NotNull(result.Value);
+        Assert.True(CollectionContainsPath(result.Value!, goodCs));
+        Assert.NotNull(result.Warnings);
+        Assert.NotEmpty(result.Warnings);
+        mock.Verify(e => e.EnumerateDirectories(blocked), Times.Never);
     }
 }
