@@ -6,10 +6,6 @@ Zusätzlich konterkariert die fehlerhafte Implementierung des `Parse Once, Rewri
 
 **2. BLOCKER (Kritische Fehler)**
 
-* **Synchroner I/O & Parsing im Lock (Performance-Killer):**
-Im `CSharpDocumentLoader` wird innerhalb des `lock (_sync)`-Blocks die Methode `ReadAndParse(fullPath)` aufgerufen. Das bedeutet: Datei-I/O (`fileReader.ReadAllText`) und die teure Roslyn-Parsing-Operation (`CSharpSyntaxTree.ParseText`) blockieren den gesamten Cache für alle anderen Threads. Die auf maximal 5 Tasks begrenzte Parallelisierung im `MultiViewExportService` verpufft komplett, da alle View-Builder sequenziell auf das Parsen warten müssen.
-
-
 * **Doppeltes Parsen (Redundanz):**
 Die Methode `CSharpTransformedHasExportableSurface` in `AiFeedSegmentExportability` parst den bereits von den Rewritern umgeschriebenen und als String exportierten Code (`transformedText`) *erneut* in einen SyntaxTree, um zu prüfen, ob der Inhalt leer ist. Jede C#-Datei wird in den Views `signatures-only`, `public-only` und `dto-only` somit ein zweites Mal geparst.
 

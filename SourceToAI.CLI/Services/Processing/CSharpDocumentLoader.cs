@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using SourceToAI.CLI.Models;
@@ -7,14 +8,9 @@ namespace SourceToAI.CLI.Services.Processing;
 
 public sealed class CSharpDocumentLoader : ICSharpDocumentLoader
 {
-    private readonly Dictionary<string, CachedCSharpParse> _parseCache = new(StringComparer.OrdinalIgnoreCase);
-    private readonly object _sync = new();
+    private readonly ConcurrentDictionary<string, Lazy<CachedCSharpParse>> _parseCache = new(StringComparer.OrdinalIgnoreCase);
 
-    public void Clear()
-    {
-        lock (_sync)
-            _parseCache.Clear();
-    }
+    public void Clear() => _parseCache.Clear();
 
     public ExtractionResult<IReadOnlyList<ParsedCSharpDocument>> LoadParsedDocuments(
         ProjectDefinition project,
@@ -34,19 +30,13 @@ public sealed class CSharpDocumentLoader : ICSharpDocumentLoader
                 if (!seenInThisInvocation.Add(fullPath))
                     continue;
 
-                CachedCSharpParse cached;
-                lock (_sync)
-                {
-                    if (_parseCache.TryGetValue(fullPath, out var existing))
-                    {
-                        cached = existing;
-                    }
-                    else
-                    {
-                        cached = ReadAndParse(fullPath);
-                        _parseCache[fullPath] = cached;
-                    }
-                }
+                var lazyParse = _parseCache.GetOrAdd(
+                    fullPath,
+                    key => new Lazy<CachedCSharpParse>(
+                        () => ReadAndParse(key),
+                        LazyThreadSafetyMode.ExecutionAndPublication));
+
+                var cached = lazyParse.Value;
 
                 var relativePath = Path.GetRelativePath(project.RootDirectory, fullPath);
                 documents.Add(new ParsedCSharpDocument(
