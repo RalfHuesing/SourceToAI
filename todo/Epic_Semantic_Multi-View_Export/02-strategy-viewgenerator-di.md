@@ -21,10 +21,10 @@
 
 ## Selbstverifikation
 
-- [ ] Kein Parser-/File-I/O im Interface — nur Transformation/Building.
-- [ ] `00`-Matrix: Zeile „Strategy“ abgehakt mit Verweis auf Interface-Datei.
-- [ ] Projektrichtlinien: Interface + DI erfüllt.
-- [ ] `dotnet test` grün.
+- [x] Kein Parser-/File-I/O im Interface — nur Transformation/Building.
+- [x] `00`-Matrix: Zeile „Strategy“ abgehakt mit Verweis auf Interface-Datei.
+- [x] Projektrichtlinien: Interface + DI erfüllt.
+- [x] `dotnet test` grün.
 
 ## Nächster Schritt
 

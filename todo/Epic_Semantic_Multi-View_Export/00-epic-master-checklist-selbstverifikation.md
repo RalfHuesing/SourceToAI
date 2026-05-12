@@ -11,7 +11,7 @@ Wenn eine nummerierte Task (`01-…`–`09-…`) **inhaltlich erledigt** ist: de
 | Anforderung aus `konzept.md` | Primär umgesetzt in |
 |------------------------------|----------------------|
 | Parse Once, Rewrite Multiple | `01` (`ICSharpDocumentLoader`, `ParsedCSharpDocument`, `CSharpDocumentLoader`), `06` |
-| `IViewGenerator` / `ICodeProcessor` + Strategy | `02` |
+| `IViewGenerator` / `ICodeProcessor` + Strategy | [x] `02` — `SourceToAI.CLI/Services/Processing/IViewGenerator.cs` |
 | `SignaturesRewriter` (Bodies `;`, expression-bodied) | `03` |
 | `VisibilityRewriter` (kein private/internal im public-export) | `04` |
 | `DtoFilter` (records, enums, property-only-Klassen) | `05` |
