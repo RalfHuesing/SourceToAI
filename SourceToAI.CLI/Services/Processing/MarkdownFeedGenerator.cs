@@ -1,6 +1,5 @@
 ﻿using SourceToAI.CLI.Models;
 using SourceToAI.CLI.Services.Export.AiFeed;
-using SourceToAI.CLI.Services.IO;
 using SourceToAI.CLI.Services.Processing.Markdown;
 using System.Text;
 
@@ -8,8 +7,6 @@ namespace SourceToAI.CLI.Services.Processing;
 
 public class MarkdownFeedGenerator(
     IFileTypeService fileTypeService,
-    IHashService hashService,
-    IFileReader fileReader,
     ICSharpDocumentLoader csharpDocumentLoader) : IFeedGenerator
 {
     public ExtractionResult<string> GenerateFeed(string solutionName, ProjectDefinition project, List<string> filePaths)
@@ -39,7 +36,7 @@ public class MarkdownFeedGenerator(
                 d => d,
                 StringComparer.OrdinalIgnoreCase);
 
-            // 1. Dateien einlesen und analysieren (.cs über Parse-Pipeline, übrige Extensions einmalig via IFileReader)
+            // 1. Dateien einlesen und analysieren (.cs über Parse-Pipeline, übrige Extensions einmalig direkt vom Dateisystem)
             int idCounter = 1;
             foreach (var path in sortedPaths)
             {
@@ -53,7 +50,7 @@ public class MarkdownFeedGenerator(
                 }
                 else
                 {
-                    content = fileReader.ReadAllText(fullPath);
+                    content = File.ReadAllText(fullPath);
                     size = new FileInfo(fullPath).Length;
                 }
 
@@ -61,7 +58,7 @@ public class MarkdownFeedGenerator(
                 var relativePath = Path.GetRelativePath(project.RootDirectory, fullPath);
 
                 var (type, language) = fileTypeService.GetFileTypeAndLanguage(extension);
-                var hash = hashService.ComputeShortHash(content);
+                var hash = HashUtility.ComputeShortHash(content);
 
                 fileContents.Add(new FileContent(idCounter, relativePath, content, type, language, hash, size));
                 manifests.Add(new FileManifestEntry(idCounter, type, hash, size, relativePath));

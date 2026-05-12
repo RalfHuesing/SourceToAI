@@ -8,7 +8,6 @@ using SourceToAI.CLI.Services.Discovery;
 using SourceToAI.CLI.Services.Export;
 using SourceToAI.CLI.Services.Export.AiFeed;
 using SourceToAI.CLI.Services.Integration;
-using SourceToAI.CLI.Services.IO;
 using SourceToAI.CLI.Services.Processing;
 using SourceToAI.Tests.Support;
 
@@ -19,7 +18,6 @@ public class ConsoleOrchestratorTests
     private static ServiceProvider CreateMultiViewServiceProvider()
     {
         var services = new ServiceCollection();
-        services.AddSingleton<IFileReader, PhysicalFileReader>();
         services.AddSingleton<ICSharpDocumentLoader, CSharpDocumentLoader>();
         services.AddTransient<IFileTypeService, FileTypeService>();
         services.AddViewGenerators();

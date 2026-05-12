@@ -1,5 +1,4 @@
 using SourceToAI.CLI.Models;
-using SourceToAI.CLI.Services.IO;
 using SourceToAI.CLI.Services.Processing;
 using SourceToAI.Tests.Support;
 
@@ -9,12 +8,9 @@ public class MarkdownFeedGeneratorTests
 {
     private static MarkdownFeedGenerator CreateSut()
     {
-        var fileReader = new PhysicalFileReader();
         return new MarkdownFeedGenerator(
             new FileTypeService(),
-            new HashService(),
-            fileReader,
-            new CSharpDocumentLoader(fileReader));
+            new CSharpDocumentLoader());
     }
 
     private readonly MarkdownFeedGenerator _sut = CreateSut();
