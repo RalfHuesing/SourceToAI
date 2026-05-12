@@ -17,7 +17,7 @@ Wenn eine nummerierte Task (`01-…`–`07-…`) **inhaltlich erledigt** ist: de
 | [x] **YAML-Escaping** nicht doppelt pflegen (`EscapeYamlDoubleQuoted` u. Ä.) | `04` — kleine zentrale Hilfs-API, Aufrufer anpassen |
 | [ ] **YAML-Builder-Struktur** (großer Umbau) | **Nicht** Teil dieses Epics (YAGNI laut `konzept.md`) |
 | [x] **Tests** (Unit + Integration, Regression Export-Verhalten) | `01`, `02`, `04` je Task; `06` Querschnitt |
-| [ ] **Nutzerhinweise** (z. B. teilweise erfasste Dateien bei gesperrten Ordnern) | `07` — `README.md` / Konsolenausgabe nur falls Verhalten sichtbar ändert |
+| [x] **Nutzerhinweise** (z. B. teilweise erfasste Dateien bei gesperrten Ordnern) | `07` — `README.md` ergänzt (Scanning + `[WARN]` wie `ConsoleOrchestrator`; Parallelität/stabile Export-Reihenfolge); Konsolenausgabe unverändert dokumentiert |
 
 ## Architektur-Regeln (nicht verhandelbar)
 
@@ -28,7 +28,7 @@ Wenn eine nummerierte Task (`01-…`–`07-…`) **inhaltlich erledigt** ist: de
 
 ## Finale Epic-Selbstverifikation (Agent / Mensch)
 
-- [ ] Matrix: jede Zeile mit umgesetztem Task verknüpft / abgehakt.
+- [x] Matrix: jede Zeile mit umgesetztem Task verknüpft / abgehakt (Zeile „YAML-Builder-Struktur“ bewusst ausgenommen, YAGNI laut Matrix).
 - [x] Nachweis **Parse Once:** z. B. Test mit zählerndem `IFileReader` oder Debugger-Breakpoint-Strategie dokumentiert in `06` — pro physischem `.cs`-Pfad maximal **ein** Read pro Projekt-Lauf über alle Views.
 - [x] `FileDiscoveryService`: gesperrter Unterordner führt nicht zum vollständigen Wegfall des Projekts (siehe `02`).
 - [x] `dotnet test` grün; bestehende Integrationstests (`MultiViewExport…`, `AiFeedProjectGranularity…`) unverändert grün oder bewusst erweitert (`06`).
@@ -42,4 +42,4 @@ Wenn eine nummerierte Task (`01-…`–`07-…`) **inhaltlich erledigt** ist: de
 
 ---
 
-**Status:** Epic offen — mit Task `01` oder `02` starten (keine harte Reihenfolge; `04` kann parallel zu `02`).
+**Status:** Epic abgeschlossen (Tasks `01`–`07` inkl. Nutzerhinweise; YAML-Builder-Umbau nicht Bestandteil dieses Epics).
