@@ -17,9 +17,9 @@ Wenn eine nummerierte Task (`01-…`–`09-…`) **inhaltlich erledigt** ist: de
 | `DtoFilter` (records, enums, property-only-Klassen) | [x] `05` — `SourceToAI.CLI/Services/Processing/Rewriters/DtoRewriter.cs` |
 | View-Builder + Markdown (`csharp`-Fences, Pfade) | [x] `06` — `SourceToAI.CLI/Services/Processing/Markdown/` |
 | [x] `dependency-graph.md` (csproj) | `07` — `SourceToAI.CLI/Services/Export/CsprojDependencyGraphMarkdownGenerator.cs`, `ConsoleOrchestrator` |
-| Orchestrierung, Ordner, `readme.md` | `08` |
-| Output-Struktur exakt wie Konzept | `01`, `08` |
-| `output` bei Start sauber / neu | `01`, `08` |
+| Orchestrierung, Ordner, `readme.md` | [x] `08` — `ConsoleOrchestrator`, `MultiViewExportService`, `MultiViewReadmeMarkdownGenerator` |
+| Output-Struktur exakt wie Konzept | [x] `01`, `08` |
+| `output` bei Start sauber / neu | [x] `01`, `08` |
 | Tests überall | jeweilige Steps + `09` |
 | Performance: Datei nur 1× lesen (für `.cs`) | `01`, Verifikation `09` |
 
@@ -41,7 +41,7 @@ Nach einem Lauf (pro Solution/Export-Root wie in der Architektur festgelegt):
     └── models.md
 ```
 
-**Hinweis zur Integration:** Aktuell legt `ConsoleOrchestrator` unter `{exportPath}/{solutionName}` flache `.md`-Dateien an. Die Tasks müssen klären, ob die neue Struktur **diesen Ordner** ersetzt, **unterordnet** wird, oder ob der alte Feed parallel bleibt — aber **alle Pfade und Dateinamen** aus dem Konzept müssen irgendwo erreichbar sein (einheitlich dokumentieren in `08`).
+**Hinweis zur Integration (Stand Task 08):** Unter `{exportPath}/{solutionName}` liegt nur noch der **Konzept-Baum** (`readme.md`, `dependency-graph.md`, `complete/`, …). Flache datierte Projekt-Feeds entfallen; `complete/full-source.md` übernimmt den 1:1-Inhalt. `IFeedGenerator`/`MarkdownFeedGenerator` bleiben für Tests und künftige Nutzung registriert, der Orchestrator ruft sie nicht mehr auf.
 
 ## Architektur-Regeln (nicht verhandelbar)
 
@@ -55,15 +55,15 @@ Nach einem Lauf (pro Solution/Export-Root wie in der Architektur festgelegt):
 **Vor Merge / vor „Epic fertig“:**
 
 - [ ] Matrix oben: jede Zeile mit PR-/Commit-Referenz oder Dateipfad belegt.
-- [ ] Manuell oder per Test: Ordnerbaum wie oben vorhanden.
+- [x] Manuell oder per Test: Ordnerbaum wie oben vorhanden.
 - [ ] `signatures-only/signatures.md`: Stichprobe mit Roslyn oder `dotnet` — syntaktisch valide C#-Schnittstellen (keine halben Bodies).
 - [ ] `public-only/public-api.md`: Stichprobe — **kein** Body von klar `private`/`internal` Methoden; grep nach bekanntem privaten Test-Member negativ.
 - [ ] `dto-only/models.md`: enthält keine „vollen“ Service-Klassen mit Logik-Methoden (laut Definition in `05`).
 - [x] `dependency-graph.md`: alle `.csproj` des Scans mit Package/Project-Referenzen abgedeckt (oder dokumentierte Ausnahme).
-- [ ] `readme.md`: Projektname (aus Root), Zeitstempel, **Erklärung jedes Unterordners** für Prompt-Use-Cases.
+- [x] `readme.md`: Projektname (aus Root), Zeitstempel, **Erklärung jedes Unterordners** für Prompt-Use-Cases.
 - [ ] `complete/full-source.md`: entspricht bisherigem „alles 1:1“-Export (inkl. Nicht-`.cs`, sofern im Konzept gefordert).
 - [ ] Alle Unit-/Integrationstests grün (`dotnet test`).
-- [ ] `IPostExportTask`-Hooks: Verhalten unverändert oder bewusst angepasst und getestet.
+- [x] `IPostExportTask`-Hooks: Verhalten unverändert oder bewusst angepasst und getestet.
 
 ## Bekannte Fallstricke (bewusst gegenlesen)
 

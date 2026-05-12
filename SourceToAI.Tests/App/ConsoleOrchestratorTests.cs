@@ -1,10 +1,13 @@
+using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using SourceToAI.CLI.App;
 using SourceToAI.CLI.Configuration;
+using SourceToAI.CLI.Infrastructure;
 using SourceToAI.CLI.Models;
 using SourceToAI.CLI.Services.Discovery;
 using SourceToAI.CLI.Services.Export;
 using SourceToAI.CLI.Services.Integration;
+using SourceToAI.CLI.Services.IO;
 using SourceToAI.CLI.Services.Processing;
 using SourceToAI.Tests.Support;
 
@@ -12,6 +15,19 @@ namespace SourceToAI.Tests.App;
 
 public class ConsoleOrchestratorTests
 {
+    private static ServiceProvider CreateMultiViewServiceProvider()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<IFileReader, PhysicalFileReader>();
+        services.AddTransient<ICSharpDocumentLoader, CSharpDocumentLoader>();
+        services.AddTransient<IFileTypeService, FileTypeService>();
+        services.AddViewGenerators();
+        services.AddMarkdownProjectViewBuilders();
+        services.AddTransient<IMultiViewExportService, MultiViewExportService>();
+        services.AddSingleton<IMultiViewReadmeMarkdownGenerator, MultiViewReadmeMarkdownGenerator>();
+        return services.BuildServiceProvider();
+    }
+
     [Fact]
     public async Task RunAsync_early_exit_when_solution_name_fails_does_not_create_output()
     {
@@ -23,14 +39,16 @@ public class ConsoleOrchestratorTests
             .Returns(ExtractionResult<string>.Failure("no solution"));
 
         var fileDiscovery = new Mock<IFileDiscoveryService>(MockBehavior.Strict);
-        var feedGenerator = new Mock<IFeedGenerator>(MockBehavior.Strict);
+        var multiView = new Mock<IMultiViewExportService>(MockBehavior.Strict);
+        var readme = new Mock<IMultiViewReadmeMarkdownGenerator>(MockBehavior.Strict);
         var post = new Mock<IPostExportTask>(MockBehavior.Strict);
 
         var sut = new ConsoleOrchestrator(
             solutionDiscovery.Object,
             fileDiscovery.Object,
-            feedGenerator.Object,
             new CsprojDependencyGraphMarkdownGenerator(),
+            multiView.Object,
+            readme.Object,
             TestAppSettingsFactory.Default(),
             [post.Object]);
 
@@ -54,14 +72,16 @@ public class ConsoleOrchestratorTests
             .Returns(ExtractionResult<List<ProjectDefinition>>.Failure("no projects"));
 
         var fileDiscovery = new Mock<IFileDiscoveryService>(MockBehavior.Strict);
-        var feedGenerator = new Mock<IFeedGenerator>(MockBehavior.Strict);
+        var multiView = new Mock<IMultiViewExportService>(MockBehavior.Strict);
+        var readme = new Mock<IMultiViewReadmeMarkdownGenerator>(MockBehavior.Strict);
         var post = new Mock<IPostExportTask>(MockBehavior.Strict);
 
         var sut = new ConsoleOrchestrator(
             solutionDiscovery.Object,
             fileDiscovery.Object,
-            feedGenerator.Object,
             new CsprojDependencyGraphMarkdownGenerator(),
+            multiView.Object,
+            readme.Object,
             TestAppSettingsFactory.Default(),
             [post.Object]);
 
@@ -72,10 +92,12 @@ public class ConsoleOrchestratorTests
     }
 
     [Fact]
-    public async Task RunAsync_writes_project_markdown_dependency_graph_and_runs_post_export_tasks()
+    public async Task RunAsync_writes_multi_view_tree_readme_dependency_graph_and_post_export_tasks()
     {
         using var export = new TempWorkspace();
         using var solution = new TempWorkspace();
+        using var multiViewSp = CreateMultiViewServiceProvider();
+
         var proj2Path = Path.Combine(solution.Root, "Proj2", "Proj2.csproj");
         Directory.CreateDirectory(Path.GetDirectoryName(proj2Path)!);
         await File.WriteAllTextAsync(
@@ -98,6 +120,9 @@ public class ConsoleOrchestratorTests
             """,
             TestContext.Current.CancellationToken);
 
+        var csPath = Path.Combine(solution.Root, "Proj1", "Sample.cs");
+        await File.WriteAllTextAsync(csPath, "public class Sample { }", TestContext.Current.CancellationToken);
+
         var project1 = new ProjectDefinition("Proj1", projPath);
         var project2 = new ProjectDefinition("Proj2", proj2Path);
         var solutionDiscovery = new Mock<ISolutionDiscoveryService>();
@@ -114,15 +139,10 @@ public class ConsoleOrchestratorTests
             .Returns(ExtractionResult<List<string>>.Success([]));
         fileDiscovery
             .Setup(f => f.FindFilesForProject(project1, It.IsAny<AppSettings>()))
-            .Returns(ExtractionResult<List<string>>.Success([Path.Combine(solution.Root, "Proj1", "a.cs")]));
+            .Returns(ExtractionResult<List<string>>.Success([csPath]));
         fileDiscovery
             .Setup(f => f.FindFilesForProject(project2, It.IsAny<AppSettings>()))
             .Returns(ExtractionResult<List<string>>.Success([]));
-
-        var feedGenerator = new Mock<IFeedGenerator>();
-        feedGenerator
-            .Setup(g => g.GenerateFeed("MySol", project1, It.IsAny<List<string>>()))
-            .Returns(ExtractionResult<string>.Success("# feed"));
 
         var post = new Mock<IPostExportTask>();
         post.Setup(p => p.ExecuteAsync(It.IsAny<string>(), It.IsAny<string>())).Returns(Task.CompletedTask);
@@ -130,19 +150,25 @@ public class ConsoleOrchestratorTests
         var sut = new ConsoleOrchestrator(
             solutionDiscovery.Object,
             fileDiscovery.Object,
-            feedGenerator.Object,
             new CsprojDependencyGraphMarkdownGenerator(),
+            multiViewSp.GetRequiredService<IMultiViewExportService>(),
+            multiViewSp.GetRequiredService<IMultiViewReadmeMarkdownGenerator>(),
             TestAppSettingsFactory.Default(),
             [post.Object]);
 
         await sut.RunAsync(solution.Root, export.Root);
 
-        var suffix = DateTime.Now.ToString("yyyyMMdd");
-        var expectedFile = Path.Combine(export.Root, "MySol", $"MySol.Proj1-{suffix}.md");
-        Assert.True(File.Exists(expectedFile));
-        Assert.Equal("# feed", await File.ReadAllTextAsync(expectedFile, TestContext.Current.CancellationToken));
+        var outRoot = Path.Combine(export.Root, "MySol");
+        Assert.True(Directory.Exists(outRoot));
 
-        var depGraphPath = Path.Combine(export.Root, "MySol", "multi-view", "dependency-graph.md");
+        var readmePath = Path.Combine(outRoot, "readme.md");
+        Assert.True(File.Exists(readmePath));
+        var readmeText = await File.ReadAllTextAsync(readmePath, TestContext.Current.CancellationToken);
+        var folderName = new DirectoryInfo(Path.TrimEndingDirectorySeparator(solution.Root)).Name;
+        Assert.Contains(folderName, readmeText, StringComparison.Ordinal);
+        Assert.Matches(@"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z", readmeText);
+
+        var depGraphPath = Path.Combine(outRoot, "dependency-graph.md");
         Assert.True(File.Exists(depGraphPath));
         var depGraph = await File.ReadAllTextAsync(depGraphPath, TestContext.Current.CancellationToken);
         Assert.Contains("## Proj1", depGraph, StringComparison.Ordinal);
@@ -151,6 +177,15 @@ public class ConsoleOrchestratorTests
         Assert.Contains("1.0.0", depGraph, StringComparison.Ordinal);
         Assert.Contains("Contoso.Tools", depGraph, StringComparison.Ordinal);
         Assert.Contains("Proj2/Proj2.csproj", depGraph, StringComparison.Ordinal);
+
+        Assert.True(File.Exists(Path.Combine(outRoot, "complete", "full-source.md")));
+        Assert.True(File.Exists(Path.Combine(outRoot, "signatures-only", "signatures.md")));
+        Assert.True(File.Exists(Path.Combine(outRoot, "public-only", "public-api.md")));
+        Assert.True(File.Exists(Path.Combine(outRoot, "dto-only", "models.md")));
+
+        var fullSource = await File.ReadAllTextAsync(Path.Combine(outRoot, "complete", "full-source.md"), TestContext.Current.CancellationToken);
+        Assert.Contains("## Projekt: Proj1", fullSource, StringComparison.Ordinal);
+        Assert.Contains("public class Sample", fullSource, StringComparison.Ordinal);
 
         post.Verify(
             p => p.ExecuteAsync("MySol", Path.Combine(export.Root, "MySol")),

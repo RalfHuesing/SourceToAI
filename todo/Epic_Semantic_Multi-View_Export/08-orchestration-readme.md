@@ -24,10 +24,10 @@
 
 ## Selbstverifikation
 
-- [ ] Vollständiger manueller Lauf: Ordnerbaum wie in `00` (Screenshot oder Tree-Listing in PR-Beschreibung).
-- [ ] `IPostExportTask`: weiterhin mit `outputDir` aufgerufen — neuer Unterbaum stört nicht oder wird in Post-Tasks dokumentiert.
-- [ ] `00`-Finale Checkliste bis auf Integrationstests abgehakt.
-- [ ] `dotnet test` grün.
+- [x] Vollständiger manueller Lauf: Ordnerbaum wie in `00` (Screenshot oder Tree-Listing in PR-Beschreibung).
+- [x] `IPostExportTask`: weiterhin mit `outputDir` aufgerufen — neuer Unterbaum stört nicht oder wird in Post-Tasks dokumentiert.
+- [x] `00`-Finale Checkliste bis auf Integrationstests abgehakt.
+- [x] `dotnet test` grün.
 
 ## Nächster Schritt
 
