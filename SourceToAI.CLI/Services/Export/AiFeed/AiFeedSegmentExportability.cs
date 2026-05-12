@@ -1,7 +1,3 @@
-using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
-
 namespace SourceToAI.CLI.Services.Export.AiFeed;
 
 /// <summary>
@@ -15,10 +11,11 @@ namespace SourceToAI.CLI.Services.Export.AiFeed;
 /// (<see cref="string.IsNullOrWhiteSpace"/>) → kein Manifest, kein CONTENT-Block.</description></item>
 /// <item>
 /// <description>Zusätzlich bei <see cref="AiFeedTransformedContentKind.RewrittenViewOutput"/> und
-/// <see cref="AiFeedContentSegment.FenceLanguage"/> <c>csharp</c>: transformierter Text wird geparst; enthält die
+/// <see cref="AiFeedContentSegment.FenceLanguage"/> <c>csharp</c>: es wird
+/// <see cref="AiFeedContentSegment.CSharpRewrittenHasExportableSurface"/> ausgewertet (vom View-Generator auf dem
+/// umgeschriebenen AST gesetzt, ohne erneutes Parsen). Fehlt das Flag, wird eine Ausnahme geworfen. Enthält die
 /// Oberfläche keine Typen/Enums/Delegates und keine Top-Level-Statements, entfällt das Segment (z. B. leere
-/// Namespace-Hülle nach <c>public-only</c>). Keine neue Eingangs-Filterheuristik — nur Auswertung des View-Ergebnisses.
-/// Bei Parser-Fehlern wird aus Vorsicht exportiert.</description></item>
+/// Namespace-Hülle nach <c>public-only</c>).</description></item>
 /// <item>
 /// <description><see cref="AiFeedTransformedContentKind.OriginalAsTransformed"/> (complete-Ansicht): keine
 /// syntaktische „Hüllen“-Prüfung, damit z. B. Kommentar-only-<c>.cs</c>-Dateien erhalten bleiben.</description></item>
@@ -40,7 +37,14 @@ public static class AiFeedSegmentExportability
         if (!segment.FenceLanguage.Equals("csharp", StringComparison.OrdinalIgnoreCase))
             return true;
 
-        return CSharpTransformedHasExportableSurface(segment.TransformedText);
+        if (segment.CSharpRewrittenHasExportableSurface is not bool surface)
+        {
+            throw new InvalidOperationException(
+                $"C#-Segment ohne gesetztes {nameof(AiFeedContentSegment.CSharpRewrittenHasExportableSurface)} bei " +
+                $"{nameof(AiFeedTransformedContentKind.RewrittenViewOutput)}: {segment.RelativePathFromProjectRoot}");
+        }
+
+        return surface;
     }
 
     /// <summary>Materialisiert nur exportierbare Segmente (Reihenfolge unverändert, IDs danach lückenlos 1…k).</summary>
@@ -57,23 +61,5 @@ public static class AiFeedSegmentExportability
         }
 
         return list;
-    }
-
-    private static bool CSharpTransformedHasExportableSurface(string transformedText)
-    {
-        var tree = CSharpSyntaxTree.ParseText(
-            transformedText,
-            CSharpParseOptions.Default,
-            path: "view-segment.cs");
-
-        if (tree.GetDiagnostics().Any(static d => d.Severity == DiagnosticSeverity.Error))
-            return true;
-
-        var root = tree.GetCompilationUnitRoot();
-        return root.DescendantNodes().Any(static n =>
-            n is BaseTypeDeclarationSyntax
-                or EnumDeclarationSyntax
-                or DelegateDeclarationSyntax
-                or GlobalStatementSyntax);
     }
 }

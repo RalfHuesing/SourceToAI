@@ -40,7 +40,11 @@ public class ViewGeneratorDiTests
             var result = g.Generate(root, context);
             Assert.True(result.IsSuccess);
             Assert.NotNull(result.Value);
-            Assert.True(string.IsNullOrWhiteSpace(result.Value), $"ViewKey={g.ViewKey}");
+            Assert.True(string.IsNullOrWhiteSpace(result.Value.OutputText), $"ViewKey={g.ViewKey}");
+            if (g is CompleteViewGenerator)
+                Assert.True(result.Value.HasExportableSurface);
+            else
+                Assert.False(result.Value.HasExportableSurface);
         }
     }
 
@@ -52,6 +56,6 @@ public class ViewGeneratorDiTests
         var sut = new CompleteViewGenerator();
         var r = sut.Generate(root, ctx);
         Assert.True(r.IsSuccess);
-        Assert.Equal("// preserved\n", r.Value);
+        Assert.Equal("// preserved\n", r.Value!.OutputText);
     }
 }

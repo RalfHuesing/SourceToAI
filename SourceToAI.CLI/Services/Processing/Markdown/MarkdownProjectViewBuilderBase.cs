@@ -71,7 +71,12 @@ public abstract class MarkdownProjectViewBuilderBase(
                             gen.ErrorMessage ?? $"View {viewKey} für {relativePath} fehlgeschlagen.");
                     }
 
-                    segments.Add(new AiFeedContentSegment(relativePath, "Code", "csharp", gen.Value!));
+                    segments.Add(new AiFeedContentSegment(
+                        relativePath,
+                        "Code",
+                        "csharp",
+                        gen.Value!.OutputText,
+                        gen.Value.HasExportableSurface));
                     continue;
                 }
 

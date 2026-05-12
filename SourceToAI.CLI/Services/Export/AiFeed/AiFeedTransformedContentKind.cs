@@ -13,7 +13,8 @@ public enum AiFeedTransformedContentKind
     OriginalAsTransformed,
 
     /// <summary>
-    /// View-Ausgabe nach Roslyn-Rewritern: zusätzlich C# ohne exportierbare Syntax (z. B. nur <c>namespace N;</c>-Hülle) entfernen.
+    /// View-Ausgabe nach Roslyn-Rewritern: zusätzlich C# ohne exportierbare Syntax (z. B. nur <c>namespace N;</c>-Hülle)
+    /// entfernen — gestützt auf <see cref="AiFeedContentSegment.CSharpRewrittenHasExportableSurface"/> (kein erneutes Parsen).
     /// </summary>
     RewrittenViewOutput,
 }
