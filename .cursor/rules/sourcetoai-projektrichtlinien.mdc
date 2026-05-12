@@ -12,23 +12,11 @@ alwaysApply: true
 - **Interfaces & DI:** Alle neuen Services müssen über Interfaces abstrahiert und im Container (`Program.cs`) registriert werden, um Testbarkeit zu gewährleisten.
 - **Parallele I/O-Operationen:** Nutze gedrosselten Parallelismus via `SemaphoreSlim` (z. B. auf 5 begrenzt) für externe Netzwerk- oder I/O-intensive Massenoperationen, um Rate Limits zu respektieren. Sammle Fehler in einer `ConcurrentQueue<Exception>`, statt sie unkontrolliert hochbubbeln zu lassen, und werfe am Ende bei Bedarf eine `AggregateException`.
 
-## Commit-Text nach Änderungen
+## Quellcode-Dateigröße (hart)
 
-Wenn du in dieser Session **Dateien geschrieben oder geändert hast** (Code, Konfiguration, Dokumentation – egal welcher Art), soll am **Ende deiner Antwort** ein **Commit-Text-Vorschlag** stehen, den der Nutzer manuell in den Commit übernehmen kann.
+- **≥200 Zeilen:** Datei wird langsam zu groß → Refactoring **empfohlen** (Aufteilen, Extrahieren, klarere Zuständigkeiten), bevor weiter gewuchert wird.
+- **≥500 Zeilen:** **Blocker** – keine sinnvolle Weiterarbeit an dieser Monolith-Datei ohne vorheriges, sinnvolles Refactoring (Zerlegung in kleinere Typen/Dateien, klare Grenzen).
 
-- **Sprache:** Deutsch (Betreff und optionaler Body).
-- **Stil:** [Conventional Commits](https://www.conventionalcommits.org/) – z. B. `feat:`, `fix:`, `docs:`, `refactor:`, `chore:`, `test:`; bei Bedarf Scope in Klammern, z. B. `feat(cli): …`.
-- **Betreff:** kurz, imperativ/ohne vollständigen Satz, max. ca. 72 Zeichen; beschreibt prägnant **was** geändert wurde und **warum**, falls nötig, im Body.
-- **Body (optional):** Stichpunkte oder kurze Sätze mit Kontext, Breaking Changes oder Hinweisen.
-- **Kein automatischer Git-Commit** – nur der Textblock zum Kopieren.
+## Commit-Text (nur bei geänderten Dateien)
 
-Formatbeispiel (nur als Orientierung für den Agenten):
-
-```text
-feat(cli): Export-Pipeline um Post-Export-Hook erweitert
-
-- Neues IPostExportTask wird nach dem Markdown-Export ausgeführt
-- Fehler werden in ConcurrentQueue gesammelt
-```
-
-Wenn es **keine** Dateischreibungen gab, entfällt der Commit-Vorschlag.
+Am **Ende** der Antwort: ein kopierbarer Vorschlag (kein `git commit` ausführen). **Deutsch**, [Conventional Commits](https://www.conventionalcommits.org/) (`feat|fix|docs|…`, optional `feat(scope):`), Betreff kurz/imperativ (~72 Zeichen), Body nur bei Bedarf. Ohne Dateiänderungen: weglassen.
