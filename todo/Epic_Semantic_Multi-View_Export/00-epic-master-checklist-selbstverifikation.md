@@ -10,18 +10,18 @@ Wenn eine nummerierte Task (`01-…`–`09-…`) **inhaltlich erledigt** ist: de
 
 | Anforderung aus `konzept.md` | Primär umgesetzt in |
 |------------------------------|----------------------|
-| Parse Once, Rewrite Multiple | `01` (`ICSharpDocumentLoader`, `ParsedCSharpDocument`, `CSharpDocumentLoader`), `06` |
-| `IViewGenerator` / `ICodeProcessor` + Strategy | [x] `02` — `SourceToAI.CLI/Services/Processing/IViewGenerator.cs` |
+| [x] Parse Once, Rewrite Multiple | `01` — `SourceToAI.CLI/Services/Processing/CSharpDocumentLoader.cs`, `ParsedCSharpDocument`, `ICSharpDocumentLoader`; `06` — `MarkdownProjectViewBuilderBase.cs` |
+| [x] `IViewGenerator` / `ICodeProcessor` + Strategy | `02` — `SourceToAI.CLI/Services/Processing/IViewGenerator.cs` |
 | [x] `SignaturesRewriter` (Bodies `;`, expression-bodied) | `03` — `SourceToAI.CLI/Services/Processing/Rewriters/SignaturesRewriter.cs` |
 | [x] `VisibilityRewriter` (kein private/internal im public-export) | `04` — `SourceToAI.CLI/Services/Processing/Rewriters/VisibilityRewriter.cs` |
-| `DtoFilter` (records, enums, property-only-Klassen) | [x] `05` — `SourceToAI.CLI/Services/Processing/Rewriters/DtoRewriter.cs` |
-| View-Builder + Markdown (`csharp`-Fences, Pfade) | [x] `06` — `SourceToAI.CLI/Services/Processing/Markdown/` |
+| [x] `DtoFilter` (records, enums, property-only-Klassen) | `05` — `SourceToAI.CLI/Services/Processing/Rewriters/DtoRewriter.cs` |
+| [x] View-Builder + Markdown (`csharp`-Fences, Pfade) | `06` — `SourceToAI.CLI/Services/Processing/Markdown/` |
 | [x] `dependency-graph.md` (csproj) | `07` — `SourceToAI.CLI/Services/Export/CsprojDependencyGraphMarkdownGenerator.cs`, `ConsoleOrchestrator` |
-| Orchestrierung, Ordner, `readme.md` | [x] `08` — `ConsoleOrchestrator`, `MultiViewExportService`, `MultiViewReadmeMarkdownGenerator` |
-| Output-Struktur exakt wie Konzept | [x] `01`, `08` |
-| `output` bei Start sauber / neu | [x] `01`, `08` |
-| Tests überall | jeweilige Steps + `09` |
-| Performance: Datei nur 1× lesen (für `.cs`) | `01`, Verifikation `09` |
+| [x] Orchestrierung, Ordner, `readme.md` | `08` — `ConsoleOrchestrator`, `MultiViewExportService`, `MultiViewReadmeMarkdownGenerator` |
+| [x] Output-Struktur exakt wie Konzept | `01`, `08` — z. B. `MultiViewExportPaths.cs` |
+| [x] `output` bei Start sauber / neu | `01`, `08` — `ConsoleOrchestrator.RunAsync` (Löschen/Neuanlage unter `MultiViewExportPaths.GetSolutionExportRoot`) |
+| [x] Tests überall | `09` — `SourceToAI.Tests/App/MultiViewExportIntegrationTests.cs`, `ConsoleOrchestratorTests.cs`, übrige Step-Tests im Projekt |
+| [x] Performance: Datei nur 1× lesen (für `.cs`) | `01` — `CSharpDocumentLoader.LoadParsedDocuments` (ein `ReadAllText` + ein Parse pro Pfad); Abgleich in `09` (Konzept-Review, optional kein zusätzlicher Mess-Hook) |
 
 ## Ziel-Verzeichnisstruktur (Definition of Done — Dateisystem)
 
@@ -54,15 +54,15 @@ Nach einem Lauf (pro Solution/Export-Root wie in der Architektur festgelegt):
 
 **Vor Merge / vor „Epic fertig“:**
 
-- [ ] Matrix oben: jede Zeile mit PR-/Commit-Referenz oder Dateipfad belegt.
+- [x] Matrix oben: jede Zeile mit PR-/Commit-Referenz oder Dateipfad belegt.
 - [x] Manuell oder per Test: Ordnerbaum wie oben vorhanden.
-- [ ] `signatures-only/signatures.md`: Stichprobe mit Roslyn oder `dotnet` — syntaktisch valide C#-Schnittstellen (keine halben Bodies).
-- [ ] `public-only/public-api.md`: Stichprobe — **kein** Body von klar `private`/`internal` Methoden; grep nach bekanntem privaten Test-Member negativ.
-- [ ] `dto-only/models.md`: enthält keine „vollen“ Service-Klassen mit Logik-Methoden (laut Definition in `05`).
+- [x] `signatures-only/signatures.md`: Stichprobe mit Roslyn oder `dotnet` — syntaktisch valide C#-Schnittstellen (keine halben Bodies).
+- [x] `public-only/public-api.md`: Stichprobe — **kein** Body von klar `private`/`internal` Methoden; grep nach bekanntem privaten Test-Member negativ.
+- [x] `dto-only/models.md`: enthält keine „vollen“ Service-Klassen mit Logik-Methoden (laut Definition in `05`).
 - [x] `dependency-graph.md`: alle `.csproj` des Scans mit Package/Project-Referenzen abgedeckt (oder dokumentierte Ausnahme).
 - [x] `readme.md`: Projektname (aus Root), Zeitstempel, **Erklärung jedes Unterordners** für Prompt-Use-Cases.
-- [ ] `complete/full-source.md`: entspricht bisherigem „alles 1:1“-Export (inkl. Nicht-`.cs`, sofern im Konzept gefordert).
-- [ ] Alle Unit-/Integrationstests grün (`dotnet test`).
+- [x] `complete/full-source.md`: entspricht bisherigem „alles 1:1“-Export (inkl. Nicht-`.cs`, sofern im Konzept gefordert).
+- [x] Alle Unit-/Integrationstests grün (`dotnet test`).
 - [x] `IPostExportTask`-Hooks: Verhalten unverändert oder bewusst angepasst und getestet.
 
 ## Bekannte Fallstricke (bewusst gegenlesen)
@@ -75,4 +75,4 @@ Nach einem Lauf (pro Solution/Export-Root wie in der Architektur festgelegt):
 
 ---
 
-**Nächster Schritt:** `01-pipeline-parsed-document-output-aufräumen.md`
+**Status:** Epic abgeschlossen (Task `09` — Integrationstests & Master-Checkliste).
