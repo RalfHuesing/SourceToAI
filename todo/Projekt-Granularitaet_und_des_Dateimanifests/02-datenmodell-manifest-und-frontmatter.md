@@ -25,9 +25,9 @@
 
 ## Selbstverifikation (nach Umsetzung)
 
-- [ ] Modelle im passenden Namespace (z. B. `Services/Export/AiFeed/` oder `Models/`) — konsistent mit bestehendem Projekt.
-- [ ] `00`-Matrix: Zeilen Frontmatter/Manifest mit `02`/`03` verknüpft.
-- [ ] `dotnet test` grün.
+- [x] Modelle im passenden Namespace (z. B. `Services/Export/AiFeed/` oder `Models/`) — konsistent mit bestehendem Projekt.
+- [x] `00`-Matrix: Zeilen Frontmatter/Manifest mit `02`/`03` verknüpft.
+- [x] `dotnet test` grün.
 
 ## Nächster Schritt
 

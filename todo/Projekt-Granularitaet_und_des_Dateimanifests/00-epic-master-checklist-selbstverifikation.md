@@ -74,4 +74,4 @@ Nach einem Lauf unter `{exportPath}/{solutionName}/` (gemäß `Konzept.md` Absch
 
 ---
 
-**Status:** Epic in Umsetzung — Task `01` (Pfade/Dateinamen + pro-Projekt-Dateien im Export) erledigt; `02`–`09` ausstehend.
+**Status:** Epic in Umsetzung — Task `01` (Pfade/Dateinamen + pro-Projekt-Dateien im Export) erledigt; Task `02` (DTOs Manifestzeile + Frontmatter, Hash/Size/Pfad-Hilfen) erledigt; `03`–`09` ausstehend.
