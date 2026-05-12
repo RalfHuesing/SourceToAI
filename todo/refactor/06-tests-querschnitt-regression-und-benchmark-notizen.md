@@ -28,9 +28,11 @@
 
 ## Selbstverifikation (nach Umsetzung)
 
-- [ ] `dotnet test` grün (lokal/CI).
-- [ ] `00-epic-master-checklist-selbstverifikation.md`: finale Matrix- und Abschluss-Checkboxen mitverifizieren.
-- [ ] Parse-Once-Nachweis verlinkt oder in Test-Klassenname/Kommentar auffindbar.
+- [x] `dotnet test` grün (lokal/CI).
+- [x] `00-epic-master-checklist-selbstverifikation.md`: finale Matrix- und Abschluss-Checkboxen mitverifizieren.
+- [x] Parse-Once-Nachweis verlinkt oder in Test-Klassenname/Kommentar auffindbar.
+
+**Lokaler Nachweis (optional):** `dotnet test SourceToAI.sln` — 2026-05-12, Windows, alle 132 Tests grün (0 Warnungen beim Build).
 
 ## Nächster Schritt
 

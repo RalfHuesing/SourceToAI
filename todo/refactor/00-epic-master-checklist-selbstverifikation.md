@@ -16,7 +16,7 @@ Wenn eine nummerierte Task (`01-…`–`07-…`) **inhaltlich erledigt** ist: de
 | [x] **Roslyn-Allokationen** im `SignaturesRewriter` (optional, nach Messung) | `05` — bedingte `WithBody`/`WithExpressionBody` statt fixem Paar; `BaseMethodDeclarationSyntax`-Pfad; Stress-Test `Rewrite_many_mixed_members_round_trips_without_errors` (kein separates Alloc-Profiling) |
 | [x] **YAML-Escaping** nicht doppelt pflegen (`EscapeYamlDoubleQuoted` u. Ä.) | `04` — kleine zentrale Hilfs-API, Aufrufer anpassen |
 | [ ] **YAML-Builder-Struktur** (großer Umbau) | **Nicht** Teil dieses Epics (YAGNI laut `konzept.md`) |
-| [ ] **Tests** (Unit + Integration, Regression Export-Verhalten) | `01`, `02`, `04` je Task; `06` Querschnitt |
+| [x] **Tests** (Unit + Integration, Regression Export-Verhalten) | `01`, `02`, `04` je Task; `06` Querschnitt |
 | [ ] **Nutzerhinweise** (z. B. teilweise erfasste Dateien bei gesperrten Ordnern) | `07` — `README.md` / Konsolenausgabe nur falls Verhalten sichtbar ändert |
 
 ## Architektur-Regeln (nicht verhandelbar)

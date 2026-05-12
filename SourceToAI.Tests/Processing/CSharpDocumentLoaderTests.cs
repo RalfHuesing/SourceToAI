@@ -6,6 +6,11 @@ using SourceToAI.Tests.Support;
 
 namespace SourceToAI.Tests.Processing;
 
+/// <summary>
+/// Regression für <c>Parse Once, Rewrite Multiple</c> auf <see cref="ICSharpDocumentLoader"/>:
+/// gemeinsamer Parse-Cache pro Prozess, <see cref="ICSharpDocumentLoader.Clear"/> zwischen Export-Läufen.
+/// Nachweis-Pflicht: siehe <c>todo/refactor/06-tests-querschnitt-regression-und-benchmark-notizen.md</c>.
+/// </summary>
 public class CSharpDocumentLoaderTests
 {
     [Fact]
