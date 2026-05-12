@@ -21,9 +21,9 @@
 
 ## Selbstverifikation
 
-- [ ] `00`-Checkliste: „private Methoden nicht in public-only“ — dedizierter Testname, grep-freundlich.
-- [ ] `protected` und `public` bleiben erhalten.
-- [ ] `dotnet test` grün.
+- [x] `00`-Checkliste: „private Methoden nicht in public-only“ — dedizierter Testname, grep-freundlich.
+- [x] `protected` und `public` bleiben erhalten.
+- [x] `dotnet test` grün.
 
 ## Nächster Schritt
 

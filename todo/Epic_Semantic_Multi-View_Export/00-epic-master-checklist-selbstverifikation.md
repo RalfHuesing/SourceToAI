@@ -13,7 +13,7 @@ Wenn eine nummerierte Task (`01-…`–`09-…`) **inhaltlich erledigt** ist: de
 | Parse Once, Rewrite Multiple | `01` (`ICSharpDocumentLoader`, `ParsedCSharpDocument`, `CSharpDocumentLoader`), `06` |
 | `IViewGenerator` / `ICodeProcessor` + Strategy | [x] `02` — `SourceToAI.CLI/Services/Processing/IViewGenerator.cs` |
 | [x] `SignaturesRewriter` (Bodies `;`, expression-bodied) | `03` — `SourceToAI.CLI/Services/Processing/Rewriters/SignaturesRewriter.cs` |
-| `VisibilityRewriter` (kein private/internal im public-export) | `04` |
+| [x] `VisibilityRewriter` (kein private/internal im public-export) | `04` — `SourceToAI.CLI/Services/Processing/Rewriters/VisibilityRewriter.cs` |
 | `DtoFilter` (records, enums, property-only-Klassen) | `05` |
 | View-Builder + Markdown (`csharp`-Fences, Pfade) | `06` |
 | `dependency-graph.md` (csproj) | `07` |

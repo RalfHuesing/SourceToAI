@@ -112,54 +112,57 @@ public class SignaturesRewriterTests
     [MemberData(nameof(SignaturesCases))]
     public void Rewrite_output_parses_without_errors_and_strips_bodies(string source, string[] forbiddenFragments)
     {
-        var tree = CSharpSyntaxTree.ParseText(source, ParseOptions);
-        AssertNoParseErrors(tree, "Eingabe");
+        var ct = TestContext.Current.CancellationToken;
+        var tree = CSharpSyntaxTree.ParseText(source, ParseOptions, cancellationToken: ct);
+        AssertNoParseErrors(tree, "Eingabe", ct);
 
-        var root = tree.GetCompilationUnitRoot();
+        var root = tree.GetCompilationUnitRoot(ct);
         var rewritten = SignaturesRewriter.Rewrite(root);
         var output = rewritten.ToFullString();
 
         foreach (var fragment in forbiddenFragments)
             Assert.DoesNotContain(fragment, output);
 
-        var roundTrip = CSharpSyntaxTree.ParseText(output, ParseOptions);
-        var errors = roundTrip.GetDiagnostics().Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
+        var roundTrip = CSharpSyntaxTree.ParseText(output, ParseOptions, cancellationToken: ct);
+        var errors = roundTrip.GetDiagnostics(ct).Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
         Assert.Empty(errors);
     }
 
     [Fact]
     public void Rewrite_top_level_local_function_strips_expression_body()
     {
+        var ct = TestContext.Current.CancellationToken;
         const string source = """
             static int F() => 3;
             """;
 
-        var tree = CSharpSyntaxTree.ParseText(source, ParseOptions);
-        var root = tree.GetCompilationUnitRoot();
+        var tree = CSharpSyntaxTree.ParseText(source, ParseOptions, cancellationToken: ct);
+        var root = tree.GetCompilationUnitRoot(ct);
         var output = SignaturesRewriter.Rewrite(root).ToFullString();
 
         Assert.DoesNotContain("=>", output);
-        var roundTrip = CSharpSyntaxTree.ParseText(output, ParseOptions);
-        AssertNoParseErrors(roundTrip, "Ausgabe");
+        var roundTrip = CSharpSyntaxTree.ParseText(output, ParseOptions, cancellationToken: ct);
+        AssertNoParseErrors(roundTrip, "Ausgabe", ct);
     }
 
     [Fact]
     public void Rewrite_property_expression_body_yields_accessor_list()
     {
+        var ct = TestContext.Current.CancellationToken;
         const string source = """
             public class C { public int P => 1; }
             """;
 
-        var root = CSharpSyntaxTree.ParseText(source, ParseOptions).GetCompilationUnitRoot();
+        var root = CSharpSyntaxTree.ParseText(source, ParseOptions, cancellationToken: ct).GetCompilationUnitRoot(ct);
         var output = SignaturesRewriter.Rewrite(root).ToFullString();
 
         Assert.Contains("get;", output);
         Assert.DoesNotContain("=>", output);
     }
 
-    private static void AssertNoParseErrors(SyntaxTree tree, string label)
+    private static void AssertNoParseErrors(SyntaxTree tree, string label, CancellationToken cancellationToken)
     {
-        var errors = tree.GetDiagnostics().Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
+        var errors = tree.GetDiagnostics(cancellationToken).Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
         Assert.True(errors.Count == 0, $"{label}: {string.Join("; ", errors)}");
     }
 }
