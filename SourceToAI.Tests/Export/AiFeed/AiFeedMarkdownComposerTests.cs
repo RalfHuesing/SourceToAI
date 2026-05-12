@@ -97,4 +97,27 @@ public class AiFeedMarkdownComposerTests
 
         Assert.Contains($"| [1](#1) | Code | {expectedHash} |", md);
     }
+
+    [Fact]
+    public void Compose_drops_whitespace_only_segments_and_renumbers_manifest_and_content_ids()
+    {
+        var segments = new[]
+        {
+            new AiFeedContentSegment("src/Keep.cs", "Code", "csharp", "// kept"),
+            new AiFeedContentSegment("src/Dead.md", "Doc", "markdown", " \n\t "),
+            new AiFeedContentSegment("src/Also.cs", "Code", "csharp", "public class Also { }"),
+        };
+
+        var md = Composer.Compose("Sol", "Proj", FixedSession, FixedGenerated, segments);
+
+        Assert.Contains("file_count: 2", md);
+        var manifestBodyLines = md.Split('\n').Where(l => l.StartsWith("| [", StringComparison.Ordinal)).ToArray();
+        Assert.Equal(2, manifestBodyLines.Length);
+        Assert.Contains("| [1](#1) | Code |", md);
+        Assert.Contains("| [2](#2) | Code |", md);
+        Assert.DoesNotContain("| [3](#3) |", md);
+        Assert.Contains("### [1] src\\Keep.cs", md);
+        Assert.Contains("### [2] src\\Also.cs", md);
+        Assert.DoesNotContain("Dead.md", md);
+    }
 }

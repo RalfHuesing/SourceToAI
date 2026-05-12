@@ -2,7 +2,6 @@ using System.Linq;
 using SourceToAI.CLI.Models;
 using SourceToAI.CLI.Services.Export.AiFeed;
 using SourceToAI.CLI.Services.Processing.Markdown;
-
 namespace SourceToAI.CLI.Services.Export;
 
 public sealed class MultiViewExportService(
@@ -40,6 +39,9 @@ public sealed class MultiViewExportService(
                     if (!docResult.IsSuccess)
                         return ExtractionResult<bool>.Failure(docResult.ErrorMessage!);
 
+                    if (docResult.Value!.Count == 0)
+                        continue;
+
                     var docBody = markdownComposer.Compose(
                         solutionDisplayName,
                         docProject.ProjectName,
@@ -63,6 +65,9 @@ public sealed class MultiViewExportService(
                     var part = builder.BuildContentSegments(project, paths);
                     if (!part.IsSuccess)
                         return ExtractionResult<bool>.Failure(part.ErrorMessage!);
+
+                    if (part.Value!.Count == 0)
+                        continue;
 
                     var body = markdownComposer.Compose(
                         solutionDisplayName,

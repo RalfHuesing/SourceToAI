@@ -141,6 +141,31 @@ public class MarkdownProjectViewBuilderTests
     }
 
     [Fact]
+    public void Public_only_internal_only_file_does_not_yield_segment_when_only_public_api_shell_remains()
+    {
+        using var sp = CreateServiceProvider();
+        var sut = sp.GetServices<IMarkdownProjectViewBuilder>().Single(b => b.ViewKey == "public-only");
+
+        const string internalOnly = """
+            namespace N;
+
+            internal static class NotForPublicView { }
+            """;
+
+        using var ws = new TempWorkspace();
+        var internalPath = ws.WriteFile("src/InternalOnly.cs", internalOnly);
+        var publicPath = ws.WriteFile("src/PublicApi.cs", "public class Visible { public void M() { } }");
+        var project = new ProjectDefinition("P", Path.Combine(ws.Root, "src", "P.csproj"));
+
+        var result = sut.BuildContentSegments(project, [internalPath, publicPath]);
+
+        Assert.True(result.IsSuccess, result.ErrorMessage);
+        var segs = result.Value!;
+        Assert.Single(segs);
+        Assert.EndsWith("PublicApi.cs", segs[0].RelativePathFromProjectRoot, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void Non_cs_files_are_omitted_from_signatures_only_segments()
     {
         using var sp = CreateServiceProvider();

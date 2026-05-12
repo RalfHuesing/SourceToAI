@@ -18,6 +18,9 @@ public sealed class AiFeedMarkdownComposer : IAiFeedMarkdownComposer
         ArgumentNullException.ThrowIfNull(projectDisplayName);
         ArgumentNullException.ThrowIfNull(segments);
 
+        segments = AiFeedSegmentExportability.FilterToExportableList(
+            segments,
+            AiFeedTransformedContentKind.OriginalAsTransformed);
         var manifestLines = BuildManifestLines(segments);
         var frontmatter = AiFeedFrontmatter.Create(
             solutionDisplayName,

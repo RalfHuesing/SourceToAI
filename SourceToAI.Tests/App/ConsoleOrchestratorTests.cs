@@ -123,7 +123,16 @@ public class ConsoleOrchestratorTests
             TestContext.Current.CancellationToken);
 
         var csPath = Path.Combine(solution.Root, "Proj1", "Sample.cs");
-        await File.WriteAllTextAsync(csPath, "public class Sample { }", TestContext.Current.CancellationToken);
+        await File.WriteAllTextAsync(
+            csPath,
+            """
+            namespace Demo;
+
+            public class Sample { }
+
+            public record UnitDto(int Id);
+            """,
+            TestContext.Current.CancellationToken);
 
         var project1 = new ProjectDefinition("Proj1", projPath);
         var project2 = new ProjectDefinition("Proj2", proj2Path);
@@ -185,11 +194,17 @@ public class ConsoleOrchestratorTests
         Assert.True(File.Exists(Path.Combine(outRoot, "public-only", "MySol.Proj1.md")));
         Assert.True(File.Exists(Path.Combine(outRoot, "dto-only", "MySol.Proj1.md")));
 
+        var dtoMd = await File.ReadAllTextAsync(
+            Path.Combine(outRoot, "dto-only", "MySol.Proj1.md"),
+            TestContext.Current.CancellationToken);
+        Assert.Contains("UnitDto", dtoMd, StringComparison.Ordinal);
+
         var fullSource = await File.ReadAllTextAsync(Path.Combine(outRoot, "complete", "MySol.Proj1.md"), TestContext.Current.CancellationToken);
         Assert.Contains("# AI FEED:", fullSource, StringComparison.Ordinal);
         Assert.Contains("Sample.cs", fullSource, StringComparison.Ordinal);
         Assert.Matches(@"### \[\d+\] .*Sample\.cs", fullSource);
         Assert.Contains("public class Sample", fullSource, StringComparison.Ordinal);
+        Assert.Contains("UnitDto", fullSource, StringComparison.Ordinal);
 
         post.Verify(
             p => p.ExecuteAsync("MySol", Path.Combine(export.Root, "MySol")),
