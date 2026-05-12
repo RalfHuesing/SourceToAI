@@ -7,7 +7,7 @@ alwaysApply: true
 
 ## Architektur
 
-- **Stabile Cloud-IDs:** Cloud-Ressourcen (wie Google Drive Folder) sollen bei Synchronisationen stets über „In-Place Updates“ (selektives Löschen von Inhalten) aktualisiert werden, statt sie komplett neu zu erstellen. Das gewährleistet persistente IDs für die Integration mit LLMs und externen Systemen.
+- **Stabile Remote-IDs:** Wenn du künftig externe Synchronisationen oder Uploads anbindest, sollten bestehende Zielressourcen per In-Place-Update (selektives Ersetzen von Inhalten) aktualisiert werden, statt sie jedes Mal neu anzulegen, damit stabile IDs für LLMs und andere Systeme erhalten bleiben.
 - **Post-Export Pipeline:** Erweiterungen, die nach dem Export von Dateien ausgeführt werden sollen (z. B. Uploads, Benachrichtigungen, Post-Processing), müssen das Interface `IPostExportTask` implementieren. Sie werden automatisch über den Dependency-Injection-Container vom `ConsoleOrchestrator` geladen und aufgerufen.
 - **Interfaces & DI:** Alle neuen Services müssen über Interfaces abstrahiert und im Container (`Program.cs`) registriert werden, um Testbarkeit zu gewährleisten.
 - **Parallele I/O-Operationen:** Nutze gedrosselten Parallelismus via `SemaphoreSlim` (z. B. auf 5 begrenzt) für externe Netzwerk- oder I/O-intensive Massenoperationen, um Rate Limits zu respektieren. Sammle Fehler in einer `ConcurrentQueue<Exception>`, statt sie unkontrolliert hochbubbeln zu lassen, und werfe am Ende bei Bedarf eine `AggregateException`.
@@ -25,9 +25,9 @@ Wenn du in dieser Session **Dateien geschrieben oder geändert hast** (Code, Kon
 Formatbeispiel (nur als Orientierung für den Agenten):
 
 ```text
-feat(cli): Google-Drive-Sync mit In-Place-Update
+feat(cli): Export-Pipeline um Post-Export-Hook erweitert
 
-- Ordner wird nicht neu angelegt, Inhalte selektiv aktualisiert
+- Neues IPostExportTask wird nach dem Markdown-Export ausgeführt
 - Fehler werden in ConcurrentQueue gesammelt
 ```
 
