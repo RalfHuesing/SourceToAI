@@ -6,6 +6,7 @@ using SourceToAI.CLI.Infrastructure;
 using SourceToAI.CLI.Models;
 using SourceToAI.CLI.Services.Discovery;
 using SourceToAI.CLI.Services.Export;
+using SourceToAI.CLI.Services.Export.AiFeed;
 using SourceToAI.CLI.Services.Integration;
 using SourceToAI.CLI.Services.IO;
 using SourceToAI.CLI.Services.Processing;
@@ -23,6 +24,7 @@ public class ConsoleOrchestratorTests
         services.AddTransient<IFileTypeService, FileTypeService>();
         services.AddViewGenerators();
         services.AddMarkdownProjectViewBuilders();
+        services.AddSingleton<IAiFeedMarkdownComposer, AiFeedMarkdownComposer>();
         services.AddTransient<IMultiViewExportService, MultiViewExportService>();
         services.AddSingleton<IMultiViewReadmeMarkdownGenerator, MultiViewReadmeMarkdownGenerator>();
         return services.BuildServiceProvider();
@@ -184,7 +186,9 @@ public class ConsoleOrchestratorTests
         Assert.True(File.Exists(Path.Combine(outRoot, "dto-only", "MySol.Proj1.md")));
 
         var fullSource = await File.ReadAllTextAsync(Path.Combine(outRoot, "complete", "MySol.Proj1.md"), TestContext.Current.CancellationToken);
-        Assert.Contains("### Sample.cs", fullSource, StringComparison.Ordinal);
+        Assert.Contains("# AI FEED:", fullSource, StringComparison.Ordinal);
+        Assert.Contains("Sample.cs", fullSource, StringComparison.Ordinal);
+        Assert.Matches(@"### \[\d+\] .*Sample\.cs", fullSource);
         Assert.Contains("public class Sample", fullSource, StringComparison.Ordinal);
 
         post.Verify(

@@ -74,4 +74,4 @@ Nach einem Lauf unter `{exportPath}/{solutionName}/` (gemäß `Konzept.md` Absch
 
 ---
 
-**Status:** Epic in Umsetzung — Task `01`–`03` erledigt; `04`–`09` ausstehend.
+**Status:** Epic in Umsetzung — Task `01`–`04` erledigt; `05`–`09` ausstehend.

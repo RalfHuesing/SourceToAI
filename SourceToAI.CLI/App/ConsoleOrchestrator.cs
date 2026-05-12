@@ -63,6 +63,7 @@ public class ConsoleOrchestrator(
         }
 
         var generatedAt = DateTimeOffset.UtcNow;
+        var exportSessionId = Guid.NewGuid();
         try
         {
             var readme = readmeMarkdownGenerator.Generate(repositoryFolderName, generatedAt);
@@ -130,6 +131,8 @@ public class ConsoleOrchestrator(
             outputDir,
             solutionName,
             rootPath,
+            exportSessionId,
+            generatedAt,
             projectsWithFiles,
             solutionDocPaths);
 

@@ -12,10 +12,14 @@ public interface IMultiViewExportService
     /// eine Markdown-Datei unter <see cref="MultiViewExportPaths.GetViewFolderNameForViewKey"/> geschrieben
     /// (<c>SolutionName.ProjektName.md</c>, siehe <see cref="MultiViewExportPaths"/>).
     /// </summary>
+    /// <param name="sessionId">Gemeinsame Session für alle Dateien dieses Laufs (Frontmatter).</param>
+    /// <param name="generated">Zeitstempel für Frontmatter (z. B. identisch mit Readme-Lauf).</param>
     ExtractionResult<bool> WriteMergedSolutionViews(
         string outputRoot,
         string solutionDisplayName,
         string solutionRootPath,
+        Guid sessionId,
+        DateTimeOffset generated,
         IReadOnlyList<(ProjectDefinition Project, IReadOnlyList<string> AbsoluteFilePaths)> projectsWithFiles,
         IReadOnlyList<string>? solutionDocumentationAbsolutePaths);
 }
