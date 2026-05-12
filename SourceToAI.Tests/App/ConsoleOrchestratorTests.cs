@@ -178,13 +178,13 @@ public class ConsoleOrchestratorTests
         Assert.Contains("Contoso.Tools", depGraph, StringComparison.Ordinal);
         Assert.Contains("Proj2/Proj2.csproj", depGraph, StringComparison.Ordinal);
 
-        Assert.True(File.Exists(Path.Combine(outRoot, "complete", "full-source.md")));
-        Assert.True(File.Exists(Path.Combine(outRoot, "signatures-only", "signatures.md")));
-        Assert.True(File.Exists(Path.Combine(outRoot, "public-only", "public-api.md")));
-        Assert.True(File.Exists(Path.Combine(outRoot, "dto-only", "models.md")));
+        Assert.True(File.Exists(Path.Combine(outRoot, "complete", "MySol.Proj1.md")));
+        Assert.True(File.Exists(Path.Combine(outRoot, "signatures-only", "MySol.Proj1.md")));
+        Assert.True(File.Exists(Path.Combine(outRoot, "public-only", "MySol.Proj1.md")));
+        Assert.True(File.Exists(Path.Combine(outRoot, "dto-only", "MySol.Proj1.md")));
 
-        var fullSource = await File.ReadAllTextAsync(Path.Combine(outRoot, "complete", "full-source.md"), TestContext.Current.CancellationToken);
-        Assert.Contains("## Projekt: Proj1", fullSource, StringComparison.Ordinal);
+        var fullSource = await File.ReadAllTextAsync(Path.Combine(outRoot, "complete", "MySol.Proj1.md"), TestContext.Current.CancellationToken);
+        Assert.Contains("### Sample.cs", fullSource, StringComparison.Ordinal);
         Assert.Contains("public class Sample", fullSource, StringComparison.Ordinal);
 
         post.Verify(

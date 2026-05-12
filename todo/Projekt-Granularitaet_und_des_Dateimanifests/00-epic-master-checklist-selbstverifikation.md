@@ -10,7 +10,7 @@ Wenn eine nummerierte Task (`01-…`–`09-…`) **inhaltlich erledigt** ist: de
 
 | Anforderung aus `Konzept.md` | Primär umgesetzt in |
 |------------------------------|----------------------|
-| [ ] Output: **eine Datei pro Projekt** je View (`SolutionName.Projekt.md` unter `complete/` usw.) | `01`, `06` — `MultiViewExportPaths`, `MultiViewExportService`, ggf. Hilfs-API für sichere Dateinamen |
+| [x] Output: **eine Datei pro Projekt** je View (`SolutionName.Projekt.md` unter `complete/` usw.) | `01`, `06` — `MultiViewExportPaths`, `MultiViewExportService`, ggf. Hilfs-API für sichere Dateinamen |
 | [ ] Schleife **Projekte → Views** (Parse Once bleibt; pro Projekt alle Views bedienen) | `06` — Orchestrierung; Anbindung an bestehende `ICSharpDocumentLoader`-Pipeline |
 | [ ] YAML-Frontmatter (`feed_type`, `project`, `session_id`, `generated`, `file_count`) | `02`, `03` — Metadatenmodell + zentraler Builder |
 | [ ] Header `# AI FEED: …` + Block `## INSTRUCTION` | `03` |
@@ -74,4 +74,4 @@ Nach einem Lauf unter `{exportPath}/{solutionName}/` (gemäß `Konzept.md` Absch
 
 ---
 
-**Status:** Epic in Planung — Tasks `01`–`09` ausstehend.
+**Status:** Epic in Umsetzung — Task `01` (Pfade/Dateinamen + pro-Projekt-Dateien im Export) erledigt; `02`–`09` ausstehend.

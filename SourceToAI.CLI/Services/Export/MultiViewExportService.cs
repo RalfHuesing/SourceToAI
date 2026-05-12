@@ -1,5 +1,4 @@
 using System.Linq;
-using System.Text;
 using SourceToAI.CLI.Models;
 using SourceToAI.CLI.Services.Processing.Markdown;
 
@@ -11,6 +10,7 @@ public sealed class MultiViewExportService(IEnumerable<IMarkdownProjectViewBuild
 
     public ExtractionResult<bool> WriteMergedSolutionViews(
         string outputRoot,
+        string solutionDisplayName,
         string solutionRootPath,
         IReadOnlyList<(ProjectDefinition Project, IReadOnlyList<string> AbsoluteFilePaths)> projectsWithFiles,
         IReadOnlyList<string>? solutionDocumentationAbsolutePaths)
@@ -24,7 +24,8 @@ public sealed class MultiViewExportService(IEnumerable<IMarkdownProjectViewBuild
                 if (!buildersByKey.TryGetValue(viewKey, out var builder))
                     return ExtractionResult<bool>.Failure($"Kein Markdown-View-Builder für „{viewKey}“ registriert.");
 
-                var aggregate = new StringBuilder();
+                var viewFolder = MultiViewExportPaths.GetViewFolderNameForViewKey(viewKey);
+                var usedStems = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
                 if (viewKey.Equals("complete", StringComparison.Ordinal)
                     && solutionDocumentationAbsolutePaths is { Count: > 0 })
@@ -34,13 +35,15 @@ public sealed class MultiViewExportService(IEnumerable<IMarkdownProjectViewBuild
                     if (!docResult.IsSuccess)
                         return ExtractionResult<bool>.Failure(docResult.ErrorMessage!);
 
-                    aggregate.AppendLine("## Solution-Dokumentation (.Docs)");
-                    aggregate.AppendLine();
-                    aggregate.Append(docResult.Value);
-                    aggregate.AppendLine();
+                    var stem = MultiViewExportPaths.AllocateUniqueFileStem(
+                        MultiViewExportPaths.BuildSanitizedExportFileStem(solutionDisplayName, docProject.ProjectName),
+                        usedStems);
+                    WriteProjectViewFile(outputRoot, viewFolder, stem, docResult.Value!);
                 }
 
-                foreach (var (project, paths) in projectsWithFiles.OrderBy(p => p.Project.ProjectName, StringComparer.OrdinalIgnoreCase))
+                foreach (var (project, paths) in projectsWithFiles.OrderBy(
+                             p => p.Project.ProjectName,
+                             StringComparer.OrdinalIgnoreCase))
                 {
                     if (paths.Count == 0)
                         continue;
@@ -49,21 +52,11 @@ public sealed class MultiViewExportService(IEnumerable<IMarkdownProjectViewBuild
                     if (!part.IsSuccess)
                         return ExtractionResult<bool>.Failure(part.ErrorMessage!);
 
-                    aggregate.AppendLine($"## Projekt: {project.ProjectName}");
-                    aggregate.AppendLine();
-                    aggregate.Append(part.Value);
-                    aggregate.AppendLine();
+                    var stem = MultiViewExportPaths.AllocateUniqueFileStem(
+                        MultiViewExportPaths.BuildSanitizedExportFileStem(solutionDisplayName, project.ProjectName),
+                        usedStems);
+                    WriteProjectViewFile(outputRoot, viewFolder, stem, part.Value!);
                 }
-
-                var outPath = Path.Combine(outputRoot, builder.RelativeOutputFile);
-                var outDir = Path.GetDirectoryName(outPath);
-                if (!string.IsNullOrEmpty(outDir))
-                    Directory.CreateDirectory(outDir);
-
-                var body = aggregate.Length == 0
-                    ? "*(Keine passenden Dateien für diese Sicht.)*\n"
-                    : aggregate.ToString();
-                File.WriteAllText(outPath, body);
             }
 
             return ExtractionResult<bool>.Success(true);
@@ -72,5 +65,15 @@ public sealed class MultiViewExportService(IEnumerable<IMarkdownProjectViewBuild
         {
             return ExtractionResult<bool>.Failure($"Multi-View-Export: {ex.Message}");
         }
+    }
+
+    private static void WriteProjectViewFile(string outputRoot, string viewFolder, string uniqueStem, string body)
+    {
+        var outPath = MultiViewExportPaths.GetViewOutputPath(outputRoot, viewFolder, uniqueStem);
+        var outDir = Path.GetDirectoryName(outPath);
+        if (!string.IsNullOrEmpty(outDir))
+            Directory.CreateDirectory(outDir);
+
+        File.WriteAllText(outPath, body);
     }
 }
