@@ -12,12 +12,12 @@ Wenn eine nummerierte Task (`01-…`–`09-…`) **inhaltlich erledigt** ist: de
 |------------------------------|----------------------|
 | [x] Output: **eine Datei pro Projekt** je View (`SolutionName.Projekt.md` unter `complete/` usw.) | `01`, `06` — `MultiViewExportPaths`, `MultiViewExportService`, ggf. Hilfs-API für sichere Dateinamen |
 | [ ] Schleife **Projekte → Views** (Parse Once bleibt; pro Projekt alle Views bedienen) | `06` — Orchestrierung; Anbindung an bestehende `ICSharpDocumentLoader`-Pipeline |
-| [ ] YAML-Frontmatter (`feed_type`, `project`, `session_id`, `generated`, `file_count`) | `02`, `03` — Metadatenmodell + zentraler Builder |
-| [ ] Header `# AI FEED: …` + Block `## INSTRUCTION` | `03` |
-| [ ] **MANIFEST**-Tabelle (ID, Type, Hash, Size, Path) mit Anker `[n](#n)`; Pfade relativ zum **Projektroot** | `02`, `03` |
-| [ ] **CONTENT** mit IDs, Trennlinien, dynamischem Fencing (≥4 Backticks bei Bedarf) | `03`, `04` — `MarkdownFenceUtility` wiederverwenden |
+| [x] YAML-Frontmatter (`feed_type`, `project`, `session_id`, `generated`, `file_count`) | `02`, `03` — Metadatenmodell + zentraler Builder |
+| [x] Header `# AI FEED: …` + Block `## INSTRUCTION` | `03` |
+| [x] **MANIFEST**-Tabelle (ID, Type, Hash, Size, Path) mit Anker `[n](#n)`; Pfade relativ zum **Projektroot** | `02`, `03` |
+| [x] **CONTENT** mit IDs, Trennlinien, dynamischem Fencing (≥4 Backticks bei Bedarf) | `03`, `04` — `MarkdownFenceUtility` wiederverwenden |
 | [ ] Nach View-Filter **komplett leere** Dateien: weder Manifest noch Content | `04`, `05` |
-| [ ] Zentraler Builder (keine Duplikation der Zusammenstellung pro View) | `03`, `04` |
+| [x] Zentraler Builder (keine Duplikation der Zusammenstellung pro View) | `03`, `04` |
 | [ ] Roslyn **Parse Once, Rewrite Multiple** unverändert | implizit `04`/`06` — keine Doppel-Einlesepfade einführen |
 | [ ] `readme.md` beschreibt neue Struktur / Prompt-Nutzung | `07` |
 | [ ] `dependency-graph.md` / Solution-Ebene | unverändert auf Solution-Root (nur in `00` verankert, falls Anpassungen nötig: `07` oder kleiner Follow-up) |
@@ -74,4 +74,4 @@ Nach einem Lauf unter `{exportPath}/{solutionName}/` (gemäß `Konzept.md` Absch
 
 ---
 
-**Status:** Epic in Umsetzung — Task `01` (Pfade/Dateinamen + pro-Projekt-Dateien im Export) erledigt; Task `02` (DTOs Manifestzeile + Frontmatter, Hash/Size/Pfad-Hilfen) erledigt; `03`–`09` ausstehend.
+**Status:** Epic in Umsetzung — Task `01`–`03` erledigt; `04`–`09` ausstehend.

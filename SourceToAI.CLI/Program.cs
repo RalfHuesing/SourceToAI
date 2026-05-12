@@ -5,6 +5,7 @@ using SourceToAI.CLI.Configuration;
 using SourceToAI.CLI.Infrastructure;
 using SourceToAI.CLI.Services.Discovery;
 using SourceToAI.CLI.Services.Export;
+using SourceToAI.CLI.Services.Export.AiFeed;
 using SourceToAI.CLI.Services.IO;
 using SourceToAI.CLI.Services.Processing;
 
@@ -47,6 +48,7 @@ services.AddTransient<IFeedGenerator, MarkdownFeedGenerator>();
 services.AddTransient<IDependencyGraphMarkdownGenerator, CsprojDependencyGraphMarkdownGenerator>();
 services.AddTransient<IMultiViewExportService, MultiViewExportService>();
 services.AddSingleton<IMultiViewReadmeMarkdownGenerator, MultiViewReadmeMarkdownGenerator>();
+services.AddSingleton<IAiFeedMarkdownComposer, AiFeedMarkdownComposer>();
 services.AddViewGenerators();
 services.AddMarkdownProjectViewBuilders();
 
