@@ -16,7 +16,7 @@ Wenn eine nummerierte Task (`01-…`–`09-…`) **inhaltlich erledigt** ist: de
 | [x] `VisibilityRewriter` (kein private/internal im public-export) | `04` — `SourceToAI.CLI/Services/Processing/Rewriters/VisibilityRewriter.cs` |
 | `DtoFilter` (records, enums, property-only-Klassen) | [x] `05` — `SourceToAI.CLI/Services/Processing/Rewriters/DtoRewriter.cs` |
 | View-Builder + Markdown (`csharp`-Fences, Pfade) | [x] `06` — `SourceToAI.CLI/Services/Processing/Markdown/` |
-| `dependency-graph.md` (csproj) | `07` |
+| [x] `dependency-graph.md` (csproj) | `07` — `SourceToAI.CLI/Services/Export/CsprojDependencyGraphMarkdownGenerator.cs`, `ConsoleOrchestrator` |
 | Orchestrierung, Ordner, `readme.md` | `08` |
 | Output-Struktur exakt wie Konzept | `01`, `08` |
 | `output` bei Start sauber / neu | `01`, `08` |
@@ -59,7 +59,7 @@ Nach einem Lauf (pro Solution/Export-Root wie in der Architektur festgelegt):
 - [ ] `signatures-only/signatures.md`: Stichprobe mit Roslyn oder `dotnet` — syntaktisch valide C#-Schnittstellen (keine halben Bodies).
 - [ ] `public-only/public-api.md`: Stichprobe — **kein** Body von klar `private`/`internal` Methoden; grep nach bekanntem privaten Test-Member negativ.
 - [ ] `dto-only/models.md`: enthält keine „vollen“ Service-Klassen mit Logik-Methoden (laut Definition in `05`).
-- [ ] `dependency-graph.md`: alle `.csproj` des Scans mit Package/Project-Referenzen abgedeckt (oder dokumentierte Ausnahme).
+- [x] `dependency-graph.md`: alle `.csproj` des Scans mit Package/Project-Referenzen abgedeckt (oder dokumentierte Ausnahme).
 - [ ] `readme.md`: Projektname (aus Root), Zeitstempel, **Erklärung jedes Unterordners** für Prompt-Use-Cases.
 - [ ] `complete/full-source.md`: entspricht bisherigem „alles 1:1“-Export (inkl. Nicht-`.cs`, sofern im Konzept gefordert).
 - [ ] Alle Unit-/Integrationstests grün (`dotnet test`).

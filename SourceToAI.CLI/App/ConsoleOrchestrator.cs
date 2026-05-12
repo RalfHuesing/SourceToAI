@@ -1,6 +1,7 @@
 using SourceToAI.CLI.Configuration;
 using SourceToAI.CLI.Models;
 using SourceToAI.CLI.Services.Discovery;
+using SourceToAI.CLI.Services.Export;
 using SourceToAI.CLI.Services.Integration;
 using SourceToAI.CLI.Services.Processing;
 using System;
@@ -15,6 +16,7 @@ public class ConsoleOrchestrator(
     ISolutionDiscoveryService solutionDiscovery,
     IFileDiscoveryService fileDiscovery,
     IFeedGenerator feedGenerator,
+    IDependencyGraphMarkdownGenerator dependencyGraphMarkdownGenerator,
     AppSettings settings,
     IEnumerable<IPostExportTask> postExportTasks)
 {
@@ -70,6 +72,26 @@ public class ConsoleOrchestrator(
         {
             Console.WriteLine($"[FEHLER] Konnte Ausgabeordner nicht erstellen: {ex.Message}");
             return;
+        }
+
+        var multiViewRoot = MultiViewExportPaths.GetMultiViewRoot(exportPath, solutionName);
+        try
+        {
+            Directory.CreateDirectory(multiViewRoot);
+            var depGraphResult = dependencyGraphMarkdownGenerator.Generate(rootPath, projects);
+            if (depGraphResult.IsSuccess)
+            {
+                File.WriteAllText(Path.Combine(multiViewRoot, "dependency-graph.md"), depGraphResult.Value!);
+                Console.WriteLine($"[INFO] dependency-graph.md → {multiViewRoot}");
+            }
+            else
+            {
+                Console.WriteLine($"[WARN] dependency-graph.md: {depGraphResult.ErrorMessage}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[WARN] dependency-graph.md konnte nicht geschrieben werden: {ex.Message}");
         }
 
         Console.WriteLine($"- Verarbeite Solution-Dokumentation (Root & .cursor)...");
