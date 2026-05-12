@@ -4,6 +4,7 @@ using SourceToAI.CLI.App;
 using SourceToAI.CLI.Configuration;
 using SourceToAI.CLI.Infrastructure;
 using SourceToAI.CLI.Services.Discovery;
+using SourceToAI.CLI.Services.Export;
 using SourceToAI.CLI.Services.IO;
 using SourceToAI.CLI.Services.Processing;
 
@@ -43,6 +44,7 @@ services.AddTransient<ICSharpDocumentLoader, CSharpDocumentLoader>();
 services.AddTransient<IFileTypeService, FileTypeService>();
 services.AddTransient<IHashService, HashService>();
 services.AddTransient<IFeedGenerator, MarkdownFeedGenerator>();
+services.AddTransient<IDependencyGraphMarkdownGenerator, CsprojDependencyGraphMarkdownGenerator>();
 services.AddViewGenerators();
 services.AddMarkdownProjectViewBuilders();
 

@@ -23,9 +23,9 @@
 
 ## Selbstverifikation
 
-- [ ] Alle in der Test-Solution vorkommenden Projekte erscheinen als Abschnitt (oder erklärtes Filtering).
-- [ ] `00`-Struktur: `dependency-graph.md` an Root.
-- [ ] `dotnet test` grün.
+- [x] Alle in der Test-Solution vorkommenden Projekte erscheinen als Abschnitt (oder erklärtes Filtering).
+- [x] `00`-Struktur: `dependency-graph.md` an Root.
+- [x] `dotnet test` grün.
 
 ## Nächster Schritt
 
