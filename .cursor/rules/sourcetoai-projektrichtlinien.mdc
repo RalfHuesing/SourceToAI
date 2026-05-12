@@ -1,5 +1,5 @@
 ---
-description: Architektur- und Arbeitsregeln für SourceToAI (Cloud-IDs, DI, I/O, Warnungen, Commits)
+description: Architektur, DI, I/O/Parse, Anti-Bloat, Dateigröße, Warnungen, Commits (SourceToAI)
 alwaysApply: true
 ---
 
@@ -9,8 +9,15 @@ alwaysApply: true
 
 - **Stabile Remote-IDs:** Wenn du künftig externe Synchronisationen oder Uploads anbindest, sollten bestehende Zielressourcen per In-Place-Update (selektives Ersetzen von Inhalten) aktualisiert werden, statt sie jedes Mal neu anzulegen, damit stabile IDs für LLMs und andere Systeme erhalten bleiben.
 - **Post-Export Pipeline:** Erweiterungen, die nach dem Export von Dateien ausgeführt werden sollen (z. B. Uploads, Benachrichtigungen, Post-Processing), müssen das Interface `IPostExportTask` implementieren. Sie werden automatisch über den Dependency-Injection-Container vom `ConsoleOrchestrator` geladen und aufgerufen.
-- **Interfaces & DI:** Alle neuen Services müssen über Interfaces abstrahiert und im Container (`Program.cs`) registriert werden, um Testbarkeit zu gewährleisten.
+- **Interfaces & DI:** Zustandsbehaftete Services, Orchestrierung und bewusst austauschbare Implementierungen (z. B. für Unit-Tests): über Interfaces abstrahieren und im Container (`Program.cs`) registrieren. Kein DI und keine `I...`-Schicht für zustandslose Standard-Framework-Nutzung — siehe **Performance & Anti-Bloat**.
 - **Parallele I/O-Operationen:** Nutze gedrosselten Parallelismus via `SemaphoreSlim` (z. B. auf 5 begrenzt) für externe Netzwerk- oder I/O-intensive Massenoperationen, um Rate Limits zu respektieren. Sammle Fehler in einer `ConcurrentQueue<Exception>`, statt sie unkontrolliert hochbubbeln zu lassen, und werfe am Ende bei Bedarf eine `AggregateException`.
+
+## Performance & Anti-Bloat (hart)
+
+- **Keine Abstraktions-Hüllen:** Keine Interfaces (`I...`) und keine Wrapper-Services um zustandslose Standard-APIs des Frameworks (z. B. `File.ReadAllText`, `MD5.HashData`). Solche Hilfslogik als `static class` (oder direkte Aufrufe), ohne künstliche „Service“-Fassade.
+- **Kein DI-Overhead für lokale CLI-Helfer:** Dependency Injection nur dort, wo Zustand, Orchestrierung oder echte Austauschbarkeit (Mocking) es rechtfertigen. Einfache, lokale Helfer direkt instanziieren — nicht alles in den Container ziehen.
+- **Kein redundantes I/O und Parsen im Export-Lauf:** Innerhalb eines Export-Laufs darf dieselbe Quelldatei nicht mehrfach von der Disk gelesen werden. Nach der ersten Erstellung des Roslyn-AST ist erneutes `CSharpSyntaxTree.ParseText` desselben Inhalts in nachgelagerten View-Buildern oder Filtern untersagt; AST/Text weiterreichen.
+- **Kein blockierendes I/O in Locks:** Aufrufe wie `ReadAllText` oder `ParseText` (und vergleichbar blockierendes I/O) dürfen nicht innerhalb eines `lock`-Statements ausgeführt werden.
 
 ## Quellcode-Dateigröße (hart)
 
