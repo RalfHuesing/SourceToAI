@@ -14,7 +14,7 @@ Wenn eine nummerierte Task (`01-…`–`09-…`) **inhaltlich erledigt** ist: de
 | `IViewGenerator` / `ICodeProcessor` + Strategy | [x] `02` — `SourceToAI.CLI/Services/Processing/IViewGenerator.cs` |
 | [x] `SignaturesRewriter` (Bodies `;`, expression-bodied) | `03` — `SourceToAI.CLI/Services/Processing/Rewriters/SignaturesRewriter.cs` |
 | [x] `VisibilityRewriter` (kein private/internal im public-export) | `04` — `SourceToAI.CLI/Services/Processing/Rewriters/VisibilityRewriter.cs` |
-| `DtoFilter` (records, enums, property-only-Klassen) | `05` |
+| `DtoFilter` (records, enums, property-only-Klassen) | [x] `05` — `SourceToAI.CLI/Services/Processing/Rewriters/DtoRewriter.cs` |
 | View-Builder + Markdown (`csharp`-Fences, Pfade) | `06` |
 | `dependency-graph.md` (csproj) | `07` |
 | Orchestrierung, Ordner, `readme.md` | `08` |
