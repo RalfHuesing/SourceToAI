@@ -28,9 +28,9 @@
 
 ## Selbstverifikation (nach Umsetzung)
 
-- [ ] README-Konsistenz mit implementiertem Verhalten.
-- [ ] `00-epic-master-checklist-selbstverifikation.md`: Matrix-Zeile „Nutzerhinweise“ abhaken oder „n/a“ dokumentiert.
+- [x] README-Konsistenz mit implementiertem Verhalten.
+- [x] `00-epic-master-checklist-selbstverifikation.md`: Matrix-Zeile „Nutzerhinweise“ abhaken oder „n/a“ dokumentiert.
 
 ## Nächster Schritt
 
-Epic in `00-epic-master-checklist-selbstverifikation.md` auf **abgeschlossen** setzen; `konzept.md` bei Bedarf um Status-Zeile ergänzen (optional).
+Epic in `00-epic-master-checklist-selbstverifikation.md` auf **abgeschlossen** gesetzt; `konzept.md` bei Bedarf um Status-Zeile ergänzen (optional).
