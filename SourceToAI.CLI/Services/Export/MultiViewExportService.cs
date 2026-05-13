@@ -130,7 +130,7 @@ public sealed class MultiViewExportService(
             var usedStems = usedStemsPerView[slot.ViewKey];
 
             var stem = MultiViewExportPaths.AllocateUniqueFileStem(
-                MultiViewExportPaths.BuildSanitizedExportFileStem(solutionDisplayName, slot.Project.ProjectName),
+                MultiViewExportPaths.BuildSanitizedExportFileStem(solutionDisplayName, slot.Project.ProjectName, slot.ViewKey),
                 usedStems);
             WriteProjectViewFile(outputRoot, viewFolder, stem, body);
         }
