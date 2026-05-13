@@ -10,9 +10,9 @@
 
 ## Was es macht
 
-- **Multi-View-Export:** Unter `complete/`, `signatures-only/`, `public-only/` und `dto-only/` liegt pro Projekt jeweils **eine** Markdown-Datei; Dateinamen: `<Solution>.<Projekt>.md` (Sonderzeichen bereinigt). Virtuelle Solution-Doku (Root-`README`, `.cursor/rules` usw.) erscheint in `complete/` als `<Solution>..Docs.md`.
-- **Mehrere Quellen in einem Lauf:** Du gibst **ein** Export-Ziel und **eine oder mehrere** Quellen an. Jede Quelle wird nacheinander verarbeitet; pro erkanntem Solution-Namen entsteht ein **eigener Unterordner** unter dem Export-Pfad.
-- **Quellen:** Verzeichnis mit `.sln`/`.csproj` (typisch Repository- oder Solution-Stamm) **oder** eine **.dll/.exe**-Assembly. Bei Assemblies wird der Code zuerst per Decompiler in ein temporäres `decompile/`-Projekt unter `{Export}/{AssemblyName}/` gelegt und von dort wie gewohnt exportiert.
+- **Multi-View-Export:** In den Ordnern `complete/`, `signatures-only/`, `public-only/` und `dto-only/` liegt pro Projekt jeweils **eine** Markdown-Datei. Dateinamen tragen das View-Suffix: `<Solution>.<Projekt>-<view>.md` (z. B. `MySol.Proj-complete.md`). Virtuelle Solution-Doku (Root-`README`, `.cursor/rules` usw.) erscheint in `complete/` als `<Solution>..Docs-complete.md`.
+- **Mehrere Quellen in einem Lauf:** Du gibst **ein** globales Export-Ziel und **eine oder mehrere** Quellen an. Jede Quelle wird nacheinander verarbeitet. Workspace-weite AI-Kontextdateien fließen in den gemeinsamen Baum `Merged/` ein, isolierte projektbezogene Dateien landen in `Isolated/<SolutionName>/`.
+- **Quellen:** Verzeichnis mit `.sln`/`.csproj` (typisch Repository- oder Solution-Stamm) **oder** eine **.dll/.exe**-Assembly. Bei Assemblies wird der Code zuerst per Decompiler in ein temporäres `decompile/`-Projekt unter `Isolated/<AssemblyName>/decompile/` gelegt und von dort wie gewohnt exportiert.
 - **Robustheit:** Build-Artefakte und übliche Tool-Ordner werden standardmäßig ignoriert; Lesefehler in Unterzweigen führen zu Warnungen, nicht zum kompletten Abbruch.
 
 ---
@@ -20,7 +20,7 @@
 ## Nutzung mit Web-KIs (Kurz)
 
 1. Export ausführen (siehe unten).
-2. Aus `complete/` die passenden `<Solution>..Docs.md`- und Projekt-`.md`-Dateien in den Chat laden.
+2. Aus dem gemeinsamen Ordner `Merged/complete/` die passenden `<Solution>..Docs-complete.md`- und Projekt-MD-Dateien (z. B. `...-complete.md`) in den Chat laden.
 3. Im Prompt auf Manifest-Einträge und Views verweisen (Details stehen in der generierten `readme.md` im jeweiligen Solution-Exportordner).
 
 ---
@@ -61,9 +61,12 @@ SourceToAI --export ./exports -i C:\Daten\RepoA\ -i C:\Daten\RepoB\
 
 ## Ausgabeordner und Sicherheit
 
-Unter `<Export-Pfad>` legt das Tool pro Solution einen Ordner `<SolutionName>` an (Name aus der ersten `.sln` im Stammverzeichnis, sonst Name des Quellordners; bei Assembly-Export: Basisname der Datei). Darin: `readme.md`, `dependency-graph.md` (falls möglich), die View-Unterordner und bei Assembly-Quellen zusätzlich `decompile/` mit dem erzeugten C#-Baum.
+Unter dem globalen `<Export-Pfad>` bereitet das Tool einen Verzeichnisbaum vor:
+- Ein globales `readme.md` mit Nutzungshinweisen.
+- Ein Verzeichnis `Merged/`, in dem alle Projekte aller exportierten Solutions vereint und nach Views gruppiert liegen.
+- Ein Verzeichnis `Isolated/`, in dem jede Solution (z. B. `<SolutionName>`) ihren eigenen Unterordner behält. Dort finden sich z. B. der lösungsspezifische `dependency-graph.md` und bei Assembly-Quellen zusätzlich `decompile/` mit dem erzeugten C#-Baum.
 
-**Wichtig:** Bevor ein bestehender Solution-Exportordner geleert wird, muss darin die von SourceToAI angelegte Markerdatei **`.sta-marker`** liegen. Fehlt sie (z. B. Ordner war nie ein SourceToAI-Export oder wurde manuell bearbeitet), bricht die CLI ab, um **versehentlichen Datenverlust** im Zielverzeichnis zu vermeiden. Zum erneuten Export: Ordner leeren oder bewusst `.sta-marker` anlegen – siehe Konsolenmeldung.
+**Wichtig:** Bevor ein bestehender globaler Exportordner überschrieben wird, muss direkt im `<Export-Pfad>` die von SourceToAI angelegte Markerdatei **`.sta-marker`** liegen. Fehlt sie (z. B. Ordner war nie ein SourceToAI-Export oder wurde manuell angelegt), bricht die CLI ab, um **versehentlichen Datenverlust** zu vermeiden. Zum erneuten Export: Ordner leeren oder bewusst `.sta-marker` anlegen – siehe Konsolenmeldung.
 
 ---
 
