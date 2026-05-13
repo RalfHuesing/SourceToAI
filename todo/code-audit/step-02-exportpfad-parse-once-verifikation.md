@@ -31,3 +31,18 @@ Sicherstellen, dass im **Produktions-Exportlauf** dieselbe Quelldatei nicht erne
 ## Anschluss
 
 Weiter mit [`step-03-di-viewgeneratoren-straffen.md`](step-03-di-viewgeneratoren-straffen.md).
+
+---
+
+## Anhang: Volltextsuche `ParseText` / `CSharpSyntaxTree` / `ParseFile` (CLI, ohne `bin`/`obj`)
+
+Stand Verifikation: Produktionscode unter `SourceToAI.CLI`.
+
+| Ort | Symbol | Einordnung |
+|-----|--------|--------------|
+| `Services/Processing/CSharpDocumentLoader.cs` | `CSharpSyntaxTree.ParseText` | **Erlaubt (einmalig pro Cache-Pfad):** einziger Hot-Path-Parser für Quell-`.cs` im Export; Ergebnis wird an View-Generatoren als `CompilationUnitSyntax` weitergereicht. |
+| `Services/Processing/IViewGenerator.cs` | nur XML-`<see cref="CSharpSyntaxTree.ParseText"/>` | **Dokumentation:** Vertrag „kein Parse in Generatoren“. |
+
+`ParseFile` im CLI-Projekt: **keine Treffer.**
+
+View-Generatoren leiten `HasExportableSurface` aus `CSharpCompilationUnitExportSurface.HasExportableSurface(rewritten)` ab (AST nach Rewrite). `AiFeedSegmentExportability` wertet nur das vorberechnete Flag aus, ohne den transformierten String erneut zu parsen.

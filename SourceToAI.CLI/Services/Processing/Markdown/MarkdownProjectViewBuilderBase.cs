@@ -17,6 +17,9 @@ namespace SourceToAI.CLI.Services.Processing.Markdown;
 /// </list>
 /// Nicht-<c>.cs</c>-Dateien erscheinen nur in <b>complete</b> (wie Konzept „alles 1:1“); andere Views nur <c>.cs</c>.
 /// Segmente ohne exportierbaren Inhalt (Task 05) werden vor der Rückgabe entfernt — siehe <see cref="AiFeedSegmentExportability"/>.
+/// Dabei wird ausschließlich <see cref="AiFeedContentSegment.CSharpRewrittenHasExportableSurface"/> (vom View-Generator aus dem
+/// umgeschriebenen <see cref="Microsoft.CodeAnalysis.CSharp.Syntax.CompilationUnitSyntax"/>) ausgewertet; der gefilterte Markdown-Pfad
+/// führt <b>kein</b> erneutes <c>CSharpSyntaxTree.ParseText</c> über <see cref="AiFeedContentSegment.TransformedText"/> aus.
 /// </remarks>
 public abstract class MarkdownProjectViewBuilderBase(
     ICSharpDocumentLoader csharpDocumentLoader,
