@@ -7,7 +7,7 @@ namespace SourceToAI.CLI.Services.Export;
 public interface IMultiViewReadmeMarkdownGenerator
 {
     /// <summary>
-    /// Globale Orientierung für KI-Nutzer: Aufbau von <c>Isolated/</c> und <c>Merged/</c>, Views, Suche mit <c>rg</c>/<c>grep</c>.
+    /// Globale Orientierung für KI-Nutzer: Aufbau von <c>Isolated/</c> und <c>Merged/</c>, Views, Suchreihenfolge (Signaturen vor <c>complete</c>), <c>rg</c>/<c>grep</c>.
     /// </summary>
     string GenerateGlobalExportOverview(DateTimeOffset generatedAtUtc);
 

@@ -23,6 +23,8 @@ public sealed class MultiViewReadmeMarkdownGeneratorTests
         Assert.Contains("signatures-only", text, StringComparison.Ordinal);
         Assert.Contains("public-only", text, StringComparison.Ordinal);
         Assert.Contains("dto-only", text, StringComparison.Ordinal);
+        Assert.Contains("Best Practice für KIs", text, StringComparison.Ordinal);
+        Assert.Contains("Definitionen zuerst", text, StringComparison.Ordinal);
         Assert.DoesNotContain("full-source.md", text, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -43,6 +45,7 @@ public sealed class MultiViewReadmeMarkdownGeneratorTests
         Assert.Contains("../Merged/", text, StringComparison.Ordinal);
         Assert.Contains("dependency-graph.md", text, StringComparison.Ordinal);
         Assert.Contains("Solution-Ebene", text, StringComparison.Ordinal);
+        Assert.Contains("Gezielte Suche (KI)", text, StringComparison.Ordinal);
         Assert.DoesNotContain("full-source.md", text, StringComparison.OrdinalIgnoreCase);
     }
 
