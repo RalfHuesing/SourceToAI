@@ -12,6 +12,12 @@ public class FileTypeServiceTests
     [InlineData(".yaml", "Config", "yaml")]
     [InlineData(".yml", "Config", "yaml")]
     [InlineData(".json", "Config", "json")]
+    [InlineData(".cshtml", "UI", "html")]
+    [InlineData(".html", "UI", "html")]
+    [InlineData(".http", "Config", "http")]
+    [InlineData(".razor", "UI", "razor")]
+    [InlineData(".svg", "UI", "svg")]
+    [InlineData(".txt", "Doc", "text")]
     [InlineData(".unknownext", "Unknown", "text")]
     public void GetFileTypeAndLanguage_maps_known_extensions(string extension, string expectedType, string expectedLanguage)
     {
