@@ -32,6 +32,11 @@ public static class MultiViewExportPaths
 
     public const string DtoOnlyFolderName = "dto-only";
 
+    /// <summary>
+    /// Dateiname der Sicherheits-Markerdatei unter der Solution-Exportwurzel (von SourceToAI angelegt).
+    /// </summary>
+    public const string SafetyMarkerFileName = ".sta-marker";
+
     private static readonly HashSet<string> ReservedWindowsBaseNames = new(StringComparer.OrdinalIgnoreCase)
     {
         "CON", "PRN", "AUX", "NUL",
@@ -44,7 +49,9 @@ public static class MultiViewExportPaths
     /// Absolut: <c>Path.Combine(exportPath, solutionName)</c>.
     /// </summary>
     /// <remarks>
-    /// Vor jedem Lauf vom Orchestrator vollständig leeren/neu anlegen, damit keine veralteten Dateien bleiben.
+    /// Vor jedem Lauf vom Orchestrator vollständig leeren/neu anlegen, damit keine veralteten Dateien bleiben —
+    /// aber nur, wenn bereits eine <see cref="SafetyMarkerFileName"/>-Datei existiert (von einem früheren Lauf);
+    /// sonst bricht die CLI zur Vermeidung von Datenverlust ab.
     /// </remarks>
     public static string GetSolutionExportRoot(string exportPath, string solutionName) =>
         Path.Combine(exportPath, solutionName);

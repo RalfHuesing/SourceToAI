@@ -92,6 +92,106 @@ public class ConsoleOrchestratorTests
     }
 
     [Fact]
+    public async Task RunAsync_aborts_when_output_directory_exists_without_marker()
+    {
+        using var export = new TempWorkspace();
+        using var solution = new TempWorkspace();
+        var outputRoot = Path.Combine(export.Root, "MySol");
+        Directory.CreateDirectory(outputRoot);
+        await File.WriteAllTextAsync(Path.Combine(outputRoot, "foreign.txt"), "keep", TestContext.Current.CancellationToken);
+
+        var solutionDiscovery = new Mock<ISolutionDiscoveryService>(MockBehavior.Strict);
+        solutionDiscovery
+            .Setup(s => s.GetSolutionName(solution.Root))
+            .Returns(ExtractionResult<string>.Success("MySol"));
+        solutionDiscovery
+            .Setup(s => s.FindProjects(solution.Root))
+            .Returns(ExtractionResult<List<ProjectDefinition>>.Success([]));
+
+        var fileDiscovery = new Mock<IFileDiscoveryService>(MockBehavior.Strict);
+        var multiView = new Mock<IMultiViewExportService>(MockBehavior.Strict);
+        var readme = new Mock<IMultiViewReadmeMarkdownGenerator>(MockBehavior.Strict);
+        var post = new Mock<IPostExportTask>(MockBehavior.Strict);
+
+        var sut = new ConsoleOrchestrator(
+            solutionDiscovery.Object,
+            fileDiscovery.Object,
+            new CsprojDependencyGraphMarkdownGenerator(),
+            multiView.Object,
+            readme.Object,
+            TestAppSettingsFactory.Default(),
+            [post.Object]);
+
+        var ex = await Assert.ThrowsAsync<SourceToAiValidationException>(() => sut.RunAsync(solution.Root, export.Root));
+        Assert.Contains("Sicherheitsabbruch", ex.Message, StringComparison.Ordinal);
+        Assert.Contains(MultiViewExportPaths.SafetyMarkerFileName, ex.Message, StringComparison.Ordinal);
+        Assert.True(Directory.Exists(outputRoot));
+        Assert.True(File.Exists(Path.Combine(outputRoot, "foreign.txt")));
+        post.Verify(p => p.ExecuteAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task RunAsync_proceeds_when_output_directory_exists_with_marker()
+    {
+        using var export = new TempWorkspace();
+        using var solution = new TempWorkspace();
+        using var multiViewSp = CreateMultiViewServiceProvider();
+
+        var outputRoot = Path.Combine(export.Root, "MySol");
+        Directory.CreateDirectory(outputRoot);
+        var markerPath = Path.Combine(outputRoot, MultiViewExportPaths.SafetyMarkerFileName);
+        await File.WriteAllTextAsync(markerPath, "previous run", TestContext.Current.CancellationToken);
+        await File.WriteAllTextAsync(Path.Combine(outputRoot, "stale.md"), "# old", TestContext.Current.CancellationToken);
+
+        var projPath = Path.Combine(solution.Root, "Proj1", "Proj1.csproj");
+        Directory.CreateDirectory(Path.GetDirectoryName(projPath)!);
+        await File.WriteAllTextAsync(
+            projPath,
+            """<Project Sdk="Microsoft.NET.Sdk"></Project>""",
+            TestContext.Current.CancellationToken);
+
+        var csPath = Path.Combine(solution.Root, "Proj1", "Sample.cs");
+        await File.WriteAllTextAsync(csPath, "namespace Demo; public class Sample { }", TestContext.Current.CancellationToken);
+
+        var project1 = new ProjectDefinition("Proj1", projPath);
+        var solutionDiscovery = new Mock<ISolutionDiscoveryService>();
+        solutionDiscovery
+            .Setup(s => s.GetSolutionName(solution.Root))
+            .Returns(ExtractionResult<string>.Success("MySol"));
+        solutionDiscovery
+            .Setup(s => s.FindProjects(solution.Root))
+            .Returns(ExtractionResult<List<ProjectDefinition>>.Success([project1]));
+
+        var fileDiscovery = new Mock<IFileDiscoveryService>();
+        fileDiscovery
+            .Setup(f => f.FindSolutionDocs(solution.Root, It.IsAny<AppSettings>()))
+            .Returns(ExtractionResult<List<string>>.Success([]));
+        fileDiscovery
+            .Setup(f => f.FindFilesForProject(project1, It.IsAny<AppSettings>()))
+            .Returns(ExtractionResult<List<string>>.Success([csPath]));
+
+        var post = new Mock<IPostExportTask>();
+        post.Setup(p => p.ExecuteAsync(It.IsAny<string>(), It.IsAny<string>())).Returns(Task.CompletedTask);
+
+        var sut = new ConsoleOrchestrator(
+            solutionDiscovery.Object,
+            fileDiscovery.Object,
+            new CsprojDependencyGraphMarkdownGenerator(),
+            multiViewSp.GetRequiredService<IMultiViewExportService>(),
+            multiViewSp.GetRequiredService<IMultiViewReadmeMarkdownGenerator>(),
+            TestAppSettingsFactory.Default(),
+            [post.Object]);
+
+        await sut.RunAsync(solution.Root, export.Root);
+
+        Assert.True(File.Exists(markerPath));
+        var markerText = await File.ReadAllTextAsync(markerPath, TestContext.Current.CancellationToken);
+        Assert.Contains("Generated by SourceToAI", markerText, StringComparison.Ordinal);
+        Assert.False(File.Exists(Path.Combine(outputRoot, "stale.md")));
+        Assert.True(File.Exists(Path.Combine(outputRoot, "complete", "MySol.Proj1.md")));
+    }
+
+    [Fact]
     public async Task RunAsync_writes_multi_view_tree_readme_dependency_graph_and_post_export_tasks()
     {
         using var export = new TempWorkspace();
