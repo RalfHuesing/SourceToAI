@@ -132,7 +132,7 @@ public sealed class MultiViewExportService(
             var stem = MultiViewExportPaths.AllocateUniqueFileStem(
                 MultiViewExportPaths.BuildSanitizedExportFileStem(solutionDisplayName, slot.Project.ProjectName, slot.ViewKey),
                 usedStems);
-            WriteProjectViewFile(outputRoot, viewFolder, stem, body);
+            WriteProjectViewFiles(outputRoot, solutionDisplayName, viewFolder, stem, body);
         }
     }
 
@@ -165,13 +165,24 @@ public sealed class MultiViewExportService(
         ProjectDefinition Project,
         IReadOnlyList<string> Paths);
 
-    private static void WriteProjectViewFile(string outputRoot, string viewFolder, string uniqueStem, string body)
+    private static void WriteProjectViewFiles(string outputRoot, string solutionDisplayName, string viewFolder, string uniqueStem, string body)
     {
-        var outPath = MultiViewExportPaths.GetViewOutputPath(outputRoot, viewFolder, uniqueStem);
-        var outDir = Path.GetDirectoryName(outPath);
-        if (!string.IsNullOrEmpty(outDir))
-            Directory.CreateDirectory(outDir);
+        var isolatedRoot = MultiViewExportPaths.GetSolutionExportRoot(outputRoot, solutionDisplayName);
+        var mergedRoot = Path.Combine(outputRoot, MultiViewExportPaths.MergedFolderName);
 
-        File.WriteAllText(outPath, body);
+        var isolatedOutPath = MultiViewExportPaths.GetViewOutputPath(isolatedRoot, viewFolder, uniqueStem);
+        var mergedOutPath = MultiViewExportPaths.GetViewOutputPath(mergedRoot, viewFolder, uniqueStem);
+
+        WriteTextEnsuringDirectory(isolatedOutPath, body);
+        WriteTextEnsuringDirectory(mergedOutPath, body);
+    }
+
+    private static void WriteTextEnsuringDirectory(string path, string content)
+    {
+        var dir = Path.GetDirectoryName(path);
+        if (!string.IsNullOrEmpty(dir))
+            Directory.CreateDirectory(dir);
+
+        File.WriteAllText(path, content);
     }
 }
