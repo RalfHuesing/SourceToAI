@@ -10,7 +10,7 @@ public sealed class MultiViewReadmeMarkdownGeneratorTests
         var sut = new MultiViewReadmeMarkdownGenerator();
         var text = sut.Generate("MyRepo", new DateTimeOffset(2026, 5, 12, 10, 0, 0, TimeSpan.Zero));
 
-        Assert.Contains("# SourceToAI — Export: MyRepo", text, StringComparison.Ordinal);
+        Assert.Contains("# SourceToAI — Globaler Export: MyRepo", text, StringComparison.Ordinal);
         Assert.Contains("`MyRepo`", text, StringComparison.Ordinal);
         Assert.Contains("`2026-05-12T10:00:00.000Z`", text, StringComparison.Ordinal);
         Assert.Contains("MANIFEST", text, StringComparison.Ordinal);
@@ -21,7 +21,10 @@ public sealed class MultiViewReadmeMarkdownGeneratorTests
         Assert.Contains("public-only/", text, StringComparison.Ordinal);
         Assert.Contains("dto-only/", text, StringComparison.Ordinal);
         Assert.Contains("dependency-graph.md", text, StringComparison.Ordinal);
-        Assert.Contains("Solution-Ebene", text, StringComparison.Ordinal);
+        Assert.Contains("**Solution-Ebene** (isoliert)", text, StringComparison.Ordinal);
+        Assert.Contains("Isolated/", text, StringComparison.Ordinal);
+        Assert.Contains("Merged/", text, StringComparison.Ordinal);
+        Assert.Contains("-<view>.md", text, StringComparison.Ordinal);
         Assert.DoesNotContain("full-source.md", text, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -32,6 +35,6 @@ public sealed class MultiViewReadmeMarkdownGeneratorTests
         const string folder = "My-Solution_2026";
         var text = sut.Generate(folder, DateTimeOffset.Parse("2026-01-02T03:04:05.000Z"));
 
-        Assert.Contains($"# SourceToAI — Export: {folder}", text, StringComparison.Ordinal);
+        Assert.Contains($"# SourceToAI — Globaler Export: {folder}", text, StringComparison.Ordinal);
     }
 }
