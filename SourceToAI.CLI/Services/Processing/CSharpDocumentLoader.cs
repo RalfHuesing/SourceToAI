@@ -7,6 +7,16 @@ using System.Text;
 
 namespace SourceToAI.CLI.Services.Processing;
 
+/// <summary>
+/// Parse-Cache: pro normalisiertem absoluten Pfad höchstens eine Materialisierung von
+/// <see cref="ReadAndParse"/> unter Parallelität (<see cref="LazyThreadSafetyMode.ExecutionAndPublication"/>).
+/// </summary>
+/// <remarks>
+/// Skippable I/O-Fehler: <see cref="Lazy"/> speichert Factory-Ausnahmen — bei
+/// <see cref="SkippableLocalFileIoExceptions"/> ersetzen wir den betroffenen Cache-Eintrag per
+/// <see cref="ConcurrentDictionary{TKey,TValue}.TryUpdate"/> durch eine frische <see cref="Lazy{T}"/>,
+/// sobald der gescheiterte Wert noch der veröffentlichte ist (kein Fremd-Eintrag überschreiben).
+/// </remarks>
 public sealed class CSharpDocumentLoader : ICSharpDocumentLoader
 {
     private readonly ConcurrentDictionary<string, Lazy<CachedCSharpParse>> _parseCache = new(StringComparer.OrdinalIgnoreCase);
@@ -32,29 +42,27 @@ public sealed class CSharpDocumentLoader : ICSharpDocumentLoader
                 if (!seenInThisInvocation.Add(fullPath))
                     continue;
 
-                if (!_parseCache.TryGetValue(fullPath, out var lazyParse))
+                var lazyParse = _parseCache.GetOrAdd(
+                    fullPath,
+                    fp => new Lazy<CachedCSharpParse>(
+                        () => ReadAndParse(fp),
+                        LazyThreadSafetyMode.ExecutionAndPublication));
+
+                CachedCSharpParse cached;
+                try
                 {
-                    CachedCSharpParse parsed;
-                    try
-                    {
-                        parsed = ReadAndParse(fullPath);
-                    }
-                    catch (Exception ex) when (SkippableLocalFileIoExceptions.Matches(ex))
-                    {
-                        warnings.Add(
-                            $"„{fullPath}“ übersprungen ({ex.GetType().Name}): {ex.Message}");
-                        continue;
-                    }
-
-                    lazyParse = new Lazy<CachedCSharpParse>(
-                        () => parsed,
-                        LazyThreadSafetyMode.ExecutionAndPublication);
-
-                    if (!_parseCache.TryAdd(fullPath, lazyParse))
-                        lazyParse = _parseCache[fullPath];
+                    cached = lazyParse.Value;
                 }
-
-                var cached = lazyParse.Value;
+                catch (Exception ex) when (SkippableLocalFileIoExceptions.Matches(ex))
+                {
+                    var retryLazy = new Lazy<CachedCSharpParse>(
+                        () => ReadAndParse(fullPath),
+                        LazyThreadSafetyMode.ExecutionAndPublication);
+                    _ = _parseCache.TryUpdate(fullPath, retryLazy, lazyParse);
+                    warnings.Add(
+                        $"„{fullPath}“ übersprungen ({ex.GetType().Name}): {ex.Message}");
+                    continue;
+                }
 
                 var relativePath = Path.GetRelativePath(project.RootDirectory, fullPath);
                 documents.Add(new ParsedCSharpDocument(

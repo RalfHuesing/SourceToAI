@@ -1,3 +1,5 @@
+using System.Collections.Concurrent;
+using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using SourceToAI.CLI.Models;
 using SourceToAI.CLI.Services.Processing;
@@ -59,6 +61,27 @@ public class CSharpDocumentLoaderTests
         Assert.True(r1.IsSuccess && r2.IsSuccess, r1.ErrorMessage ?? r2.ErrorMessage);
         Assert.Same(r1.Value![0].SourceText, r2.Value![0].SourceText);
         Assert.Same(r1.Value![0].SyntaxTree, r2.Value![0].SyntaxTree);
+    }
+
+    [Fact]
+    public void LoadParsedDocuments_parallel_invocations_on_same_path_share_one_syntax_tree()
+    {
+        using var ws = new TempWorkspace();
+        var path = ws.WriteFile("src/Parallel.cs", "class ParallelDup { }");
+        var project = new ProjectDefinition("App", Path.Combine(ws.Root, "src", "App.csproj"));
+        var sut = new CSharpDocumentLoader();
+
+        var trees = new ConcurrentBag<SyntaxTree>();
+        const int iterations = 64;
+        Parallel.For(0, iterations, _ =>
+        {
+            var r = sut.LoadParsedDocuments(project, [path]);
+            Assert.True(r.IsSuccess, r.ErrorMessage);
+            trees.Add(r.Value![0].SyntaxTree);
+        });
+
+        var reference = trees.First(t => t is not null);
+        Assert.All(trees, t => Assert.Same(reference, t));
     }
 
     [Fact]
