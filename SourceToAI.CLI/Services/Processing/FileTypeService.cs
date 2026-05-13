@@ -26,6 +26,8 @@ public static class FileTypeService
             ".ts" => ("Code", "typescript"),
             ".css" => ("Code", "css"),
             ".html" => ("UI", "html"),
+            ".svg" => ("UI", "svg"),
+            ".http" => ("Config", "http"),
 
             // Database
             ".sql" => ("Data", "sql"),

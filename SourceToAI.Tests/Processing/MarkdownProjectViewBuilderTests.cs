@@ -223,8 +223,37 @@ public class MarkdownProjectViewBuilderTests
             Assert.True(result.IsSuccess, result.ErrorMessage);
             Assert.NotNull(result.Warnings);
             Assert.Contains(result.Warnings!, w => w.Contains("Locked.cs", StringComparison.OrdinalIgnoreCase));
-            Assert.Single(result.Value!);
-            Assert.EndsWith("Ok.cs", result.Value![0].RelativePathFromProjectRoot, StringComparison.OrdinalIgnoreCase);
+        Assert.Single(result.Value!);
+        Assert.EndsWith("Ok.cs", result.Value![0].RelativePathFromProjectRoot, StringComparison.OrdinalIgnoreCase);
         }
+    }
+
+    [Fact]
+    public void Complete_build_includes_razor_and_html_under_wwwroot_as_text_segments()
+    {
+        using var sp = CreateServiceProvider();
+        var sut = sp.GetServices<IMarkdownProjectViewBuilder>().Single(b => b.ViewKey == "complete");
+
+        using var ws = new TempWorkspace();
+        var htmlPath = ws.WriteFile("src/wwwroot/index.html", "<p>hi</p>");
+        var razorPath = ws.WriteFile("src/Pages/Counter.razor", "@code { }");
+        var project = new ProjectDefinition("P", Path.Combine(ws.Root, "src", "P.csproj"));
+
+        var result = sut.BuildContentSegments(project, [htmlPath, razorPath]);
+
+        Assert.True(result.IsSuccess, result.ErrorMessage);
+        var segs = result.Value!;
+        Assert.Equal(2, segs.Count);
+        var htmlSeg = segs.Single(s => s.FenceLanguage.Equals("html", StringComparison.OrdinalIgnoreCase));
+        var razorSeg = segs.Single(s => s.FenceLanguage.Equals("razor", StringComparison.OrdinalIgnoreCase));
+
+        Assert.Contains("wwwroot", htmlSeg.RelativePathFromProjectRoot, StringComparison.OrdinalIgnoreCase);
+        Assert.EndsWith("index.html", htmlSeg.RelativePathFromProjectRoot, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("UI", htmlSeg.FileTypeCategory);
+        Assert.Contains("<p>hi</p>", htmlSeg.TransformedText, StringComparison.Ordinal);
+
+        Assert.EndsWith("Counter.razor", razorSeg.RelativePathFromProjectRoot, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("UI", razorSeg.FileTypeCategory);
+        Assert.Contains("@code", razorSeg.TransformedText, StringComparison.Ordinal);
     }
 }

@@ -85,10 +85,17 @@ Die Datei muss **neben der ausführbaren Datei** liegen (wird mit ausgeliefert).
 {
     "SourceToAI": {
         "ExcludedDirectories": [ "bin", "obj", ".git", ".vs", ".idea", "node_modules" ],
-        "IncludedExtensions": [ ".cs", ".sql", ".json", ".xml", ".xaml", ".md", ".mdc", ".js", ".ts", ".css" ]
+        "IncludedExtensions": [
+            ".cs", ".sql", ".json", ".xml", ".xaml", ".yml", ".md", ".mdc", ".js", ".ts", ".css",
+            ".cshtml", ".html", ".http", ".razor", ".svg", ".txt", ".csproj"
+        ]
     }
 }
 ```
+
+Die Liste entspricht den Fallback-Defaults in `AppSettings.cs` und der mitgelieferten `appsettings.json`. Dateien mit diesen Endungen unterhalb jeder gefundenen `.csproj` (z. B. `wwwroot/`) werden in der View **`complete`** als Text eingebettet; C#-spezifische Views nutzen weiterhin nur `.cs` (Roslyn). **XAML**, **Razor** und **HTML** laufen nicht durch den C#-Parser, sondern über den gleichen Verzeichnis-Scan wie andere Textdateien.
+
+**Grenzen (Stand heute):** Unter dem angegebenen Quellverzeichnis muss mindestens eine `*.csproj` existieren — reine Static-Sites oder HTML-Sammlungen ohne .NET-Projekt werden nicht als Solution erkannt. Binärdateien (z. B. `.png`, Schriftarten) werden nicht in den Markdown-Feed übernommen; dafür wäre eine spätere Erweiterung (z. B. Manifest oder `IPostExportTask`) nötig.
 
 ---
 

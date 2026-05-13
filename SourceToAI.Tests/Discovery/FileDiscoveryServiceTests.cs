@@ -120,4 +120,22 @@ public class FileDiscoveryServiceTests
         Assert.NotNull(result.Value);
         Assert.True(CollectionContainsPath(result.Value, upperCs));
     }
+
+    [Fact]
+    public void FindFilesForProject_collects_web_extensions_under_wwwroot()
+    {
+        using var ws = new TempWorkspace();
+        ws.WriteFile("WebApp/WebApp.csproj", "<Project></Project>");
+        var html = ws.WriteFile("WebApp/wwwroot/index.html", "<html></html>");
+        var razor = ws.WriteFile("WebApp/Components/Pages/Home.razor", "<h1/>");
+        var project = new ProjectDefinition("WebApp", Path.Combine(ws.Root, "WebApp", "WebApp.csproj"));
+        var settings = TestAppSettingsFactory.Default();
+
+        var result = CreateSut().FindFilesForProject(project, settings);
+
+        Assert.True(result.IsSuccess, result.ErrorMessage);
+        Assert.NotNull(result.Value);
+        Assert.True(CollectionContainsPath(result.Value, html));
+        Assert.True(CollectionContainsPath(result.Value, razor));
+    }
 }

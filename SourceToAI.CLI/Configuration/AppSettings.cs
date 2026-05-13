@@ -12,6 +12,7 @@ public class AppSettings
 
     public string[] IncludedExtensions { get; set; } =
     [
-        ".cs", ".sql", ".json", ".xml", ".xaml", ".yml", ".md", ".mdc", ".js", ".ts", ".css", ".csproj"
+        ".cs", ".sql", ".json", ".xml", ".xaml", ".yml", ".md", ".mdc", ".js", ".ts", ".css",
+        ".cshtml", ".html", ".http", ".razor", ".svg", ".txt", ".csproj"
     ];
 }
