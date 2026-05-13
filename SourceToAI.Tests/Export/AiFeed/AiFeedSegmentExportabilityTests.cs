@@ -53,6 +53,18 @@ public class AiFeedSegmentExportabilityTests
     }
 
     [Fact]
+    public void IsExportable_rewritten_csharp_top_level_statement_only_with_surface_flag_is_true()
+    {
+        var seg = new AiFeedContentSegment(
+            "Program.cs",
+            "Code",
+            "csharp",
+            "System.Console.WriteLine(1);",
+            CSharpRewrittenHasExportableSurface: true);
+        Assert.True(AiFeedSegmentExportability.IsExportable(seg, AiFeedTransformedContentKind.RewrittenViewOutput));
+    }
+
+    [Fact]
     public void IsExportable_rewritten_csharp_missing_surface_flag_throws()
     {
         var seg = new AiFeedContentSegment("x.cs", "Code", "csharp", "public class X { }");

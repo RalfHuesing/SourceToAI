@@ -12,6 +12,11 @@ namespace SourceToAI.CLI.Services.Processing;
 /// <see cref="ReadAndParse"/> unter Parallelität (<see cref="LazyThreadSafetyMode.ExecutionAndPublication"/>).
 /// </summary>
 /// <remarks>
+/// Einziger Produktionsort für <see cref="CSharpSyntaxTree.ParseText"/> im CLI-Export-/View-Pfad; nachgelagerte
+/// View-Builder und <c>AI-Feed</c>-Exportierbarkeit arbeiten auf dem bestehenden AST bzw. vorberechneten Flags
+/// (kein erneutes Parsen desselben Quelltexts pro Lauf).
+/// </remarks>
+/// <remarks>
 /// Skippable I/O-Fehler: <see cref="Lazy"/> speichert Factory-Ausnahmen — bei
 /// <see cref="SkippableLocalFileIoExceptions"/> ersetzen wir den betroffenen Cache-Eintrag per
 /// <see cref="ConcurrentDictionary{TKey,TValue}.TryUpdate"/> durch eine frische <see cref="Lazy{T}"/>,
