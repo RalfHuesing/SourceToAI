@@ -23,6 +23,10 @@ public class ConsoleOrchestrator(
     AppSettings settings,
     IEnumerable<IPostExportTask> postExportTasks)
 {
+    /// <param name="AssemblyPath">Vollständiger Pfad zur .dll/.exe-Quelle.</param>
+    /// <param name="DetailMessage">Mehrzeilige Fehlerdetails (z. B. entflachte AggregateException).</param>
+    private readonly record struct AssemblySourceFailure(string AssemblyPath, string DetailMessage);
+
     private static T UnwrapOrThrowValidation<T>(ExtractionResult<T> result)
     {
         if (!result.IsSuccess)
@@ -33,10 +37,29 @@ public class ConsoleOrchestrator(
     private class ExportState { public bool Initialized; }
 
     /// <summary>
+    /// Baut eine mehrzeilige Beschreibung für fehlgeschlagene Assembly-Verarbeitung (insb. <see cref="AggregateException"/>).
+    /// </summary>
+    private static string BuildAssemblyProcessingFailureDetail(Exception ex)
+    {
+        if (ex is AggregateException aggregate)
+        {
+            var parts = aggregate.Flatten().InnerExceptions.Select(static e => e.Message).ToArray();
+            return parts.Length > 0 ? string.Join(Environment.NewLine, parts) : aggregate.Message;
+        }
+
+        var lines = new List<string> { ex.Message };
+        for (var inner = ex.InnerException; inner is not null; inner = inner.InnerException)
+            lines.Add(inner.Message);
+
+        return string.Join(Environment.NewLine, lines);
+    }
+
+    /// <summary>
     /// Exportiert nacheinander jede Quellwurzel unter <paramref name="exportPath"/>.
     /// AST-/Parse-Cache: pro Export setzt <see cref="IMultiViewExportService.WriteMergedSolutionViews"/> (über den Loader) den Cache zurück.
     /// </summary>
-    public async Task RunAsync(IEnumerable<string> rootPaths, string exportPath)
+    /// <returns><see langword="true"/>, wenn keine Assembly-Quelle wegen Dekompilierung/Discovery fehlgeschlagen ist; sonst <see langword="false"/>.</returns>
+    public async Task<bool> RunAsync(IEnumerable<string> rootPaths, string exportPath)
     {
         var roots = rootPaths
             .Select(static p => p?.Trim())
@@ -52,6 +75,7 @@ public class ConsoleOrchestrator(
         Console.WriteLine("==================================================\n");
         Console.WriteLine($"[INFO] {roots.Length} Quelle(n), Export-Ziel: {exportPath}\n");
 
+        var assemblyFailures = new List<AssemblySourceFailure>();
         var state = new ExportState();
         for (var i = 0; i < roots.Length; i++)
         {
@@ -61,12 +85,35 @@ public class ConsoleOrchestrator(
             Console.WriteLine($"[INFO] Quelle {ordinal}/{roots.Length}: {rootPath}");
             Console.WriteLine("--------------------------------------------------\n");
 
-            await RunSingleSourceAsync(rootPath, exportPath, state);
+            await RunSingleSourceAsync(rootPath, exportPath, state, assemblyFailures);
         }
 
         Console.WriteLine("\n==================================================");
         Console.WriteLine($"- Alle Quellen verarbeitet ({roots.Length}).");
         Console.WriteLine("==================================================");
+
+        if (assemblyFailures.Count > 0)
+        {
+            Console.WriteLine();
+            Console.WriteLine("==================================================");
+            Console.WriteLine($"Zusammenfassung: fehlgeschlagene Assembly-Quellen ({assemblyFailures.Count})");
+            Console.WriteLine("==================================================");
+            for (var i = 0; i < assemblyFailures.Count; i++)
+            {
+                var f = assemblyFailures[i];
+                Console.WriteLine($"{i + 1}) {f.AssemblyPath}");
+                foreach (var line in f.DetailMessage.Split(
+                             ['\r', '\n'],
+                             StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                {
+                    Console.WriteLine($"   {line}");
+                }
+            }
+
+            Console.WriteLine("==================================================");
+        }
+
+        return assemblyFailures.Count == 0;
     }
 
     private static bool IsNetAssemblyFile(string path) =>
@@ -131,7 +178,11 @@ public class ConsoleOrchestrator(
         }
     }
 
-    private async Task RunSingleSourceAsync(string rootPath, string exportPath, ExportState state)
+    private async Task RunSingleSourceAsync(
+        string rootPath,
+        string exportPath,
+        ExportState state,
+        List<AssemblySourceFailure> assemblyFailures)
     {
         string effectiveRoot;
         string solutionName;
@@ -152,30 +203,40 @@ public class ConsoleOrchestrator(
             var plannedSolutionExportRoot = Path.GetFullPath(MultiViewExportPaths.GetSolutionExportRoot(exportPath, assemblyBaseName));
 
             var decompileDir = Path.Combine(plannedSolutionExportRoot, "decompile");
-            // RunAsync/CLI reichen das Abbruchtoken noch nicht durch — sobald verfügbar hier an den Decompiler durchreichen.
-            effectiveRoot = assemblyDecompiler.DecompileToProjectDirectory(
-                assemblyPath,
-                decompileDir,
-                CancellationToken.None);
-
-            solutionName = UnwrapOrThrowValidation(solutionDiscovery.GetSolutionName(effectiveRoot));
-            if (!string.Equals(solutionName, assemblyBaseName, StringComparison.OrdinalIgnoreCase))
+            try
             {
-                throw new SourceToAiValidationException(
-                    $"Ermittelter Solution-Name „{solutionName}“ weicht vom Assembly-Basisnamen „{assemblyBaseName}“ ab (Export-Pfad-Invariante).");
-            }
+                // RunAsync/CLI reichen das Abbruchtoken noch nicht durch — sobald verfügbar hier an den Decompiler durchreichen.
+                effectiveRoot = assemblyDecompiler.DecompileToProjectDirectory(
+                    assemblyPath,
+                    decompileDir,
+                    CancellationToken.None);
 
-            var exportRootFromName = Path.GetFullPath(MultiViewExportPaths.GetSolutionExportRoot(exportPath, solutionName));
-            if (!string.Equals(exportRootFromName, plannedSolutionExportRoot, StringComparison.OrdinalIgnoreCase))
+                solutionName = UnwrapOrThrowValidation(solutionDiscovery.GetSolutionName(effectiveRoot));
+                if (!string.Equals(solutionName, assemblyBaseName, StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new SourceToAiValidationException(
+                        $"Ermittelter Solution-Name „{solutionName}“ weicht vom Assembly-Basisnamen „{assemblyBaseName}“ ab (Export-Pfad-Invariante).");
+                }
+
+                var exportRootFromName = Path.GetFullPath(MultiViewExportPaths.GetSolutionExportRoot(exportPath, solutionName));
+                if (!string.Equals(exportRootFromName, plannedSolutionExportRoot, StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new SourceToAiValidationException(
+                        $"Export-Wurzel „{exportRootFromName}“ entspricht nicht der erwarteten Assembly-Export-Wurzel „{plannedSolutionExportRoot}“.");
+                }
+
+                Console.WriteLine($"[INFO] Solution erkannt: {solutionName}");
+                projects = UnwrapOrThrowValidation(solutionDiscovery.FindProjects(effectiveRoot));
+                Console.WriteLine($"[INFO] {projects.Count} Projekte gefunden.\n");
+                outputDir = plannedSolutionExportRoot;
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                throw new SourceToAiValidationException(
-                    $"Export-Wurzel „{exportRootFromName}“ entspricht nicht der erwarteten Assembly-Export-Wurzel „{plannedSolutionExportRoot}“.");
+                var detail = BuildAssemblyProcessingFailureDetail(ex);
+                assemblyFailures.Add(new AssemblySourceFailure(assemblyPath, detail));
+                Console.WriteLine($"[WARN] Assembly-Quelle übersprungen ({assemblyPath}): {ex.Message}");
+                return;
             }
-
-            Console.WriteLine($"[INFO] Solution erkannt: {solutionName}");
-            projects = UnwrapOrThrowValidation(solutionDiscovery.FindProjects(effectiveRoot));
-            Console.WriteLine($"[INFO] {projects.Count} Projekte gefunden.\n");
-            outputDir = plannedSolutionExportRoot;
         }
         else
         {
