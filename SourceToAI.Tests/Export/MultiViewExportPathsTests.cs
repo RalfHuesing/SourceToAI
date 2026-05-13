@@ -8,7 +8,7 @@ public sealed class MultiViewExportPathsTests
     public void GetSolutionExportRoot_combines_export_path_and_solution_folder()
     {
         var root = Path.Combine(Path.GetTempPath(), "sta-solroot-" + Guid.NewGuid().ToString("N"));
-        Assert.Equal(Path.Combine(root, "MySolution"), MultiViewExportPaths.GetSolutionExportRoot(root, "MySolution"));
+        Assert.Equal(Path.Combine(root, MultiViewExportPaths.IsolatedFolderName, "MySolution"), MultiViewExportPaths.GetSolutionExportRoot(root, "MySolution"));
     }
 
     [Theory]
@@ -62,19 +62,19 @@ public sealed class MultiViewExportPathsTests
     public void GetViewOutputPath_combines_root_folder_and_md_extension()
     {
         var root = Path.Combine(Path.GetTempPath(), "sta-export-test-" + Guid.NewGuid().ToString("N"));
-        var path = MultiViewExportPaths.GetViewOutputPath(root, "complete", "MySol.MyApp");
-        Assert.Equal(Path.Combine(root, "complete", "MySol.MyApp.md"), path);
+        var path = MultiViewExportPaths.GetViewOutputPath(root, "complete", "MySol.MyApp-complete");
+        Assert.Equal(Path.Combine(root, "complete", "MySol.MyApp-complete.md"), path);
     }
 
     [Fact]
-    public void GetViewOutputPath_four_arg_overload_matches_stem_builder()
+    public void GetViewOutputPath_five_arg_overload_matches_stem_builder()
     {
         var root = @"C:\out\Sol";
         var expected = MultiViewExportPaths.GetViewOutputPath(
             root,
             "public-only",
-            MultiViewExportPaths.BuildSanitizedExportFileStem("S<>", "P|"));
-        var actual = MultiViewExportPaths.GetViewOutputPath(root, "public-only", "S<>", "P|");
+            MultiViewExportPaths.BuildSanitizedExportFileStem("S<>", "P|", "public-only"));
+        var actual = MultiViewExportPaths.GetViewOutputPath(root, "public-only", "S<>", "P|", "public-only");
         Assert.Equal(expected, actual);
     }
 
@@ -85,22 +85,22 @@ public sealed class MultiViewExportPathsTests
         var used = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         var stem1 = MultiViewExportPaths.AllocateUniqueFileStem(
-            MultiViewExportPaths.BuildSanitizedExportFileStem(sol, "a/b"),
+            MultiViewExportPaths.BuildSanitizedExportFileStem(sol, "a/b", "complete"),
             used);
         var stem2 = MultiViewExportPaths.AllocateUniqueFileStem(
-            MultiViewExportPaths.BuildSanitizedExportFileStem(sol, "a:b"),
+            MultiViewExportPaths.BuildSanitizedExportFileStem(sol, "a:b", "complete"),
             used);
 
-        Assert.Equal("FixtureSol.a_b", stem1);
-        Assert.Equal("FixtureSol.a_b_2", stem2);
+        Assert.Equal("FixtureSol.a_b-complete", stem1);
+        Assert.Equal("FixtureSol.a_b-complete_2", stem2);
         Assert.Equal(2, used.Count);
     }
 
     [Fact]
     public void AllocateUniqueFileStem_reuses_suffix_counter_until_free()
     {
-        var used = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "X.a_b", "X.a_b_2" };
-        var stem = MultiViewExportPaths.AllocateUniqueFileStem("X.a_b", used);
-        Assert.Equal("X.a_b_3", stem);
+        var used = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "X.a_b-complete", "X.a_b-complete_2" };
+        var stem = MultiViewExportPaths.AllocateUniqueFileStem("X.a_b-complete", used);
+        Assert.Equal("X.a_b-complete_3", stem);
     }
 }
