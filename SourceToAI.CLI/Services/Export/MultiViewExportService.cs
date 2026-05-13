@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Linq;
+using SourceToAI.CLI.App.Exceptions;
 using SourceToAI.CLI.Models;
 using SourceToAI.CLI.Services.Export.AiFeed;
 using SourceToAI.CLI.Services.Processing;
@@ -18,7 +19,7 @@ public sealed class MultiViewExportService(
 
     private static readonly string[] ViewKeyOrder = ["complete", "signatures-only", "public-only", "dto-only"];
 
-    public ExtractionResult<bool> WriteMergedSolutionViews(
+    public void WriteMergedSolutionViews(
         string outputRoot,
         string solutionDisplayName,
         string solutionRootPath,
@@ -27,118 +28,111 @@ public sealed class MultiViewExportService(
         IReadOnlyList<(ProjectDefinition Project, IReadOnlyList<string> AbsoluteFilePaths)> projectsWithFiles,
         IReadOnlyList<string>? solutionDocumentationAbsolutePaths)
     {
-        try
+        csharpDocumentLoader.Clear();
+
+        var buildersByKey = viewBuilders.ToDictionary(b => b.ViewKey, StringComparer.Ordinal);
+        var usedStemsPerView = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
+        foreach (var vk in ViewKeyOrder)
+            usedStemsPerView[vk] = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        var orderedProjects = projectsWithFiles
+            .OrderBy(p => p.Project.ProjectName, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        var exportUnits = new List<(ProjectDefinition Project, IReadOnlyList<string> Paths, bool DocsOnlyInCompleteView)>();
+        if (solutionDocumentationAbsolutePaths is { Count: > 0 })
         {
-            csharpDocumentLoader.Clear();
-
-            var buildersByKey = viewBuilders.ToDictionary(b => b.ViewKey, StringComparer.Ordinal);
-            var usedStemsPerView = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
-            foreach (var vk in ViewKeyOrder)
-                usedStemsPerView[vk] = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-            var orderedProjects = projectsWithFiles
-                .OrderBy(p => p.Project.ProjectName, StringComparer.OrdinalIgnoreCase)
-                .ToList();
-
-            var exportUnits = new List<(ProjectDefinition Project, IReadOnlyList<string> Paths, bool DocsOnlyInCompleteView)>();
-            if (solutionDocumentationAbsolutePaths is { Count: > 0 })
-            {
-                var docProject = new ProjectDefinition(".Docs", Path.Combine(solutionRootPath, "virtual.csproj"));
-                exportUnits.Add((docProject, solutionDocumentationAbsolutePaths, true));
-            }
-
-            foreach (var (project, paths) in orderedProjects)
-            {
-                if (paths.Count == 0)
-                    continue;
-                exportUnits.Add((project, paths, false));
-            }
-
-            var workSlots = new List<ViewWorkSlot>();
-            foreach (var (project, paths, docsOnlyInCompleteView) in exportUnits)
-            {
-                foreach (var viewKey in ViewKeyOrder)
-                {
-                    if (docsOnlyInCompleteView && !viewKey.Equals("complete", StringComparison.Ordinal))
-                        continue;
-
-                    if (!buildersByKey.TryGetValue(viewKey, out var builder))
-                        return ExtractionResult<bool>.Failure($"Kein Markdown-View-Builder für „{viewKey}“ registriert.");
-
-                    workSlots.Add(new ViewWorkSlot(viewKey, builder, project, paths));
-                }
-            }
-
-            var parallelErrors = new ConcurrentQueue<Exception>();
-            var composedBodies = new ExtractionResult<string>?[workSlots.Count];
-            RunBoundedParallel(
-                MaxConcurrentViewBuilds,
-                workSlots.Count,
-                i =>
-                {
-                    var slot = workSlots[i];
-                    var part = slot.Builder.BuildContentSegments(slot.Project, slot.Paths);
-                    if (!part.IsSuccess)
-                    {
-                        composedBodies[i] = ExtractionResult<string>.Failure(part.ErrorMessage!);
-                        return;
-                    }
-
-                    if (part.Warnings is { Count: > 0 } buildWarnings)
-                    {
-                        foreach (var line in buildWarnings)
-                        {
-                            Console.WriteLine(
-                                $"   -> [WARN] {slot.Project.ProjectName} ({slot.ViewKey}): {line}");
-                        }
-                    }
-
-                    if (part.Value!.Count == 0)
-                    {
-                        composedBodies[i] = null;
-                        return;
-                    }
-
-                    var body = markdownComposer.Compose(
-                        solutionDisplayName,
-                        slot.Project.ProjectName,
-                        sessionId,
-                        generated,
-                        part.Value!);
-                    composedBodies[i] = ExtractionResult<string>.Success(body);
-                },
-                parallelErrors);
-
-            if (!parallelErrors.IsEmpty)
-            {
-                var agg = new AggregateException(parallelErrors.ToArray());
-                return ExtractionResult<bool>.Failure($"Multi-View-Export: {agg.Message}");
-            }
-
-            for (var i = 0; i < workSlots.Count; i++)
-            {
-                var composed = composedBodies[i];
-                if (composed is null)
-                    continue;
-
-                if (!composed.IsSuccess)
-                    return ExtractionResult<bool>.Failure(composed.ErrorMessage!);
-
-                var slot = workSlots[i];
-                var viewFolder = MultiViewExportPaths.GetViewFolderNameForViewKey(slot.ViewKey);
-                var usedStems = usedStemsPerView[slot.ViewKey];
-
-                var stem = MultiViewExportPaths.AllocateUniqueFileStem(
-                    MultiViewExportPaths.BuildSanitizedExportFileStem(solutionDisplayName, slot.Project.ProjectName),
-                    usedStems);
-                WriteProjectViewFile(outputRoot, viewFolder, stem, composed.Value!);
-            }
-
-            return ExtractionResult<bool>.Success(true);
+            var docProject = new ProjectDefinition(".Docs", Path.Combine(solutionRootPath, "virtual.csproj"));
+            exportUnits.Add((docProject, solutionDocumentationAbsolutePaths, true));
         }
-        catch (Exception ex)
+
+        foreach (var (project, paths) in orderedProjects)
         {
-            return ExtractionResult<bool>.Failure($"Multi-View-Export: {ex.Message}");
+            if (paths.Count == 0)
+                continue;
+            exportUnits.Add((project, paths, false));
+        }
+
+        var workSlots = new List<ViewWorkSlot>();
+        foreach (var (project, paths, docsOnlyInCompleteView) in exportUnits)
+        {
+            foreach (var viewKey in ViewKeyOrder)
+            {
+                if (docsOnlyInCompleteView && !viewKey.Equals("complete", StringComparison.Ordinal))
+                    continue;
+
+                if (!buildersByKey.TryGetValue(viewKey, out var builder))
+                {
+                    throw new SourceToAiExportException(
+                        $"Kein Markdown-View-Builder für „{viewKey}“ registriert.");
+                }
+
+                workSlots.Add(new ViewWorkSlot(viewKey, builder, project, paths));
+            }
+        }
+
+        var parallelErrors = new ConcurrentQueue<Exception>();
+        var composedBodies = new string?[workSlots.Count];
+        RunBoundedParallel(
+            MaxConcurrentViewBuilds,
+            workSlots.Count,
+            i =>
+            {
+                var slot = workSlots[i];
+                var part = slot.Builder.BuildContentSegments(slot.Project, slot.Paths);
+                if (!part.IsSuccess)
+                {
+                    parallelErrors.Enqueue(
+                        new SourceToAiExportException(part.ErrorMessage ?? "View-Build fehlgeschlagen."));
+                    return;
+                }
+
+                if (part.Warnings is { Count: > 0 } buildWarnings)
+                {
+                    foreach (var line in buildWarnings)
+                    {
+                        Console.WriteLine(
+                            $"   -> [WARN] {slot.Project.ProjectName} ({slot.ViewKey}): {line}");
+                    }
+                }
+
+                if (part.Value!.Count == 0)
+                {
+                    composedBodies[i] = null;
+                    return;
+                }
+
+                var body = markdownComposer.Compose(
+                    solutionDisplayName,
+                    slot.Project.ProjectName,
+                    sessionId,
+                    generated,
+                    part.Value!);
+                composedBodies[i] = body;
+            },
+            parallelErrors);
+
+        if (!parallelErrors.IsEmpty)
+        {
+            throw new SourceToAiExportException(
+                "Multi-View-Export: Mindestens ein View-Build ist fehlgeschlagen.",
+                new AggregateException(parallelErrors.ToArray()));
+        }
+
+        for (var i = 0; i < workSlots.Count; i++)
+        {
+            var body = composedBodies[i];
+            if (body is null)
+                continue;
+
+            var slot = workSlots[i];
+            var viewFolder = MultiViewExportPaths.GetViewFolderNameForViewKey(slot.ViewKey);
+            var usedStems = usedStemsPerView[slot.ViewKey];
+
+            var stem = MultiViewExportPaths.AllocateUniqueFileStem(
+                MultiViewExportPaths.BuildSanitizedExportFileStem(solutionDisplayName, slot.Project.ProjectName),
+                usedStems);
+            WriteProjectViewFile(outputRoot, viewFolder, stem, body);
         }
     }
 

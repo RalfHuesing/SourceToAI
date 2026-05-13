@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using SourceToAI.CLI.App;
+using SourceToAI.CLI.App.Exceptions;
 using SourceToAI.CLI.Configuration;
 using SourceToAI.CLI.Infrastructure;
 using SourceToAI.CLI.Services.Discovery;
@@ -60,7 +61,20 @@ try
     var orchestrator = serviceProvider.GetRequiredService<ConsoleOrchestrator>();
     await orchestrator.RunAsync(solutionPath, exportPath);
 }
+catch (SourceToAiValidationException ex)
+{
+    Console.WriteLine($"[FEHLER] {ex.Message}");
+    Environment.ExitCode = 1;
+}
+catch (SourceToAiExportException ex)
+{
+    Console.WriteLine($"[FEHLER] {ex.Message}");
+    if (ex.InnerException is not null)
+        Console.WriteLine(ex.InnerException.ToString());
+    Environment.ExitCode = 1;
+}
 catch (Exception ex)
 {
     Console.WriteLine($"[FATAL ERROR] Ein unerwarteter Fehler ist aufgetreten: {ex.Message}");
+    Environment.ExitCode = 1;
 }

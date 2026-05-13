@@ -14,7 +14,8 @@ public interface IMultiViewExportService
     /// </summary>
     /// <param name="sessionId">Gemeinsame Session für alle Dateien dieses Laufs (Frontmatter).</param>
     /// <param name="generated">Zeitstempel für Frontmatter (z. B. identisch mit Readme-Lauf).</param>
-    ExtractionResult<bool> WriteMergedSolutionViews(
+    /// <exception cref="SourceToAI.CLI.App.Exceptions.SourceToAiExportException">Bei Build-, Compose- oder I/O-Fehlern.</exception>
+    void WriteMergedSolutionViews(
         string outputRoot,
         string solutionDisplayName,
         string solutionRootPath,

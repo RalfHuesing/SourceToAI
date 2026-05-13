@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using SourceToAI.CLI.App;
+using SourceToAI.CLI.App.Exceptions;
 using SourceToAI.CLI.Configuration;
 using SourceToAI.CLI.Infrastructure;
 using SourceToAI.CLI.Models;
@@ -51,7 +52,7 @@ public class ConsoleOrchestratorTests
             TestAppSettingsFactory.Default(),
             [post.Object]);
 
-        await sut.RunAsync(solution.Root, export.Root);
+        await Assert.ThrowsAsync<SourceToAiValidationException>(() => sut.RunAsync(solution.Root, export.Root));
 
         Assert.Empty(Directory.GetDirectories(export.Root));
         post.Verify(p => p.ExecuteAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
@@ -84,7 +85,7 @@ public class ConsoleOrchestratorTests
             TestAppSettingsFactory.Default(),
             [post.Object]);
 
-        await sut.RunAsync(solution.Root, export.Root);
+        await Assert.ThrowsAsync<SourceToAiValidationException>(() => sut.RunAsync(solution.Root, export.Root));
 
         Assert.Empty(Directory.GetDirectories(export.Root));
         post.Verify(p => p.ExecuteAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
