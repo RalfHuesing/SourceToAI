@@ -1,3 +1,4 @@
+using SourceToAI.CLI.App.Exceptions;
 using SourceToAI.CLI.Configuration;
 using SourceToAI.CLI.Models;
 using SourceToAI.CLI.Services.Discovery;
@@ -19,28 +20,23 @@ public class ConsoleOrchestrator(
     AppSettings settings,
     IEnumerable<IPostExportTask> postExportTasks)
 {
+    private static T UnwrapOrThrowValidation<T>(ExtractionResult<T> result)
+    {
+        if (!result.IsSuccess)
+            throw new SourceToAiValidationException(result.ErrorMessage ?? "Validierung fehlgeschlagen.");
+        return result.Value!;
+    }
+
     public async Task RunAsync(string rootPath, string exportPath)
     {
         Console.WriteLine("==================================================");
         Console.WriteLine("🚀 SourceToAI - Standalone AI Feed Generator");
         Console.WriteLine("==================================================\n");
 
-        var solutionResult = solutionDiscovery.GetSolutionName(rootPath);
-        if (!solutionResult.IsSuccess)
-        {
-            Console.WriteLine($"[FEHLER] {solutionResult.ErrorMessage}");
-            return;
-        }
-        var solutionName = solutionResult.Value!;
+        var solutionName = UnwrapOrThrowValidation(solutionDiscovery.GetSolutionName(rootPath));
         Console.WriteLine($"[INFO] Solution erkannt: {solutionName}");
 
-        var projectsResult = solutionDiscovery.FindProjects(rootPath);
-        if (!projectsResult.IsSuccess)
-        {
-            Console.WriteLine($"[FEHLER] {projectsResult.ErrorMessage}");
-            return;
-        }
-        var projects = projectsResult.Value!;
+        var projects = UnwrapOrThrowValidation(solutionDiscovery.FindProjects(rootPath));
         Console.WriteLine($"[INFO] {projects.Count} Projekte gefunden.\n");
 
         var outputDir = MultiViewExportPaths.GetSolutionExportRoot(exportPath, solutionName);
@@ -58,8 +54,9 @@ public class ConsoleOrchestrator(
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[FEHLER] Konnte Ausgabeordner nicht vorbereiten: {ex.Message}");
-            return;
+            throw new SourceToAiValidationException(
+                $"Konnte Ausgabeordner nicht vorbereiten: {ex.Message}",
+                ex);
         }
 
         var generatedAt = DateTimeOffset.UtcNow;
@@ -135,7 +132,7 @@ public class ConsoleOrchestrator(
         }
 
         Console.WriteLine();
-        var multiViewResult = multiViewExportService.WriteMergedSolutionViews(
+        multiViewExportService.WriteMergedSolutionViews(
             outputDir,
             solutionName,
             rootPath,
@@ -145,15 +142,7 @@ public class ConsoleOrchestrator(
             solutionDocPaths);
 
         var successCount = projectsWithFiles.Count;
-        if (!multiViewResult.IsSuccess)
-        {
-            Console.WriteLine($"[FEHLER] Multi-View-Export: {multiViewResult.ErrorMessage}");
-            successCount = 0;
-        }
-        else
-        {
-            Console.WriteLine("[INFO] Multi-View-Export (complete, signatures-only, public-only, dto-only) abgeschlossen.");
-        }
+        Console.WriteLine("[INFO] Multi-View-Export (complete, signatures-only, public-only, dto-only) abgeschlossen.");
 
         Console.WriteLine("\n==================================================");
         Console.WriteLine($"- Fertig! {successCount} von {projects.Count} Projekten mit exportierbaren Dateien.");
