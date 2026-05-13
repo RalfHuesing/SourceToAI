@@ -25,7 +25,7 @@ internal static class SourceToAiCli
             "Beispiel (Optionen): SourceToAI --export ./exports --input C:\\Daten\\RepoA\\ --input C:\\Daten\\RepoB\\";
 
         internal const string ExportPathDescription =
-            "Zielverzeichnis für den Export (wird bei Bedarf angelegt bzw. geleert).";
+            "Zielverzeichnis für den gesamten Export-Baum (wird bei Bedarf angelegt; bestehender Inhalt wird sicherheitshalber geleert, sofern .sta-marker existiert).";
 
         internal const string SolutionRootDescription =
             "Quellverzeichnis (Solution/Repository mit .sln oder darüber) oder Pfad zu einer .NET-Assembly (.dll/.exe). Mindestens ein Pfad; weitere Pfade als weitere Positionsargumente.";
