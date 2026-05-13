@@ -9,14 +9,22 @@ namespace SourceToAI.Tests.Processing;
 public class ViewGeneratorDiTests
 {
     [Fact]
-    public void AddViewGenerators_resolves_four_distinct_implementations()
+    public void AddViewGenerators_keyed_only_no_unkeyed_collection()
     {
         var services = new ServiceCollection();
         services.AddViewGenerators();
         using var sp = services.BuildServiceProvider();
 
-        var generators = sp.GetServices<IViewGenerator>().ToList();
+        Assert.Empty(sp.GetServices<IViewGenerator>());
 
+        var keys = new[]
+        {
+            MarkdownViewKeys.Complete,
+            MarkdownViewKeys.SignaturesOnly,
+            MarkdownViewKeys.PublicOnly,
+            MarkdownViewKeys.DtoOnly,
+        };
+        var generators = keys.Select(k => sp.GetRequiredKeyedService<IViewGenerator>(k)).ToList();
         Assert.Equal(4, generators.Count);
         Assert.Equal(4, generators.Select(g => g.ViewKey).Distinct().Count());
     }
