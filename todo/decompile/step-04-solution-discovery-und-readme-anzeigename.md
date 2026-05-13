@@ -28,4 +28,4 @@ Wenn die Quellwurzel ein Ordner **`decompile`** ist (typisch: `{exportPath}/{Ass
 
 ## Abhaken (Pflicht am Step-Ende)
 
-- [ ] **Step 04 abgehackt** → `- [X] **Step 04 abgehackt**`
+- [X] **Step 04 abgehackt**

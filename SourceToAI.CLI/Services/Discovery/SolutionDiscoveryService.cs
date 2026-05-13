@@ -17,8 +17,20 @@ public class SolutionDiscoveryService : ISolutionDiscoveryService
             return ExtractionResult<string>.Success(Path.GetFileNameWithoutExtension(slnFiles[0]));
         }
 
-        // Fallback: Nimm den Namen des Root-Verzeichnisses
-        var dirName = new DirectoryInfo(rootPath).Name;
+        // Fallback: Root-Verzeichnisname. Unter …/{AssemblyName}/decompile (WholeProjectDecompiler) den
+        // übergeordneten Namen nutzen, damit Export-Pfade und Readme zum Assembly-Konzept passen.
+        var normalizedRoot = Path.TrimEndingDirectorySeparator(rootPath);
+        var dirInfo = new DirectoryInfo(normalizedRoot);
+        var dirName = dirInfo.Name;
+
+        if (string.Equals(dirName, "decompile", StringComparison.OrdinalIgnoreCase))
+        {
+            // Ohne nutzbaren Parent (z. B. Dateisystem-Wurzel): weiterhin „decompile“.
+            var parent = dirInfo.Parent;
+            var displayName = parent != null ? parent.Name : dirName;
+            return ExtractionResult<string>.Success(string.IsNullOrEmpty(displayName) ? dirName : displayName);
+        }
+
         return ExtractionResult<string>.Success(dirName);
     }
 

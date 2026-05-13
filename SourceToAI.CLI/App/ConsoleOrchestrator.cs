@@ -79,7 +79,11 @@ public class ConsoleOrchestrator(
     {
         var effectiveDir = new DirectoryInfo(Path.TrimEndingDirectorySeparator(effectiveRootPath));
         if (string.Equals(effectiveDir.Name, "decompile", StringComparison.OrdinalIgnoreCase))
-            return effectiveDir.Parent?.Name ?? effectiveDir.Name;
+        {
+            var parent = effectiveDir.Parent;
+            var fromParent = parent != null ? parent.Name : effectiveDir.Name;
+            return string.IsNullOrEmpty(fromParent) ? effectiveDir.Name : fromParent;
+        }
 
         return new DirectoryInfo(Path.TrimEndingDirectorySeparator(userSourcePath)).Name;
     }
