@@ -46,4 +46,4 @@ In `SourceToAI.CLI/Program.cs`:
 
 ## Abhaken (Pflicht am Step-Ende)
 
-- [ ] **Step 02 abgehackt** → `- [X] **Step 02 abgehackt**`
+- [X] **Step 02 abgehackt**

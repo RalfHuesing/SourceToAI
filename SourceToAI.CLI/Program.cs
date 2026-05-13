@@ -5,6 +5,7 @@ using SourceToAI.CLI.App.Cli;
 using SourceToAI.CLI.App.Exceptions;
 using SourceToAI.CLI.Configuration;
 using SourceToAI.CLI.Infrastructure;
+using SourceToAI.CLI.Services.Decompilation;
 using SourceToAI.CLI.Services.Discovery;
 using SourceToAI.CLI.Services.Export;
 using SourceToAI.CLI.Services.Export.AiFeed;
@@ -43,6 +44,7 @@ static async Task<int> RunExportPipelineAsync(
 
     var services = new ServiceCollection();
     services.AddSingleton(appSettings);
+    services.AddTransient<IAssemblyDecompilerService, AssemblyDecompilerService>();
     services.AddTransient<ISolutionDiscoveryService, SolutionDiscoveryService>();
     services.AddSingleton<IDirectoryEnumerator, DefaultDirectoryEnumerator>();
     services.AddTransient<IFileDiscoveryService, FileDiscoveryService>();
