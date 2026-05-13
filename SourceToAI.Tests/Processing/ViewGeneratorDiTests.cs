@@ -2,6 +2,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.Extensions.DependencyInjection;
 using SourceToAI.CLI.Infrastructure;
 using SourceToAI.CLI.Services.Processing;
+using SourceToAI.CLI.Services.Processing.Rewriters;
 using SourceToAI.CLI.Services.Processing.ViewGenerators;
 
 namespace SourceToAI.Tests.Processing;
@@ -51,9 +52,9 @@ public class ViewGeneratorDiTests
         IViewGenerator[] stubs =
         [
             new CompleteViewGenerator(),
-            new SignaturesOnlyViewGenerator(),
-            new PublicOnlyViewGenerator(),
-            new DtoOnlyViewGenerator(),
+            new RoslynRewriteViewGenerator(MarkdownViewKeys.SignaturesOnly, SignaturesRewriter.Rewrite),
+            new RoslynRewriteViewGenerator(MarkdownViewKeys.PublicOnly, VisibilityRewriter.Rewrite),
+            new RoslynRewriteViewGenerator(MarkdownViewKeys.DtoOnly, DtoRewriter.Rewrite),
         ];
 
         foreach (var g in stubs)
