@@ -31,4 +31,4 @@ Das Paket **`ICSharpCode.Decompiler`** (ILSpy-Engine) in **`SourceToAI.CLI`** ei
 
 Wenn alle Aufgaben erledigt sind, in **dieser** Datei die folgende Zeile von unchecked auf checked ändern:
 
-- [ ] **Step 01 abgehackt** → `- [X] **Step 01 abgehackt**`
+- [X] **Step 01 abgehackt**
