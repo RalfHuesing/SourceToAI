@@ -1,12 +1,14 @@
 using SourceToAI.CLI.App.Exceptions;
 using SourceToAI.CLI.Configuration;
 using SourceToAI.CLI.Models;
+using SourceToAI.CLI.Services.Decompilation;
 using SourceToAI.CLI.Services.Discovery;
 using SourceToAI.CLI.Services.Export;
 using SourceToAI.CLI.Services.Integration;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace SourceToAI.CLI.App;
@@ -14,6 +16,7 @@ namespace SourceToAI.CLI.App;
 public class ConsoleOrchestrator(
     ISolutionDiscoveryService solutionDiscovery,
     IFileDiscoveryService fileDiscovery,
+    IAssemblyDecompilerService assemblyDecompiler,
     IDependencyGraphMarkdownGenerator dependencyGraphMarkdownGenerator,
     IMultiViewExportService multiViewExportService,
     IMultiViewReadmeMarkdownGenerator readmeMarkdownGenerator,
@@ -63,17 +66,27 @@ public class ConsoleOrchestrator(
         Console.WriteLine("==================================================");
     }
 
-    private async Task RunSingleSourceAsync(string rootPath, string exportPath)
+    private static bool IsNetAssemblyFile(string path) =>
+        !string.IsNullOrWhiteSpace(path)
+        && File.Exists(path)
+        && (Path.GetExtension(path).Equals(".dll", StringComparison.OrdinalIgnoreCase)
+            || Path.GetExtension(path).Equals(".exe", StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>
+    /// Für Readme/Anzeige: bei reiner <c>decompile</c>-Blatt-Root den übergeordneten Ordnernamen (Assembly-/Export-Ebene).
+    /// </summary>
+    private static string GetRepositoryFolderNameForReadme(string userSourcePath, string effectiveRootPath)
     {
-        var solutionName = UnwrapOrThrowValidation(solutionDiscovery.GetSolutionName(rootPath));
-        Console.WriteLine($"[INFO] Solution erkannt: {solutionName}");
+        var effectiveDir = new DirectoryInfo(Path.TrimEndingDirectorySeparator(effectiveRootPath));
+        if (string.Equals(effectiveDir.Name, "decompile", StringComparison.OrdinalIgnoreCase))
+            return effectiveDir.Parent?.Name ?? effectiveDir.Name;
 
-        var projects = UnwrapOrThrowValidation(solutionDiscovery.FindProjects(rootPath));
-        Console.WriteLine($"[INFO] {projects.Count} Projekte gefunden.\n");
+        return new DirectoryInfo(Path.TrimEndingDirectorySeparator(userSourcePath)).Name;
+    }
 
-        var outputDir = MultiViewExportPaths.GetSolutionExportRoot(exportPath, solutionName);
+    private static void PrepareSolutionExportRootDirectory(string outputDir)
+    {
         var markerPath = Path.Combine(outputDir, MultiViewExportPaths.SafetyMarkerFileName);
-        var repositoryFolderName = new DirectoryInfo(Path.TrimEndingDirectorySeparator(rootPath)).Name;
 
         if (Directory.Exists(outputDir) && !File.Exists(markerPath))
         {
@@ -105,6 +118,63 @@ public class ConsoleOrchestrator(
                 $"Konnte Ausgabeordner nicht vorbereiten: {ex.Message}",
                 ex);
         }
+    }
+
+    private async Task RunSingleSourceAsync(string rootPath, string exportPath)
+    {
+        string effectiveRoot;
+        string solutionName;
+        List<ProjectDefinition> projects;
+        string outputDir;
+
+        if (IsNetAssemblyFile(rootPath))
+        {
+            var assemblyPath = Path.GetFullPath(rootPath);
+            var assemblyBaseName = Path.GetFileNameWithoutExtension(assemblyPath);
+            var plannedSolutionExportRoot = Path.GetFullPath(Path.Combine(exportPath, assemblyBaseName));
+
+            PrepareSolutionExportRootDirectory(plannedSolutionExportRoot);
+
+            var decompileDir = Path.Combine(plannedSolutionExportRoot, "decompile");
+            // RunAsync/CLI reichen das Abbruchtoken noch nicht durch — sobald verfügbar hier an den Decompiler durchreichen.
+            effectiveRoot = assemblyDecompiler.DecompileToProjectDirectory(
+                assemblyPath,
+                decompileDir,
+                CancellationToken.None);
+
+            solutionName = UnwrapOrThrowValidation(solutionDiscovery.GetSolutionName(effectiveRoot));
+            if (!string.Equals(solutionName, assemblyBaseName, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new SourceToAiValidationException(
+                    $"Ermittelter Solution-Name „{solutionName}“ weicht vom Assembly-Basisnamen „{assemblyBaseName}“ ab (Export-Pfad-Invariante).");
+            }
+
+            var exportRootFromName = Path.GetFullPath(MultiViewExportPaths.GetSolutionExportRoot(exportPath, solutionName));
+            if (!string.Equals(exportRootFromName, plannedSolutionExportRoot, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new SourceToAiValidationException(
+                    $"Export-Wurzel „{exportRootFromName}“ entspricht nicht der erwarteten Assembly-Export-Wurzel „{plannedSolutionExportRoot}“.");
+            }
+
+            Console.WriteLine($"[INFO] Solution erkannt: {solutionName}");
+            projects = UnwrapOrThrowValidation(solutionDiscovery.FindProjects(effectiveRoot));
+            Console.WriteLine($"[INFO] {projects.Count} Projekte gefunden.\n");
+            outputDir = plannedSolutionExportRoot;
+        }
+        else
+        {
+            effectiveRoot = rootPath;
+            solutionName = UnwrapOrThrowValidation(solutionDiscovery.GetSolutionName(effectiveRoot));
+            Console.WriteLine($"[INFO] Solution erkannt: {solutionName}");
+
+            projects = UnwrapOrThrowValidation(solutionDiscovery.FindProjects(effectiveRoot));
+            Console.WriteLine($"[INFO] {projects.Count} Projekte gefunden.\n");
+
+            outputDir = MultiViewExportPaths.GetSolutionExportRoot(exportPath, solutionName);
+            PrepareSolutionExportRootDirectory(outputDir);
+        }
+
+        var repositoryFolderName = GetRepositoryFolderNameForReadme(rootPath, effectiveRoot);
 
         var generatedAt = DateTimeOffset.UtcNow;
         var exportSessionId = Guid.NewGuid();
@@ -121,7 +191,7 @@ public class ConsoleOrchestrator(
 
         try
         {
-            var depGraphResult = dependencyGraphMarkdownGenerator.Generate(rootPath, projects);
+            var depGraphResult = dependencyGraphMarkdownGenerator.Generate(effectiveRoot, projects);
             if (depGraphResult.IsSuccess)
             {
                 File.WriteAllText(Path.Combine(outputDir, "dependency-graph.md"), depGraphResult.Value!);
@@ -138,7 +208,7 @@ public class ConsoleOrchestrator(
         }
 
         IReadOnlyList<string>? solutionDocPaths = null;
-        var docsResult = fileDiscovery.FindSolutionDocs(rootPath, settings);
+        var docsResult = fileDiscovery.FindSolutionDocs(effectiveRoot, settings);
         if (docsResult.IsSuccess && docsResult.Value!.Count > 0)
         {
             solutionDocPaths = docsResult.Value;
@@ -182,7 +252,7 @@ public class ConsoleOrchestrator(
         multiViewExportService.WriteMergedSolutionViews(
             outputDir,
             solutionName,
-            rootPath,
+            effectiveRoot,
             exportSessionId,
             generatedAt,
             projectsWithFiles,

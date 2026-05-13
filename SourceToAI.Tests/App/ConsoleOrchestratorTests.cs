@@ -5,6 +5,7 @@ using SourceToAI.CLI.App.Exceptions;
 using SourceToAI.CLI.Configuration;
 using SourceToAI.CLI.Infrastructure;
 using SourceToAI.CLI.Models;
+using SourceToAI.CLI.Services.Decompilation;
 using SourceToAI.CLI.Services.Discovery;
 using SourceToAI.CLI.Services.Export;
 using SourceToAI.CLI.Services.Export.AiFeed;
@@ -39,6 +40,7 @@ public class ConsoleOrchestratorTests
             .Returns(ExtractionResult<string>.Failure("no solution"));
 
         var fileDiscovery = new Mock<IFileDiscoveryService>(MockBehavior.Strict);
+        var assemblyDecompiler = new Mock<IAssemblyDecompilerService>(MockBehavior.Strict);
         var multiView = new Mock<IMultiViewExportService>(MockBehavior.Strict);
         var readme = new Mock<IMultiViewReadmeMarkdownGenerator>(MockBehavior.Strict);
         var post = new Mock<IPostExportTask>(MockBehavior.Strict);
@@ -46,6 +48,7 @@ public class ConsoleOrchestratorTests
         var sut = new ConsoleOrchestrator(
             solutionDiscovery.Object,
             fileDiscovery.Object,
+            assemblyDecompiler.Object,
             new CsprojDependencyGraphMarkdownGenerator(),
             multiView.Object,
             readme.Object,
@@ -72,6 +75,7 @@ public class ConsoleOrchestratorTests
             .Returns(ExtractionResult<List<ProjectDefinition>>.Failure("no projects"));
 
         var fileDiscovery = new Mock<IFileDiscoveryService>(MockBehavior.Strict);
+        var assemblyDecompiler = new Mock<IAssemblyDecompilerService>(MockBehavior.Strict);
         var multiView = new Mock<IMultiViewExportService>(MockBehavior.Strict);
         var readme = new Mock<IMultiViewReadmeMarkdownGenerator>(MockBehavior.Strict);
         var post = new Mock<IPostExportTask>(MockBehavior.Strict);
@@ -79,6 +83,7 @@ public class ConsoleOrchestratorTests
         var sut = new ConsoleOrchestrator(
             solutionDiscovery.Object,
             fileDiscovery.Object,
+            assemblyDecompiler.Object,
             new CsprojDependencyGraphMarkdownGenerator(),
             multiView.Object,
             readme.Object,
@@ -109,6 +114,7 @@ public class ConsoleOrchestratorTests
             .Returns(ExtractionResult<List<ProjectDefinition>>.Success([]));
 
         var fileDiscovery = new Mock<IFileDiscoveryService>(MockBehavior.Strict);
+        var assemblyDecompiler = new Mock<IAssemblyDecompilerService>(MockBehavior.Strict);
         var multiView = new Mock<IMultiViewExportService>(MockBehavior.Strict);
         var readme = new Mock<IMultiViewReadmeMarkdownGenerator>(MockBehavior.Strict);
         var post = new Mock<IPostExportTask>(MockBehavior.Strict);
@@ -116,6 +122,7 @@ public class ConsoleOrchestratorTests
         var sut = new ConsoleOrchestrator(
             solutionDiscovery.Object,
             fileDiscovery.Object,
+            assemblyDecompiler.Object,
             new CsprojDependencyGraphMarkdownGenerator(),
             multiView.Object,
             readme.Object,
@@ -173,9 +180,12 @@ public class ConsoleOrchestratorTests
         var post = new Mock<IPostExportTask>();
         post.Setup(p => p.ExecuteAsync(It.IsAny<string>(), It.IsAny<string>())).Returns(Task.CompletedTask);
 
+        var assemblyDecompiler = new Mock<IAssemblyDecompilerService>(MockBehavior.Strict);
+
         var sut = new ConsoleOrchestrator(
             solutionDiscovery.Object,
             fileDiscovery.Object,
+            assemblyDecompiler.Object,
             new CsprojDependencyGraphMarkdownGenerator(),
             multiViewSp.GetRequiredService<IMultiViewExportService>(),
             multiViewSp.GetRequiredService<IMultiViewReadmeMarkdownGenerator>(),
@@ -256,9 +266,12 @@ public class ConsoleOrchestratorTests
         var post = new Mock<IPostExportTask>();
         post.Setup(p => p.ExecuteAsync(It.IsAny<string>(), It.IsAny<string>())).Returns(Task.CompletedTask);
 
+        var assemblyDecompiler = new Mock<IAssemblyDecompilerService>(MockBehavior.Strict);
+
         var sut = new ConsoleOrchestrator(
             solutionDiscovery.Object,
             fileDiscovery.Object,
+            assemblyDecompiler.Object,
             new CsprojDependencyGraphMarkdownGenerator(),
             multiViewSp.GetRequiredService<IMultiViewExportService>(),
             multiViewSp.GetRequiredService<IMultiViewReadmeMarkdownGenerator>(),
