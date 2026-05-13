@@ -1,8 +1,8 @@
 namespace SourceToAI.CLI.Services.Export;
 
 /// <summary>
-/// Zielpfade für den Multi-View-Export laut <c>Konzept.md</c> Abschnitt 2 — alles direkt unter
-/// <c>{exportPath}/{solutionName}</c> (kein zusätzlicher Zwischenordner).
+/// Zielpfade für den Multi-View-Export laut <c>Konzept.md</c> Abschnitt 2 — alles unter
+/// <c>{exportPath}/Isolated/{solutionName}</c> und <c>{exportPath}/Merged</c>.
 /// </summary>
 /// <remarks>
 /// <para><b>View-Key → Ausgabeordner</b> (Ordnername relativ zur Solution-Exportwurzel):</para>
@@ -14,7 +14,7 @@ namespace SourceToAI.CLI.Services.Export;
 /// <item><term><c>dto-only</c></term><description><see cref="DtoOnlyFolderName"/></description></item>
 /// </list>
 /// <para>
-/// Dateiname je View und Projekt: <c>{SolutionAnzeigename}.{ProjektAnzeigename}.md</c>.
+/// Dateiname je View und Projekt: <c>{SolutionAnzeigename}.{ProjektAnzeigename}-&lt;viewKey&gt;.md</c>.
 /// Der Solution-Anzeigename entspricht dem Rückgabewert von
 /// <see cref="SourceToAI.CLI.Services.Discovery.ISolutionDiscoveryService.GetSolutionName"/> (erste <c>.sln</c> ohne Endung oder Name des Wurzelverzeichnisses)
 /// und ist identisch zum letzten Pfadsegment von <see cref="GetSolutionExportRoot"/>.
@@ -24,6 +24,9 @@ namespace SourceToAI.CLI.Services.Export;
 /// </remarks>
 public static class MultiViewExportPaths
 {
+    public const string IsolatedFolderName = "Isolated";
+
+    public const string MergedFolderName = "Merged";
     public const string CompleteFolderName = "complete";
 
     public const string SignaturesOnlyFolderName = "signatures-only";
@@ -46,7 +49,7 @@ public static class MultiViewExportPaths
 
     /// <summary>
     /// Wurzelverzeichnis für <c>readme.md</c>, <c>dependency-graph.md</c> und alle View-Unterordner.
-    /// Absolut: <c>Path.Combine(exportPath, solutionName)</c>.
+    /// Absolut: <c>Path.Combine(exportPath, IsolatedFolderName, solutionName)</c>.
     /// </summary>
     /// <remarks>
     /// Vor jedem Lauf vom Orchestrator vollständig leeren/neu anlegen, damit keine veralteten Dateien bleiben —
@@ -54,7 +57,7 @@ public static class MultiViewExportPaths
     /// sonst bricht die CLI zur Vermeidung von Datenverlust ab.
     /// </remarks>
     public static string GetSolutionExportRoot(string exportPath, string solutionName) =>
-        Path.Combine(exportPath, solutionName);
+        Path.Combine(exportPath, IsolatedFolderName, solutionName);
 
     /// <summary>
     /// Ordnername unter der Solution-Exportwurzel für den angegebenen View-Key.
@@ -102,14 +105,15 @@ public static class MultiViewExportPaths
     }
 
     /// <summary>
-    /// Erzeugt den Dateinamen-Stamm (ohne <c>.md</c>) aus Solution- und Projekt-Anzeigenamen
-    /// im Format <c>Solution.Project</c> — jeweils sanitisiert, ohne Kollisionsauflösung.
+    /// Erzeugt den Dateinamen-Stamm (ohne <c>.md</c>) aus Solution- und Projekt-Anzeigenamen sowie dem View-Key
+    /// im Format <c>Solution.Project-view</c> — jeweils sanitisiert, ohne Kollisionsauflösung.
     /// </summary>
-    public static string BuildSanitizedExportFileStem(string solutionDisplayName, string projectDisplayName)
+    public static string BuildSanitizedExportFileStem(string solutionDisplayName, string projectDisplayName, string viewKey)
     {
         var sol = SanitizeFileNameSegment(solutionDisplayName);
         var proj = SanitizeFileNameSegment(projectDisplayName);
-        var stem = $"{sol}.{proj}";
+        var view = SanitizeFileNameSegment(viewKey);
+        var stem = $"{sol}.{proj}-{view}";
         stem = EnsureNotReservedWindowsStem(stem);
         return stem;
     }
@@ -154,11 +158,12 @@ public static class MultiViewExportPaths
         string outputRoot,
         string viewFolderName,
         string solutionDisplayName,
-        string projectDisplayName) =>
+        string projectDisplayName,
+        string viewKey) =>
         GetViewOutputPath(
             outputRoot,
             viewFolderName,
-            BuildSanitizedExportFileStem(solutionDisplayName, projectDisplayName));
+            BuildSanitizedExportFileStem(solutionDisplayName, projectDisplayName, viewKey));
 
     private static string EnsureNotReservedWindowsStem(string stem) =>
         ReservedWindowsBaseNames.Contains(stem) ? stem + "_" : stem;
