@@ -21,6 +21,9 @@ internal static class SourceToAiCli
         internal const string UsageExampleAssembly =
             "Beispiel (Assembly): SourceToAI ./exports C:\\Apps\\MyLib\\bin\\Debug\\net10.0\\MyLib.dll";
 
+        internal const string UsageExampleAssemblyWildcard =
+            "Beispiel (Assemblies mit Platzhalter * / ? im Dateinamen): SourceToAI ./exports C:\\Apps\\MyLib\\bin\\Debug\\net10.0\\*.dll";
+
         internal const string UsageExampleOptions =
             "Beispiel (Optionen): SourceToAI --export ./exports --input C:\\Daten\\RepoA\\ --input C:\\Daten\\RepoB\\";
 
@@ -98,6 +101,7 @@ internal static class SourceToAiCli
                 await Console.Error.WriteLineAsync(Usage.UsageLine);
                 await Console.Error.WriteLineAsync(Usage.UsageExamplePositional);
                 await Console.Error.WriteLineAsync(Usage.UsageExampleAssembly);
+                await Console.Error.WriteLineAsync(Usage.UsageExampleAssemblyWildcard);
                 await Console.Error.WriteLineAsync(Usage.UsageExampleOptions);
                 return 1;
             }

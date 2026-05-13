@@ -23,6 +23,7 @@ if (parseResult.Errors.Count > 0)
     await Console.Error.WriteLineAsync(SourceToAiCli.Usage.UsageLine);
     await Console.Error.WriteLineAsync(SourceToAiCli.Usage.UsageExamplePositional);
     await Console.Error.WriteLineAsync(SourceToAiCli.Usage.UsageExampleAssembly);
+    await Console.Error.WriteLineAsync(SourceToAiCli.Usage.UsageExampleAssemblyWildcard);
     await Console.Error.WriteLineAsync(SourceToAiCli.Usage.UsageExampleOptions);
     Environment.ExitCode = 1;
     return;
@@ -37,7 +38,18 @@ static async Task<int> RunExportPipelineAsync(
 {
     cancellationToken.ThrowIfCancellationRequested();
 
-    foreach (var path in solutionPaths)
+    IReadOnlyList<string> expandedPaths;
+    try
+    {
+        expandedPaths = InputPathResolver.Resolve(solutionPaths);
+    }
+    catch (SourceToAiValidationException ex)
+    {
+        await Console.Error.WriteLineAsync($"[FEHLER] {ex.Message}");
+        return 1;
+    }
+
+    foreach (var path in expandedPaths)
     {
         var validationError = ExportInputPathValidation.GetValidationError(path);
         if (validationError is not null)
@@ -76,7 +88,7 @@ static async Task<int> RunExportPipelineAsync(
     try
     {
         var orchestrator = serviceProvider.GetRequiredService<ConsoleOrchestrator>();
-        await orchestrator.RunAsync(solutionPaths, exportPath);
+        await orchestrator.RunAsync(expandedPaths, exportPath);
         return 0;
     }
     catch (SourceToAiValidationException ex)
