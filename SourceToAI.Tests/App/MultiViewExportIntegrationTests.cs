@@ -181,15 +181,23 @@ public sealed class MultiViewExportIntegrationTests
         var isolatedSolRoot = Path.Combine(export.Root, "Isolated", solutionName);
         Assert.True(Directory.Exists(isolatedSolRoot));
 
-        // konzept.md Abschnitt 2 — alle Pfade relativ zu {export}/{solutionName}
         Assert.True(File.Exists(Path.Combine(export.Root, "readme.md")));
-        var exportReadme = await File.ReadAllTextAsync(
+        var globalReadme = await File.ReadAllTextAsync(
             Path.Combine(export.Root, "readme.md"),
             TestContext.Current.CancellationToken);
-        Assert.Contains("MANIFEST", exportReadme, StringComparison.Ordinal);
-        Assert.Contains("CONTENT", exportReadme, StringComparison.Ordinal);
-        Assert.Contains("pro Projekt", exportReadme, StringComparison.Ordinal);
-        Assert.DoesNotContain("full-source.md", exportReadme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Export-Verzeichnis", globalReadme, StringComparison.Ordinal);
+        Assert.Contains("rg", globalReadme, StringComparison.Ordinal);
+        Assert.Contains("Merged", globalReadme, StringComparison.Ordinal);
+        Assert.DoesNotContain("full-source.md", globalReadme, StringComparison.OrdinalIgnoreCase);
+
+        Assert.True(File.Exists(Path.Combine(isolatedSolRoot, "readme.md")));
+        var isolatedReadme = await File.ReadAllTextAsync(
+            Path.Combine(isolatedSolRoot, "readme.md"),
+            TestContext.Current.CancellationToken);
+        Assert.Contains("MANIFEST", isolatedReadme, StringComparison.Ordinal);
+        Assert.Contains("CONTENT", isolatedReadme, StringComparison.Ordinal);
+        Assert.Contains("pro Projekt", isolatedReadme, StringComparison.Ordinal);
+        Assert.DoesNotContain("full-source.md", isolatedReadme, StringComparison.OrdinalIgnoreCase);
         
         Assert.True(File.Exists(Path.Combine(isolatedSolRoot, "dependency-graph.md")));
         var mergedRoot = Path.Combine(export.Root, "Merged");

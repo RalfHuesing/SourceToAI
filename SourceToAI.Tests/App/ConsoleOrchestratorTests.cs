@@ -284,15 +284,23 @@ public class ConsoleOrchestratorTests
         var mergedRoot = Path.Combine(export.Root, "Merged");
         Assert.True(Directory.Exists(isolatedRoot));
 
-        var readmePath = Path.Combine(export.Root, "readme.md");
-        Assert.True(File.Exists(readmePath));
-        var readmeText = await File.ReadAllTextAsync(readmePath, TestContext.Current.CancellationToken);
+        var globalReadmePath = Path.Combine(export.Root, "readme.md");
+        Assert.True(File.Exists(globalReadmePath));
+        var globalReadmeText = await File.ReadAllTextAsync(globalReadmePath, TestContext.Current.CancellationToken);
+        Assert.Contains("Export-Verzeichnis", globalReadmeText, StringComparison.Ordinal);
+        Assert.Contains("rg", globalReadmeText, StringComparison.Ordinal);
+        Assert.Matches(@"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z", globalReadmeText);
+        Assert.DoesNotContain("full-source.md", globalReadmeText, StringComparison.OrdinalIgnoreCase);
+
+        var isolatedReadmePath = Path.Combine(isolatedRoot, "readme.md");
+        Assert.True(File.Exists(isolatedReadmePath));
+        var isolatedReadmeText = await File.ReadAllTextAsync(isolatedReadmePath, TestContext.Current.CancellationToken);
         var folderName = new DirectoryInfo(Path.TrimEndingDirectorySeparator(solution.Root)).Name;
-        Assert.Contains(folderName, readmeText, StringComparison.Ordinal);
-        Assert.Matches(@"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z", readmeText);
-        Assert.Contains("MANIFEST", readmeText, StringComparison.Ordinal);
-        Assert.Contains("pro Projekt", readmeText, StringComparison.Ordinal);
-        Assert.DoesNotContain("full-source.md", readmeText, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(folderName, isolatedReadmeText, StringComparison.Ordinal);
+        Assert.Matches(@"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z", isolatedReadmeText);
+        Assert.Contains("MANIFEST", isolatedReadmeText, StringComparison.Ordinal);
+        Assert.Contains("pro Projekt", isolatedReadmeText, StringComparison.Ordinal);
+        Assert.DoesNotContain("full-source.md", isolatedReadmeText, StringComparison.OrdinalIgnoreCase);
 
         var depGraphPath = Path.Combine(isolatedRoot, "dependency-graph.md");
         Assert.True(File.Exists(depGraphPath));
