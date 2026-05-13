@@ -52,7 +52,7 @@ public class ConsoleOrchestratorTests
             TestAppSettingsFactory.Default(),
             [post.Object]);
 
-        await Assert.ThrowsAsync<SourceToAiValidationException>(() => sut.RunAsync(solution.Root, export.Root));
+        await Assert.ThrowsAsync<SourceToAiValidationException>(() => sut.RunAsync([solution.Root], export.Root));
 
         Assert.Empty(Directory.GetDirectories(export.Root));
         post.Verify(p => p.ExecuteAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
@@ -85,7 +85,7 @@ public class ConsoleOrchestratorTests
             TestAppSettingsFactory.Default(),
             [post.Object]);
 
-        await Assert.ThrowsAsync<SourceToAiValidationException>(() => sut.RunAsync(solution.Root, export.Root));
+        await Assert.ThrowsAsync<SourceToAiValidationException>(() => sut.RunAsync([solution.Root], export.Root));
 
         Assert.Empty(Directory.GetDirectories(export.Root));
         post.Verify(p => p.ExecuteAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
@@ -122,7 +122,7 @@ public class ConsoleOrchestratorTests
             TestAppSettingsFactory.Default(),
             [post.Object]);
 
-        var ex = await Assert.ThrowsAsync<SourceToAiValidationException>(() => sut.RunAsync(solution.Root, export.Root));
+        var ex = await Assert.ThrowsAsync<SourceToAiValidationException>(() => sut.RunAsync([solution.Root], export.Root));
         Assert.Contains("Sicherheitsabbruch", ex.Message, StringComparison.Ordinal);
         Assert.Contains(MultiViewExportPaths.SafetyMarkerFileName, ex.Message, StringComparison.Ordinal);
         Assert.True(Directory.Exists(outputRoot));
@@ -182,7 +182,7 @@ public class ConsoleOrchestratorTests
             TestAppSettingsFactory.Default(),
             [post.Object]);
 
-        await sut.RunAsync(solution.Root, export.Root);
+        await sut.RunAsync([solution.Root], export.Root);
 
         Assert.True(File.Exists(markerPath));
         var markerText = await File.ReadAllTextAsync(markerPath, TestContext.Current.CancellationToken);
@@ -265,7 +265,7 @@ public class ConsoleOrchestratorTests
             TestAppSettingsFactory.Default(),
             [post.Object]);
 
-        await sut.RunAsync(solution.Root, export.Root);
+        await sut.RunAsync([solution.Root], export.Root);
 
         var outRoot = Path.Combine(export.Root, "MySol");
         Assert.True(Directory.Exists(outRoot));

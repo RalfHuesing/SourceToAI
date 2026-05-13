@@ -9,6 +9,7 @@ using SourceToAI.CLI.Services.Discovery;
 using SourceToAI.CLI.Services.Export;
 using SourceToAI.CLI.Services.Export.AiFeed;
 using SourceToAI.CLI.Services.Processing;
+using System.Collections.Generic;
 using System.CommandLine;
 
 var rootCommand = SourceToAiCli.CreateRootCommand(RunExportPipelineAsync);
@@ -27,7 +28,7 @@ Environment.ExitCode = await parseResult.InvokeAsync(parseResult.InvocationConfi
 
 static async Task<int> RunExportPipelineAsync(
     string exportPath,
-    string solutionPath,
+    IReadOnlyList<string> solutionPaths,
     CancellationToken cancellationToken)
 {
     cancellationToken.ThrowIfCancellationRequested();
@@ -60,7 +61,7 @@ static async Task<int> RunExportPipelineAsync(
     try
     {
         var orchestrator = serviceProvider.GetRequiredService<ConsoleOrchestrator>();
-        await orchestrator.RunAsync(solutionPath, exportPath);
+        await orchestrator.RunAsync(solutionPaths, exportPath);
         return 0;
     }
     catch (SourceToAiValidationException ex)

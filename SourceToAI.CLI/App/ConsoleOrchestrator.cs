@@ -27,12 +27,44 @@ public class ConsoleOrchestrator(
         return result.Value!;
     }
 
-    public async Task RunAsync(string rootPath, string exportPath)
+    /// <summary>
+    /// Exportiert nacheinander jede Quellwurzel unter <paramref name="exportPath"/>.
+    /// AST-/Parse-Cache: pro Export setzt <see cref="IMultiViewExportService.WriteMergedSolutionViews"/> (über den Loader) den Cache zurück.
+    /// </summary>
+    public async Task RunAsync(IEnumerable<string> rootPaths, string exportPath)
     {
+        var roots = rootPaths
+            .Select(static p => p?.Trim())
+            .Where(static p => !string.IsNullOrEmpty(p))
+            .Select(static p => p!)
+            .ToArray();
+
+        if (roots.Length == 0)
+            throw new SourceToAiValidationException("Mindestens ein gültiger Quellpfad ist erforderlich.");
+
         Console.WriteLine("==================================================");
         Console.WriteLine("🚀 SourceToAI - Standalone AI Feed Generator");
         Console.WriteLine("==================================================\n");
+        Console.WriteLine($"[INFO] {roots.Length} Quelle(n), Export-Ziel: {exportPath}\n");
 
+        for (var i = 0; i < roots.Length; i++)
+        {
+            var rootPath = roots[i];
+            var ordinal = i + 1;
+            Console.WriteLine("--------------------------------------------------");
+            Console.WriteLine($"[INFO] Quelle {ordinal}/{roots.Length}: {rootPath}");
+            Console.WriteLine("--------------------------------------------------\n");
+
+            await RunSingleSourceAsync(rootPath, exportPath);
+        }
+
+        Console.WriteLine("\n==================================================");
+        Console.WriteLine($"- Alle Quellen verarbeitet ({roots.Length}).");
+        Console.WriteLine("==================================================");
+    }
+
+    private async Task RunSingleSourceAsync(string rootPath, string exportPath)
+    {
         var solutionName = UnwrapOrThrowValidation(solutionDiscovery.GetSolutionName(rootPath));
         Console.WriteLine($"[INFO] Solution erkannt: {solutionName}");
 
