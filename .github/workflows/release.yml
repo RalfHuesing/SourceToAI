@@ -69,10 +69,11 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: binaries-${{ matrix.rid }}
-          # Lade hier nur die umbenannte Datei hoch. appsettings nur beim Windows-Job.
+          # Executable + appsettings auf allen Matrix-OS (Override-Parität; Laufzeit hat zudem Klassen-Defaults).
           path: |
             ./publish/${{ matrix.executable }}
-            ${{ matrix.os == 'windows-latest' && './publish/appsettings.json' || '' }}
+            ./publish/appsettings.json
+          if-no-files-found: warn
           retention-days: 1 # Brauchen wir nur kurz für den nächsten Job
 
   # 2. JOB: Erstelle das GitHub Release (Läuft nur EINMAL, wenn Build fertig ist)
