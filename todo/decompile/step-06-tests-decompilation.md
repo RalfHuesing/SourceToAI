@@ -51,4 +51,4 @@ dotnet test SourceToAI.Tests/SourceToAI.Tests.csproj --configuration Release
 
 ## Abhaken (Pflicht am Step-Ende)
 
-- [ ] **Step 06 abgehackt** → `- [X] **Step 06 abgehackt**`
+- [X] **Step 06 abgehackt**
