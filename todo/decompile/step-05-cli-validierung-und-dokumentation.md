@@ -27,4 +27,4 @@ Nutzer und Agenten sollen an der CLI erkennen: **Eingaben** sind nicht nur Verze
 
 ## Abhaken (Pflicht am Step-Ende)
 
-- [ ] **Step 05 abgehackt** → `- [X] **Step 05 abgehackt**`
+- [X] **Step 05 abgehackt**

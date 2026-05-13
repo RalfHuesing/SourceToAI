@@ -21,6 +21,9 @@ if (parseResult.Errors.Count > 0)
     foreach (var error in parseResult.Errors)
         await Console.Error.WriteLineAsync(error.Message);
     await Console.Error.WriteLineAsync(SourceToAiCli.Usage.UsageLine);
+    await Console.Error.WriteLineAsync(SourceToAiCli.Usage.UsageExamplePositional);
+    await Console.Error.WriteLineAsync(SourceToAiCli.Usage.UsageExampleAssembly);
+    await Console.Error.WriteLineAsync(SourceToAiCli.Usage.UsageExampleOptions);
     Environment.ExitCode = 1;
     return;
 }
@@ -33,6 +36,16 @@ static async Task<int> RunExportPipelineAsync(
     CancellationToken cancellationToken)
 {
     cancellationToken.ThrowIfCancellationRequested();
+
+    foreach (var path in solutionPaths)
+    {
+        var validationError = ExportInputPathValidation.GetValidationError(path);
+        if (validationError is not null)
+        {
+            await Console.Error.WriteLineAsync(validationError);
+            return 1;
+        }
+    }
 
     var configuration = new ConfigurationBuilder()
         .SetBasePath(Directory.GetCurrentDirectory())
