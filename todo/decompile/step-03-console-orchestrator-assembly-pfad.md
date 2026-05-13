@@ -47,4 +47,4 @@ Später in derselben Methode wird `outputDir` (aktuell `Path.Combine(exportPath,
 
 ## Abhaken (Pflicht am Step-Ende)
 
-- [ ] **Step 03 abgehackt** → `- [X] **Step 03 abgehackt**`
+- [X] **Step 03 abgehackt**

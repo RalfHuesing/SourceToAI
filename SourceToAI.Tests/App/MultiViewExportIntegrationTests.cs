@@ -3,6 +3,7 @@ using Moq;
 using SourceToAI.CLI.App;
 using SourceToAI.CLI.Configuration;
 using SourceToAI.CLI.Models;
+using SourceToAI.CLI.Services.Decompilation;
 using SourceToAI.CLI.Services.Discovery;
 using SourceToAI.CLI.Services.Export;
 using SourceToAI.CLI.Services.Integration;
@@ -162,9 +163,12 @@ public sealed class MultiViewExportIntegrationTests
         var post = new Mock<IPostExportTask>();
         post.Setup(p => p.ExecuteAsync(It.IsAny<string>(), It.IsAny<string>())).Returns(Task.CompletedTask);
 
+        var assemblyDecompiler = new Mock<IAssemblyDecompilerService>(MockBehavior.Strict);
+
         var sut = new ConsoleOrchestrator(
             solutionDiscovery.Object,
             fileDiscovery.Object,
+            assemblyDecompiler.Object,
             new CsprojDependencyGraphMarkdownGenerator(),
             multiViewSp.GetRequiredService<IMultiViewExportService>(),
             multiViewSp.GetRequiredService<IMultiViewReadmeMarkdownGenerator>(),
