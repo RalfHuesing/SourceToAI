@@ -10,13 +10,16 @@ internal static class SourceToAiCli
     internal static class Usage
     {
         internal const string RootDescription =
-            "Exportiert eine oder mehrere .NET-Solutions als Multi-View-KI-Feed (Markdown) nacheinander in dasselbe Export-Verzeichnis.";
+            "Exportiert eine oder mehrere .NET-Quellen (Solution-/Projektverzeichnis oder kompilierte Assembly .dll/.exe) als Multi-View-KI-Feed (Markdown) nacheinander in dasselbe Export-Verzeichnis.";
 
         internal const string UsageLine =
-            "Verwendung: SourceToAI <Export-Pfad> <Pfad-zur-Solution>… | SourceToAI --export <Export-Pfad> --input <Pfad>…";
+            "Verwendung: SourceToAI <Export-Pfad> <Verzeichnis|.dll|.exe>… | SourceToAI --export <Export-Pfad> --input <Pfad>…";
 
         internal const string UsageExamplePositional =
             "Beispiel (Positionsargumente): SourceToAI ./exports C:\\Daten\\RepoA\\ C:\\Daten\\RepoB\\";
+
+        internal const string UsageExampleAssembly =
+            "Beispiel (Assembly): SourceToAI ./exports C:\\Apps\\MyLib\\bin\\Debug\\net10.0\\MyLib.dll";
 
         internal const string UsageExampleOptions =
             "Beispiel (Optionen): SourceToAI --export ./exports --input C:\\Daten\\RepoA\\ --input C:\\Daten\\RepoB\\";
@@ -25,16 +28,16 @@ internal static class SourceToAiCli
             "Zielverzeichnis für den Export (wird bei Bedarf angelegt bzw. geleert).";
 
         internal const string SolutionRootDescription =
-            "Stammverzeichnis der Solution (Ordner mit .sln oder darüber). Mindestens ein Pfad; weitere Pfade als weitere Positionsargumente.";
+            "Quellverzeichnis (Solution/Repository mit .sln oder darüber) oder Pfad zu einer .NET-Assembly (.dll/.exe). Mindestens ein Pfad; weitere Pfade als weitere Positionsargumente.";
 
         internal const string ExportOptionDescription =
             "Export-Verzeichnis (Alternative zu Positionsargument <Export-Pfad>).";
 
         internal const string InputOptionDescription =
-            "Pfad zur Solution bzw. zum Repository-Stamm (Alternative zu den weiteren Positionsargumenten). Mehrfach angebbare Option.";
+            "Quellverzeichnis oder Assembly (.dll/.exe); Alternative zu den weiteren Positionsargumenten. Mehrfach angebbare Option.";
 
         internal const string ErrorIncompletePositional =
-            "Positionsargument <Export-Pfad> und mindestens ein <Pfad-zur-Solution> sind erforderlich, wenn ohne --export/--input gearbeitet wird.";
+            "Positionsargument <Export-Pfad> und mindestens ein Quellpfad (Verzeichnis oder .dll/.exe) sind erforderlich, wenn ohne --export/--input gearbeitet wird.";
 
         internal const string ErrorIncompleteNamed =
             "Option --export und mindestens ein --input sind erforderlich, wenn ohne Positionsargumente gearbeitet wird.";
@@ -94,6 +97,7 @@ internal static class SourceToAiCli
                     await Console.Error.WriteLineAsync(resolution.ErrorMessage);
                 await Console.Error.WriteLineAsync(Usage.UsageLine);
                 await Console.Error.WriteLineAsync(Usage.UsageExamplePositional);
+                await Console.Error.WriteLineAsync(Usage.UsageExampleAssembly);
                 await Console.Error.WriteLineAsync(Usage.UsageExampleOptions);
                 return 1;
             }
