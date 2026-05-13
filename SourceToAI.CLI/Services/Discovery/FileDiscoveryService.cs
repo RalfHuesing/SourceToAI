@@ -12,6 +12,7 @@ public class FileDiscoveryService(IDirectoryEnumerator directoryEnumerator) : IF
 
         try
         {
+            var included = new HashSet<string>(settings.IncludedExtensions, StringComparer.OrdinalIgnoreCase);
             // 1. Root README.md prüfen
             var rootReadme = Path.Combine(rootPath, "README.md");
             if (File.Exists(rootReadme))
@@ -24,7 +25,7 @@ public class FileDiscoveryService(IDirectoryEnumerator directoryEnumerator) : IF
             if (Directory.Exists(cursorRulesDir))
             {
                 var ruleFiles = Directory.GetFiles(cursorRulesDir, "*.*", SearchOption.AllDirectories)
-                    .Where(f => settings.IncludedExtensions.Contains(Path.GetExtension(f).ToLowerInvariant()));
+                    .Where(f => included.Contains(Path.GetExtension(f)));
 
                 foundFiles.AddRange(ruleFiles);
             }
@@ -33,7 +34,7 @@ public class FileDiscoveryService(IDirectoryEnumerator directoryEnumerator) : IF
             if (Directory.Exists(githubDir))
             {
                 var gitHubFiles = Directory.GetFiles(githubDir, "*.*", SearchOption.AllDirectories)
-                    .Where(f => settings.IncludedExtensions.Contains(Path.GetExtension(f).ToLowerInvariant()));
+                    .Where(f => included.Contains(Path.GetExtension(f)));
 
                 foundFiles.AddRange(gitHubFiles);
             }
@@ -55,7 +56,9 @@ public class FileDiscoveryService(IDirectoryEnumerator directoryEnumerator) : IF
 
         try
         {
-            ScanDirectory(project.RootDirectory, foundFiles, settings, warnings);
+            var included = new HashSet<string>(settings.IncludedExtensions, StringComparer.OrdinalIgnoreCase);
+            var excluded = new HashSet<string>(settings.ExcludedDirectories, StringComparer.OrdinalIgnoreCase);
+            ScanDirectory(project.RootDirectory, foundFiles, included, excluded, warnings);
             return ExtractionResult<List<string>>.Success(
                 foundFiles,
                 warnings.Count > 0 ? warnings : null);
@@ -66,7 +69,12 @@ public class FileDiscoveryService(IDirectoryEnumerator directoryEnumerator) : IF
         }
     }
 
-    private void ScanDirectory(string currentDir, List<string> foundFiles, AppSettings settings, List<string> warnings)
+    private void ScanDirectory(
+        string currentDir,
+        List<string> foundFiles,
+        HashSet<string> includedExtensions,
+        HashSet<string> excludedDirectories,
+        List<string> warnings)
     {
         string[] files;
         try
@@ -81,8 +89,7 @@ public class FileDiscoveryService(IDirectoryEnumerator directoryEnumerator) : IF
 
         foreach (var file in files)
         {
-            var ext = Path.GetExtension(file).ToLowerInvariant();
-            if (settings.IncludedExtensions.Contains(ext))
+            if (includedExtensions.Contains(Path.GetExtension(file)))
             {
                 foundFiles.Add(file);
             }
@@ -103,9 +110,9 @@ public class FileDiscoveryService(IDirectoryEnumerator directoryEnumerator) : IF
         {
             var dirName = new DirectoryInfo(dir).Name;
 
-            if (!settings.ExcludedDirectories.Contains(dirName, StringComparer.OrdinalIgnoreCase))
+            if (!excludedDirectories.Contains(dirName))
             {
-                ScanDirectory(dir, foundFiles, settings, warnings);
+                ScanDirectory(dir, foundFiles, includedExtensions, excludedDirectories, warnings);
             }
         }
     }

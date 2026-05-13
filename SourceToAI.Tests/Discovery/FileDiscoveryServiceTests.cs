@@ -96,4 +96,28 @@ public class FileDiscoveryServiceTests
         Assert.NotEmpty(result.Warnings);
         mock.Verify(e => e.EnumerateDirectories(blocked), Times.Never);
     }
+
+    [Fact]
+    public void FindFilesForProject_matches_extensions_ordinal_ignore_case()
+    {
+        using var ws = new TempWorkspace();
+        var appRoot = Path.Combine(ws.Root, "App");
+        Directory.CreateDirectory(appRoot);
+        var csproj = Path.Combine(appRoot, "App.csproj");
+        File.WriteAllText(csproj, "<Project></Project>");
+        var upperCs = Path.Combine(appRoot, "Thing.CS");
+
+        var mock = new Mock<IDirectoryEnumerator>(MockBehavior.Strict);
+        mock.Setup(e => e.EnumerateFiles(appRoot)).Returns([upperCs]);
+        mock.Setup(e => e.EnumerateDirectories(appRoot)).Returns([]);
+
+        var project = new ProjectDefinition("App", csproj);
+        var settings = TestAppSettingsFactory.Default();
+
+        var result = CreateSut(mock.Object).FindFilesForProject(project, settings);
+
+        Assert.True(result.IsSuccess, result.ErrorMessage);
+        Assert.NotNull(result.Value);
+        Assert.True(CollectionContainsPath(result.Value, upperCs));
+    }
 }
