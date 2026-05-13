@@ -1,91 +1,75 @@
-# 🚀 SourceToAI - Standalone AI Feed Generator
+# SourceToAI – KI-Feed aus .NET-Quellen
 
- <img width="1905" height="1128" alt="image" src="https://github.com/user-attachments/assets/3d85e7d9-36ae-4541-bb38-00cccf4b315e" />
+<img width="1905" height="1128" alt="SourceToAI Übersicht" src="https://github.com/user-attachments/assets/3d85e7d9-36ae-4541-bb38-00cccf4b315e" />
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**SourceToAI** ist ein leichtgewichtiges, eigenständiges .NET 8 CLI-Tool. Es extrahiert Quellcode und Dokumentationen aus lokalen C#-Solutions offline und wandelt sie in KI-optimierte Markdown-Dateien um. 
-
-Entwickelt speziell für Entwickler, die mit Visual Studio Solutions und Web-basierten KIs (wie ChatGPT, Gemini, Claude) arbeiten. Lade deinen Code einfach und perfekt formatiert in den KI-Kontext!
+**SourceToAI** ist ein eigenständiges .NET-10-CLI-Tool. Es liest lokale C#-Solutions (oder entpackt kompilierte .NET-Assemblies) und erzeugt daraus **Markdown-KI-Feeds** mit Metadaten, Manifest und mehreren „Views“ (vollständiger Code, Signaturen, öffentliche API, DTO-Fokus). Alles läuft offline auf deiner Maschine.
 
 ---
 
-## ✨ Features
+## Was es macht
 
-* **KI-Optimiertes Format (MarkdownFeed):** Generiert Dateien mit YAML-Frontmatter für Metadaten und einer vollständigen Manifest-Tabelle inkl. MD5-Hashes, Dateigrößen und relativen Pfaden.
-* **One-File-Per-Project:** Extrahiert den gesamten relevanten Code eines `.csproj`-Projekts in exakt *eine* Markdown-Datei.
-* **Intelligente Dokumentations-Erfassung (.Docs):** Bündelt automatisch deine Root `README.md` und eventuelle `.cursor/rules` in einem virtuellen Projekt, damit die KI sofort die Architektur- und Projektregeln versteht.
-* **Dynamic Fencing:** Verhindert Formatierungsfehler durch intelligente Backtick-Ermittlung bei Code-Blöcken (zählt die längste Sequenz von Backticks in einer Datei und fügt `n+1` Backticks für den Code-Block hinzu).
-* **Filter-Engine:** Ignoriert standardmäßig Build-Artefakte (`bin`, `obj`), Source-Control-Ordner (`.git`) und IDE-Metadaten (`.vs`, `.idea`).
-* **Fehlertolerantes Projekt-Scanning:** Fehlen Leserechte auf einen Unterordner oder schlägt die Auflistung eines Verzeichnisses fehl, wird dieser Zweig übersprungen; übrige Dateien des Projekts werden weiter erfasst. Die CLI gibt dazu `[WARN]`-Zeilen pro Projekt aus (Teilmenge statt komplettem Ausfall).
-* **Begrenzte Parallelität bei den Views:** Mehrere View-Builds laufen intern mit begrenzter Parallelität; geschriebene Markdown-Dateien folgen einer festen Sortierung (Projekte und View-Ordner), sodass sich die Export-Struktur reproduzierbar bleibt.
+- **Multi-View-Export:** Unter `complete/`, `signatures-only/`, `public-only/` und `dto-only/` liegt pro Projekt jeweils **eine** Markdown-Datei; Dateinamen: `<Solution>.<Projekt>.md` (Sonderzeichen bereinigt). Virtuelle Solution-Doku (Root-`README`, `.cursor/rules` usw.) erscheint in `complete/` als `<Solution>..Docs.md`.
+- **Mehrere Quellen in einem Lauf:** Du gibst **ein** Export-Ziel und **eine oder mehrere** Quellen an. Jede Quelle wird nacheinander verarbeitet; pro erkanntem Solution-Namen entsteht ein **eigener Unterordner** unter dem Export-Pfad.
+- **Quellen:** Verzeichnis mit `.sln`/`.csproj` (typisch Repository- oder Solution-Stamm) **oder** eine **.dll/.exe**-Assembly. Bei Assemblies wird der Code zuerst per Decompiler in ein temporäres `decompile/`-Projekt unter `{Export}/{AssemblyName}/` gelegt und von dort wie gewohnt exportiert.
+- **Robustheit:** Build-Artefakte und übliche Tool-Ordner werden standardmäßig ignoriert; Lesefehler in Unterzweigen führen zu Warnungen, nicht zum kompletten Abbruch.
 
 ---
 
-## 🤖 KI-Workflow: Best Practices
+## Nutzung mit Web-KIs (Kurz)
 
-So nutzt du SourceToAI am besten mit ChatGPT, Gemini und Co.:
-
-1. **Code exportieren:** Lass das Tool über deine Solution laufen.
-2. **Dateien hochladen:** Lade aus `complete/` z. B. `MeineSolution..Docs.md` (virtuelles Projekt `.Docs` = Solution-Doku) sowie die relevanten `MeineSolution.<Projekt>.md`-Dateien in den Chat deiner Web-KI hoch.
-3. **Prompten:** Nutze Prompts, die das Manifest und die Struktur referenzieren. Beispiel:
-   > *"Im angehängten KI-Feed findest du die Architektur-Doku und den Code von Projekt X. Bitte analysiere Datei [ID 5] und Datei [ID 12] aus dem Manifest und schreibe mir Unit-Tests dafür. Beachte dabei die in der .Docs-Datei definierten Architekturregeln."*
+1. Export ausführen (siehe unten).
+2. Aus `complete/` die passenden `<Solution>..Docs.md`- und Projekt-`.md`-Dateien in den Chat laden.
+3. Im Prompt auf Manifest-Einträge und Views verweisen (Details stehen in der generierten `readme.md` im jeweiligen Solution-Exportordner).
 
 ---
 
-## 📦 Installation & Download
+## Installation
 
-Die Anwendung wird automatisch über GitHub Actions gebaut. Du kannst die fertigen Binaries direkt herunterladen:
+1. Unter [Releases](../../releases) die passende ZIP für dein Betriebssystem laden und entpacken, **oder**
+2. Repository klonen und mit [.NET 10 SDK](https://dotnet.microsoft.com/download) bauen: `dotnet build` / `dotnet run --project SourceToAI.CLI`.
 
-1. Gehe zu den [Releases](../../releases) in diesem Repository.
-2. Lade die passende `.zip`-Datei für dein Betriebssystem herunter.
-3. Entpacke das Archiv in ein Verzeichnis deiner Wahl.
-
-*(Alternativ kannst du das Repository klonen und per `dotnet build` bzw. `dotnet run` selbst kompilieren).*
+Für ein einzelnes, portables Binary: im CLI-Projekt z. B. `dotnet publish -c Release -r win-x64 -p:PublishSingleFile=true` (siehe Kommentar in `SourceToAI.CLI.csproj`).
 
 ---
 
-## 🚀 Verwendung
+## Kommandozeile
 
-Das Tool wird über die Kommandozeile bedient und benötigt zwingend **zwei Argumente**:
-1. `<Export-Pfad>`: Wo sollen die generierten Markdown-Dateien gespeichert werden?
-2. `<Pfad-zur-Solution>`: Das Root-Verzeichnis deiner C#-Solution (dort, wo die `.sln`-Datei liegt).
+**Syntax (eine Variante wählen – nicht mischen):**
 
-**Beispiel:**
+- **Positionsargumente:** `SourceToAI <Export-Pfad> <Quelle> [<Quelle> …]`
+- **Optionen:** `SourceToAI --export <Export-Pfad> --input <Quelle> [--input <Quelle> …]` (Kurzform: `-i`)
+
+**Quelle** ist jeweils ein existierendes **Verzeichnis** (Solution/Repo mit `.sln` oder `.csproj`) oder eine **.dll**-/.**exe**-Assembly.
+
+**Beispiele:**
+
 ```cmd
-SourceToAI.exe C:\Daten\MeineSolution\
-
+SourceToAI C:\AI_Feeds\Exports C:\Daten\RepoA\ C:\Daten\RepoB\
 ```
 
-### Ordner- & Datei-Struktur (Output)
+```cmd
+SourceToAI C:\AI_Feeds\Exports C:\Apps\MyLib\bin\Debug\net10.0\MyLib.dll
+```
 
-Unter dem gewählten Export-Pfad legt das Tool pro erkanntem Solution-Namen einen **eigenen Unterordner** an (bei erneutem Lauf wird dieser Ordner zuvor vollständig geleert). Darin liegt der **semantische Multi-View-Baum**: neben `readme.md` und `dependency-graph.md` die Ordner `complete/`, `signatures-only/`, `public-only/` und `dto-only/` — in jedem Ordner **eine Markdown-Datei pro Projekt** (`<SolutionName>.<ProjektName>.md`, Sonderzeichen bereinigt; virtuelle Solution-Doku als `<SolutionName>..Docs.md` wegen des Projektnamens `.Docs`, nur unter `complete/`). Details und Prompt-Hinweise stehen in der generierten `readme.md`.
-
-**Leere Dateien pro View:** Wenn eine Datei in einer View keinen exportierbaren Inhalt mehr hat (nur Whitespace bzw. bei umgeschriebenem C# keine sichtbaren Typ-/Member-Deklarationen mehr), erscheint sie weder im Manifest noch im CONTENT; die verbleibenden IDs sind fortlaufend. Gibt es für eine Kombination **Projekt + View** nach diesem Filter **keine** Datei mehr, wird **keine** Markdown-Datei geschrieben (kein Stub).
-
-```text
-C:\AI_Feeds\Exports\MeineSolution\
-    ├── readme.md
-    ├── dependency-graph.md
-    ├── complete\
-    │   ├── MeineSolution..Docs.md
-    │   ├── MeineSolution.ProjektA.md
-    │   └── MeineSolution.ProjektB.md
-    ├── signatures-only\
-    │   ├── MeineSolution.ProjektA.md
-    │   └── MeineSolution.ProjektB.md
-    ├── public-only\
-    │   └── …
-    └── dto-only\
-        └── …
-
+```cmd
+SourceToAI --export ./exports -i C:\Daten\RepoA\ -i C:\Daten\RepoB\
 ```
 
 ---
 
-## ⚙️ Konfiguration (`appsettings.json`)
+## Ausgabeordner und Sicherheit
 
-Das Tool verwendet eine `appsettings.json`, die im gleichen Verzeichnis wie die Ausführungsdatei liegen muss. Hier definierst du, welche Verzeichnisse ignoriert und welche Dateiendungen inkludiert werden sollen.
+Unter `<Export-Pfad>` legt das Tool pro Solution einen Ordner `<SolutionName>` an (Name aus der ersten `.sln` im Stammverzeichnis, sonst Name des Quellordners; bei Assembly-Export: Basisname der Datei). Darin: `readme.md`, `dependency-graph.md` (falls möglich), die View-Unterordner und bei Assembly-Quellen zusätzlich `decompile/` mit dem erzeugten C#-Baum.
+
+**Wichtig:** Bevor ein bestehender Solution-Exportordner geleert wird, muss darin die von SourceToAI angelegte Markerdatei **`.sta-marker`** liegen. Fehlt sie (z. B. Ordner war nie ein SourceToAI-Export oder wurde manuell bearbeitet), bricht die CLI ab, um **versehentlichen Datenverlust** im Zielverzeichnis zu vermeiden. Zum erneuten Export: Ordner leeren oder bewusst `.sta-marker` anlegen – siehe Konsolenmeldung.
+
+---
+
+## Konfiguration (`appsettings.json`)
+
+Die Datei muss **neben der ausführbaren Datei** liegen (wird mit ausgeliefert). Dort werden u. a. ignorierte Verzeichnisse und erlaubte Dateiendungen festgelegt.
 
 ```json
 {
@@ -94,11 +78,10 @@ Das Tool verwendet eine `appsettings.json`, die im gleichen Verzeichnis wie die 
         "IncludedExtensions": [ ".cs", ".sql", ".json", ".xml", ".xaml", ".md", ".mdc", ".js", ".ts", ".css" ]
     }
 }
-
 ```
 
 ---
 
-## 📄 Lizenz
+## Lizenz
 
-Dieses Projekt ist unter der **MIT-Lizenz** lizenziert. Weitere Details findest du in der `LICENSE` Datei.
+MIT – siehe [LICENSE](LICENSE).
