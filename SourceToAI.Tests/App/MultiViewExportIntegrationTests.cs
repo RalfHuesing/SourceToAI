@@ -171,7 +171,7 @@ public sealed class MultiViewExportIntegrationTests
             TestAppSettingsFactory.Default(),
             [post.Object]);
 
-        await sut.RunAsync(solution.Root, export.Root);
+        await sut.RunAsync([solution.Root], export.Root);
 
         var outRoot = Path.Combine(export.Root, solutionName);
         Assert.True(Directory.Exists(outRoot));

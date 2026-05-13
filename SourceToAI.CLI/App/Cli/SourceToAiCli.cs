@@ -10,34 +10,34 @@ internal static class SourceToAiCli
     internal static class Usage
     {
         internal const string RootDescription =
-            "Exportiert eine .NET-Solution als Multi-View-KI-Feed (Markdown).";
+            "Exportiert eine oder mehrere .NET-Solutions als Multi-View-KI-Feed (Markdown) nacheinander in dasselbe Export-Verzeichnis.";
 
         internal const string UsageLine =
-            "Verwendung: SourceToAI <Export-Pfad> <Pfad-zur-Solution> | SourceToAI --export <Export-Pfad> --input <Pfad-zur-Solution>";
+            "Verwendung: SourceToAI <Export-Pfad> <Pfad-zur-Solution>… | SourceToAI --export <Export-Pfad> --input <Pfad>…";
 
         internal const string UsageExamplePositional =
-            "Beispiel (Positionsargumente): SourceToAI ./exports C:\\Daten\\MeineSolution\\";
+            "Beispiel (Positionsargumente): SourceToAI ./exports C:\\Daten\\RepoA\\ C:\\Daten\\RepoB\\";
 
         internal const string UsageExampleOptions =
-            "Beispiel (Optionen): SourceToAI --export ./exports --input C:\\Daten\\MeineSolution\\";
+            "Beispiel (Optionen): SourceToAI --export ./exports --input C:\\Daten\\RepoA\\ --input C:\\Daten\\RepoB\\";
 
         internal const string ExportPathDescription =
             "Zielverzeichnis für den Export (wird bei Bedarf angelegt bzw. geleert).";
 
         internal const string SolutionRootDescription =
-            "Stammverzeichnis der Solution (Ordner mit .sln oder darüber).";
+            "Stammverzeichnis der Solution (Ordner mit .sln oder darüber). Mindestens ein Pfad; weitere Pfade als weitere Positionsargumente.";
 
         internal const string ExportOptionDescription =
             "Export-Verzeichnis (Alternative zu Positionsargument <Export-Pfad>).";
 
         internal const string InputOptionDescription =
-            "Pfad zur Solution bzw. zum Repository-Stamm (Alternative zum zweiten Positionsargument). Wiederholbare Angabe mehrerer Pfade ist für eine spätere Version vorgesehen.";
+            "Pfad zur Solution bzw. zum Repository-Stamm (Alternative zu den weiteren Positionsargumenten). Mehrfach angebbare Option.";
 
         internal const string ErrorIncompletePositional =
-            "Beide Positionsargumente <Export-Pfad> und <Pfad-zur-Solution> sind erforderlich, wenn ohne --export/--input gearbeitet wird.";
+            "Positionsargument <Export-Pfad> und mindestens ein <Pfad-zur-Solution> sind erforderlich, wenn ohne --export/--input gearbeitet wird.";
 
         internal const string ErrorIncompleteNamed =
-            "Beide Optionen --export und --input sind erforderlich, wenn ohne Positionsargumente gearbeitet wird.";
+            "Option --export und mindestens ein --input sind erforderlich, wenn ohne Positionsargumente gearbeitet wird.";
 
         internal const string ErrorPositionalAndNamed =
             "Positionsargumente und --export/--input dürfen nicht kombiniert werden.";
@@ -47,26 +47,28 @@ internal static class SourceToAiCli
     /// Erzeugt den Root-Command; <paramref name="runAsync"/> wird bei gültiger CLI aufgerufen.
     /// </summary>
     internal static RootCommand CreateRootCommand(
-        Func<string, string, CancellationToken, Task<int>> runAsync)
+        Func<string, IReadOnlyList<string>, CancellationToken, Task<int>> runAsync)
     {
         var exportPositional = new Argument<string?>("export-path")
         {
             Description = Usage.ExportPathDescription,
             Arity = ArgumentArity.ZeroOrOne,
         };
-        var solutionPositional = new Argument<string?>("solution-root")
+        var solutionPositional = new Argument<string[]>("solution-root")
         {
             Description = Usage.SolutionRootDescription,
-            Arity = ArgumentArity.ZeroOrOne,
+            // ZeroOrMore: sonst würden im reinen Optionsmodus (--export/--input) künstlich Positionsargumente erzwungen.
+            Arity = ArgumentArity.ZeroOrMore,
         };
 
         var exportOption = new Option<string?>("--export", [])
         {
             Description = Usage.ExportOptionDescription,
         };
-        var inputOption = new Option<string?>("--input", ["-i"])
+        var inputOption = new Option<string[]>("--input", ["-i"])
         {
             Description = Usage.InputOptionDescription,
+            Arity = ArgumentArity.OneOrMore,
         };
 
         var root = new RootCommand(Usage.RootDescription)
@@ -86,7 +88,7 @@ internal static class SourceToAiCli
                 solutionPositional,
                 inputOption,
                 exportOption);
-            if (resolution.ExportPath is null || resolution.SolutionPath is null)
+            if (resolution.ExportPath is null || resolution.SolutionPaths.Count == 0)
             {
                 if (resolution.ErrorMessage is not null)
                     await Console.Error.WriteLineAsync(resolution.ErrorMessage);
@@ -96,7 +98,7 @@ internal static class SourceToAiCli
                 return 1;
             }
 
-            return await runAsync(resolution.ExportPath!, resolution.SolutionPath!, cancellationToken);
+            return await runAsync(resolution.ExportPath!, resolution.SolutionPaths, cancellationToken);
         });
 
         return root;
@@ -105,21 +107,28 @@ internal static class SourceToAiCli
     private static CliPathResolution ResolveInvocation(
         ParseResult parseResult,
         Argument<string?> exportPositional,
-        Argument<string?> solutionPositional,
-        Option<string?> inputOption,
+        Argument<string[]> solutionPositional,
+        Option<string[]> inputOption,
         Option<string?> exportOption)
     {
         static string? N(string? s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim();
 
         var exportPos = N(parseResult.GetValue(exportPositional));
-        var solutionPos = N(parseResult.GetValue(solutionPositional));
+        var solutionPosRaw = parseResult.GetValue(solutionPositional);
+        var solutionPos = NormalizePathList(solutionPosRaw, N);
         var exportOpt = N(parseResult.GetValue(exportOption));
-        var inputOpt = N(parseResult.GetValue(inputOption));
+        var inputOptRaw = parseResult.GetValue(inputOption);
+        var inputOpt = NormalizePathList(inputOptRaw, N);
 
-        var hasPositional = exportPos is not null && solutionPos is not null;
-        var hasPartialPositional = exportPos is not null ^ solutionPos is not null;
-        var hasNamed = exportOpt is not null && inputOpt is not null;
-        var hasPartialNamed = exportOpt is not null ^ inputOpt is not null;
+        var hasExportPos = exportPos is not null;
+        var hasSolutionPos = solutionPos.Count > 0;
+        var hasPositional = hasExportPos && hasSolutionPos;
+        var hasPartialPositional = hasExportPos ^ hasSolutionPos;
+
+        var hasExportOpt = exportOpt is not null;
+        var hasInputOpt = inputOpt.Count > 0;
+        var hasNamed = hasExportOpt && hasInputOpt;
+        var hasPartialNamed = hasExportOpt ^ hasInputOpt;
 
         if (hasPartialPositional)
             return CliPathResolution.Fail(Usage.ErrorIncompletePositional);
@@ -131,31 +140,47 @@ internal static class SourceToAiCli
             return CliPathResolution.Fail(Usage.ErrorPositionalAndNamed);
 
         if (hasPositional)
-            return CliPathResolution.Ok(exportPos!, solutionPos!);
+            return CliPathResolution.Ok(exportPos!, solutionPos);
 
         if (hasNamed)
-            return CliPathResolution.Ok(exportOpt!, inputOpt!);
+            return CliPathResolution.Ok(exportOpt!, inputOpt);
 
         return CliPathResolution.Fail(null);
     }
 
+    private static IReadOnlyList<string> NormalizePathList(string[]? raw, Func<string?, string?> normalize)
+    {
+        if (raw is null || raw.Length == 0)
+            return Array.Empty<string>();
+
+        var list = new List<string>(raw.Length);
+        foreach (var item in raw)
+        {
+            var n = normalize(item);
+            if (n is not null)
+                list.Add(n);
+        }
+
+        return list;
+    }
+
     private readonly struct CliPathResolution
     {
-        private CliPathResolution(string? exportPath, string? solutionPath, string? errorMessage)
+        private CliPathResolution(string? exportPath, IReadOnlyList<string> solutionPaths, string? errorMessage)
         {
             ExportPath = exportPath;
-            SolutionPath = solutionPath;
+            SolutionPaths = solutionPaths;
             ErrorMessage = errorMessage;
         }
 
         internal string? ExportPath { get; }
-        internal string? SolutionPath { get; }
+        internal IReadOnlyList<string> SolutionPaths { get; }
         internal string? ErrorMessage { get; }
 
-        internal static CliPathResolution Ok(string exportPath, string solutionPath) =>
-            new(exportPath, solutionPath, null);
+        internal static CliPathResolution Ok(string exportPath, IReadOnlyList<string> solutionPaths) =>
+            new(exportPath, solutionPaths, null);
 
         internal static CliPathResolution Fail(string? errorMessage) =>
-            new(null, null, errorMessage);
+            new(null, Array.Empty<string>(), errorMessage);
     }
 }
