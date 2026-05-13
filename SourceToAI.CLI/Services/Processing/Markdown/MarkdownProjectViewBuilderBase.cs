@@ -21,7 +21,7 @@ namespace SourceToAI.CLI.Services.Processing.Markdown;
 /// umgeschriebenen <see cref="Microsoft.CodeAnalysis.CSharp.Syntax.CompilationUnitSyntax"/>) ausgewertet; der gefilterte Markdown-Pfad
 /// führt <b>kein</b> erneutes <c>CSharpSyntaxTree.ParseText</c> über <see cref="AiFeedContentSegment.TransformedText"/> aus.
 /// </remarks>
-public abstract class MarkdownProjectViewBuilderBase(
+public class MarkdownProjectViewBuilderBase(
     ICSharpDocumentLoader csharpDocumentLoader,
     IViewGenerator viewGenerator,
     bool includeNonCSharpFiles,
