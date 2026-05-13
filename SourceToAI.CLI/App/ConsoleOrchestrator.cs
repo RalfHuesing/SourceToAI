@@ -178,6 +178,20 @@ public class ConsoleOrchestrator(
         }
     }
 
+    private void TryWriteGlobalExportReadme(string exportPath)
+    {
+        try
+        {
+            var readme = readmeMarkdownGenerator.GenerateGlobalExportOverview(DateTimeOffset.UtcNow);
+            File.WriteAllText(Path.Combine(exportPath, "readme.md"), readme);
+            Console.WriteLine($"[INFO] readme.md (global) → {exportPath}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[WARN] readme.md (global) konnte nicht geschrieben werden: {ex.Message}");
+        }
+    }
+
     private async Task RunSingleSourceAsync(
         string rootPath,
         string exportPath,
@@ -198,6 +212,7 @@ public class ConsoleOrchestrator(
             {
                 PrepareGlobalExportRootDirectory(exportPath);
                 state.Initialized = true;
+                TryWriteGlobalExportReadme(exportPath);
             }
 
             var plannedSolutionExportRoot = Path.GetFullPath(MultiViewExportPaths.GetSolutionExportRoot(exportPath, assemblyBaseName));
@@ -251,6 +266,7 @@ public class ConsoleOrchestrator(
             {
                 PrepareGlobalExportRootDirectory(exportPath);
                 state.Initialized = true;
+                TryWriteGlobalExportReadme(exportPath);
             }
 
             outputDir = MultiViewExportPaths.GetSolutionExportRoot(exportPath, solutionName);
@@ -262,13 +278,17 @@ public class ConsoleOrchestrator(
         var exportSessionId = Guid.NewGuid();
         try
         {
-            var readme = readmeMarkdownGenerator.Generate(repositoryFolderName, generatedAt);
-            File.WriteAllText(Path.Combine(exportPath, "readme.md"), readme);
-            Console.WriteLine($"[INFO] readme.md → {exportPath}");
+            Directory.CreateDirectory(outputDir);
+            var readme = readmeMarkdownGenerator.GenerateIsolatedSolutionReadme(
+                solutionName,
+                repositoryFolderName,
+                generatedAt);
+            File.WriteAllText(Path.Combine(outputDir, "readme.md"), readme);
+            Console.WriteLine($"[INFO] readme.md (Lösung) → {outputDir}");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[WARN] readme.md konnte nicht geschrieben werden: {ex.Message}");
+            Console.WriteLine($"[WARN] readme.md (Lösung) konnte nicht geschrieben werden: {ex.Message}");
         }
 
         try
@@ -276,7 +296,6 @@ public class ConsoleOrchestrator(
             var depGraphResult = dependencyGraphMarkdownGenerator.Generate(effectiveRoot, projects);
             if (depGraphResult.IsSuccess)
             {
-                Directory.CreateDirectory(outputDir);
                 File.WriteAllText(Path.Combine(outputDir, "dependency-graph.md"), depGraphResult.Value!);
                 Console.WriteLine($"[INFO] dependency-graph.md → {outputDir}");
             }

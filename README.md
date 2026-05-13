@@ -21,7 +21,7 @@
 
 1. Export ausführen (siehe unten).
 2. Aus dem gemeinsamen Ordner `Merged/complete/` die passenden `<Solution>..Docs-complete.md`- und Projekt-MD-Dateien (z. B. `...-complete.md`) in den Chat laden.
-3. Im Prompt auf Manifest-Einträge und Views verweisen (Details stehen in der generierten `readme.md` im jeweiligen Solution-Exportordner).
+3. Im Prompt auf Manifest-Einträge und Views verweisen (Überblick: generiertes `readme.md` im Export-Root; Details pro Lösung: `Isolated/<Solution>/readme.md`).
 
 ---
 
@@ -68,7 +68,8 @@ SourceToAI --export ./exports -i C:\Daten\RepoA\ -i C:\Daten\RepoB\
 ## Ausgabeordner und Sicherheit
 
 Unter dem globalen `<Export-Pfad>` bereitet das Tool einen Verzeichnisbaum vor:
-- Ein globales `readme.md` mit Nutzungshinweisen.
+- Ein **globales** `readme.md` im Export-Root: erklärt für KI-Nutzerinnen und -nutzer den Aufbau (`Isolated/` vs. `Merged/`), die vier Views und empfiehlt `rg`/`grep` bei großen Bäumen.
+- Pro erkannte Solution zusätzlich `Isolated/<SolutionName>/readme.md` mit den tieferen Hinweisen zu MANIFEST/CONTENT und den relativen Pfaden **unter dieser Lösung**.
 - Ein Verzeichnis `Merged/`, in dem alle Projekte aller exportierten Solutions vereint und nach Views gruppiert liegen.
 - Ein Verzeichnis `Isolated/`, in dem jede Solution (z. B. `<SolutionName>`) ihren eigenen Unterordner behält. Dort finden sich z. B. der lösungsspezifische `dependency-graph.md` und bei Assembly-Quellen zusätzlich `decompile/` mit dem erzeugten C#-Baum.
 
