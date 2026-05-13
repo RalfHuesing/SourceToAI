@@ -49,7 +49,7 @@ static async Task<int> RunExportPipelineAsync(
 
     var configuration = new ConfigurationBuilder()
         .SetBasePath(AppContext.BaseDirectory)
-        .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+        .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
         .Build();
 
     var appSettings = configuration.GetSection("SourceToAI").Get<AppSettings>()
