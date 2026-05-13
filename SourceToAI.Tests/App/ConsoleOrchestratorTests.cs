@@ -324,4 +324,135 @@ public class ConsoleOrchestratorTests
             p => p.ExecuteAsync("MySol", Path.Combine(export.Root, "MySol")),
             Times.Once);
     }
+
+    [Fact]
+    public async Task RunAsync_with_assembly_input_calls_decompiler_then_discovery_on_decompiled_root()
+    {
+        using var export = new TempWorkspace();
+        using var assemblyWs = new TempWorkspace();
+        using var multiViewSp = CreateMultiViewServiceProvider();
+
+        var dllPath = Path.Combine(assemblyWs.Root, "AsmOrch.dll");
+        await File.WriteAllTextAsync(dllPath, string.Empty, TestContext.Current.CancellationToken);
+
+        var decompiledProjectDir = Path.Combine(assemblyWs.Root, "decompiled");
+        Directory.CreateDirectory(decompiledProjectDir);
+        var csprojPath = Path.Combine(decompiledProjectDir, "AsmOrch.csproj");
+        await File.WriteAllTextAsync(
+            csprojPath,
+            """<Project Sdk="Microsoft.NET.Sdk"></Project>""",
+            TestContext.Current.CancellationToken);
+        var csPath = Path.Combine(decompiledProjectDir, "Class1.cs");
+        await File.WriteAllTextAsync(csPath, "namespace Asm; public class Class1 { }", TestContext.Current.CancellationToken);
+
+        var project = new ProjectDefinition("AsmOrch", csprojPath);
+        var plannedExportRoot = Path.GetFullPath(Path.Combine(export.Root, "AsmOrch"));
+        var expectedDecompileDir = Path.GetFullPath(Path.Combine(plannedExportRoot, "decompile"));
+        var effectiveRoot = Path.GetFullPath(decompiledProjectDir);
+
+        var sequence = new MockSequence();
+        var assemblyDecompiler = new Mock<IAssemblyDecompilerService>(MockBehavior.Strict);
+        assemblyDecompiler.InSequence(sequence)
+            .Setup(d => d.DecompileToProjectDirectory(
+                Path.GetFullPath(dllPath),
+                expectedDecompileDir,
+                It.IsAny<CancellationToken>()))
+            .Returns(effectiveRoot);
+
+        var solutionDiscovery = new Mock<ISolutionDiscoveryService>(MockBehavior.Strict);
+        solutionDiscovery.InSequence(sequence)
+            .Setup(s => s.GetSolutionName(effectiveRoot))
+            .Returns(ExtractionResult<string>.Success("AsmOrch"));
+        solutionDiscovery.InSequence(sequence)
+            .Setup(s => s.FindProjects(effectiveRoot))
+            .Returns(ExtractionResult<List<ProjectDefinition>>.Success([project]));
+
+        var fileDiscovery = new Mock<IFileDiscoveryService>();
+        fileDiscovery
+            .Setup(f => f.FindSolutionDocs(effectiveRoot, It.IsAny<AppSettings>()))
+            .Returns(ExtractionResult<List<string>>.Success([]));
+        fileDiscovery
+            .Setup(f => f.FindFilesForProject(project, It.IsAny<AppSettings>()))
+            .Returns(ExtractionResult<List<string>>.Success([csPath]));
+
+        var post = new Mock<IPostExportTask>();
+        post.Setup(p => p.ExecuteAsync(It.IsAny<string>(), It.IsAny<string>())).Returns(Task.CompletedTask);
+
+        var sut = new ConsoleOrchestrator(
+            solutionDiscovery.Object,
+            fileDiscovery.Object,
+            assemblyDecompiler.Object,
+            new CsprojDependencyGraphMarkdownGenerator(),
+            multiViewSp.GetRequiredService<IMultiViewExportService>(),
+            multiViewSp.GetRequiredService<IMultiViewReadmeMarkdownGenerator>(),
+            TestAppSettingsFactory.Default(),
+            [post.Object]);
+
+        await sut.RunAsync([dllPath], export.Root);
+
+        assemblyDecompiler.Verify(
+            d => d.DecompileToProjectDirectory(
+                Path.GetFullPath(dllPath),
+                expectedDecompileDir,
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+        solutionDiscovery.Verify(s => s.GetSolutionName(effectiveRoot), Times.Once);
+        solutionDiscovery.Verify(s => s.FindProjects(effectiveRoot), Times.Once);
+
+        post.Verify(p => p.ExecuteAsync("AsmOrch", plannedExportRoot), Times.Once);
+    }
+
+    [Fact]
+    public async Task RunAsync_with_directory_input_does_not_invoke_assembly_decompiler()
+    {
+        using var export = new TempWorkspace();
+        using var solution = new TempWorkspace();
+        using var multiViewSp = CreateMultiViewServiceProvider();
+
+        var projPath = Path.Combine(solution.Root, "P1", "P1.csproj");
+        Directory.CreateDirectory(Path.GetDirectoryName(projPath)!);
+        await File.WriteAllTextAsync(
+            projPath,
+            """<Project Sdk="Microsoft.NET.Sdk"></Project>""",
+            TestContext.Current.CancellationToken);
+        var csPath = Path.Combine(solution.Root, "P1", "A.cs");
+        await File.WriteAllTextAsync(csPath, "namespace N; public class A { }", TestContext.Current.CancellationToken);
+
+        var project = new ProjectDefinition("P1", projPath);
+        var solutionDiscovery = new Mock<ISolutionDiscoveryService>();
+        solutionDiscovery
+            .Setup(s => s.GetSolutionName(solution.Root))
+            .Returns(ExtractionResult<string>.Success("MySol"));
+        solutionDiscovery
+            .Setup(s => s.FindProjects(solution.Root))
+            .Returns(ExtractionResult<List<ProjectDefinition>>.Success([project]));
+
+        var fileDiscovery = new Mock<IFileDiscoveryService>();
+        fileDiscovery
+            .Setup(f => f.FindSolutionDocs(solution.Root, It.IsAny<AppSettings>()))
+            .Returns(ExtractionResult<List<string>>.Success([]));
+        fileDiscovery
+            .Setup(f => f.FindFilesForProject(project, It.IsAny<AppSettings>()))
+            .Returns(ExtractionResult<List<string>>.Success([csPath]));
+
+        var assemblyDecompiler = new Mock<IAssemblyDecompilerService>(MockBehavior.Strict);
+        var post = new Mock<IPostExportTask>();
+        post.Setup(p => p.ExecuteAsync(It.IsAny<string>(), It.IsAny<string>())).Returns(Task.CompletedTask);
+
+        var sut = new ConsoleOrchestrator(
+            solutionDiscovery.Object,
+            fileDiscovery.Object,
+            assemblyDecompiler.Object,
+            new CsprojDependencyGraphMarkdownGenerator(),
+            multiViewSp.GetRequiredService<IMultiViewExportService>(),
+            multiViewSp.GetRequiredService<IMultiViewReadmeMarkdownGenerator>(),
+            TestAppSettingsFactory.Default(),
+            [post.Object]);
+
+        await sut.RunAsync([solution.Root], export.Root);
+
+        assemblyDecompiler.Verify(
+            d => d.DecompileToProjectDirectory(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
 }
