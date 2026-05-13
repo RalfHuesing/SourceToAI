@@ -62,7 +62,7 @@ public sealed class MultiViewExportParallelDeterminismTests
         for (var run = 0; run < 8; run++)
         {
             using var export = new TempWorkspace();
-            var outputRoot = Path.Combine(export.Root, solutionDisplayName);
+            var outputRoot = export.Root;
             exportService.WriteMergedSolutionViews(
                 outputRoot,
                 solutionDisplayName,
@@ -75,8 +75,8 @@ public sealed class MultiViewExportParallelDeterminismTests
             foreach (var name in orderedNames)
             {
                 Assert.True(
-                    File.Exists(Path.Combine(outputRoot, "complete", $"{solutionDisplayName}.{name}.md")),
-                    $"Run {run}: complete/{solutionDisplayName}.{name}.md");
+                    File.Exists(Path.Combine(outputRoot, "Merged", "complete", $"{solutionDisplayName}.{name}-complete.md")),
+                    $"Run {run}: Merged/complete/{solutionDisplayName}.{name}-complete.md");
             }
 
             var fingerprint = FingerprintExportTree(outputRoot);
@@ -90,7 +90,7 @@ public sealed class MultiViewExportParallelDeterminismTests
         var sb = new StringBuilder();
         foreach (var viewFolder in ViewFolders)
         {
-            var dir = Path.Combine(outputRoot, viewFolder);
+            var dir = Path.Combine(outputRoot, "Merged", viewFolder);
             if (!Directory.Exists(dir))
                 continue;
 
@@ -104,7 +104,6 @@ public sealed class MultiViewExportParallelDeterminismTests
             }
         }
 
-        sb.AppendLine($"readme:{File.Exists(Path.Combine(outputRoot, "readme.md"))}");
         return sb.ToString();
     }
 }
