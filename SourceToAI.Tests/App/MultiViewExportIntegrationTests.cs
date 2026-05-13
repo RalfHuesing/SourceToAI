@@ -175,89 +175,92 @@ public sealed class MultiViewExportIntegrationTests
             TestAppSettingsFactory.Default(),
             [post.Object]);
 
+        await File.WriteAllTextAsync(Path.Combine(export.Root, ".sta-marker"), "", TestContext.Current.CancellationToken);
         await sut.RunAsync([solution.Root], export.Root);
 
-        var outRoot = Path.Combine(export.Root, solutionName);
-        Assert.True(Directory.Exists(outRoot));
+        var isolatedSolRoot = Path.Combine(export.Root, "Isolated", solutionName);
+        Assert.True(Directory.Exists(isolatedSolRoot));
 
         // konzept.md Abschnitt 2 — alle Pfade relativ zu {export}/{solutionName}
-        Assert.True(File.Exists(Path.Combine(outRoot, "readme.md")));
+        Assert.True(File.Exists(Path.Combine(export.Root, "readme.md")));
         var exportReadme = await File.ReadAllTextAsync(
-            Path.Combine(outRoot, "readme.md"),
+            Path.Combine(export.Root, "readme.md"),
             TestContext.Current.CancellationToken);
         Assert.Contains("MANIFEST", exportReadme, StringComparison.Ordinal);
         Assert.Contains("CONTENT", exportReadme, StringComparison.Ordinal);
         Assert.Contains("pro Projekt", exportReadme, StringComparison.Ordinal);
         Assert.DoesNotContain("full-source.md", exportReadme, StringComparison.OrdinalIgnoreCase);
-        Assert.True(File.Exists(Path.Combine(outRoot, "dependency-graph.md")));
-        Assert.True(File.Exists(Path.Combine(outRoot, "complete", "FixtureSol.Proj1.md")));
-        Assert.True(File.Exists(Path.Combine(outRoot, "complete", "FixtureSol.Proj2.md")));
-        Assert.True(File.Exists(Path.Combine(outRoot, "complete", "FixtureSol.Proj3.md")));
-        Assert.True(File.Exists(Path.Combine(outRoot, "signatures-only", "FixtureSol.Proj1.md")));
-        Assert.True(File.Exists(Path.Combine(outRoot, "signatures-only", "FixtureSol.Proj2.md")));
-        Assert.True(File.Exists(Path.Combine(outRoot, "signatures-only", "FixtureSol.Proj3.md")));
-        Assert.True(File.Exists(Path.Combine(outRoot, "public-only", "FixtureSol.Proj1.md")));
-        Assert.True(File.Exists(Path.Combine(outRoot, "public-only", "FixtureSol.Proj2.md")));
-        Assert.False(File.Exists(Path.Combine(outRoot, "public-only", "FixtureSol.Proj3.md")));
-        Assert.True(File.Exists(Path.Combine(outRoot, "dto-only", "FixtureSol.Proj1.md")));
-        Assert.True(File.Exists(Path.Combine(outRoot, "dto-only", "FixtureSol.Proj2.md")));
-        Assert.False(File.Exists(Path.Combine(outRoot, "dto-only", "FixtureSol.Proj3.md")));
+        
+        Assert.True(File.Exists(Path.Combine(isolatedSolRoot, "dependency-graph.md")));
+        var mergedRoot = Path.Combine(export.Root, "Merged");
+        Assert.True(File.Exists(Path.Combine(mergedRoot, "complete", "FixtureSol.Proj1-complete.md")));
+        Assert.True(File.Exists(Path.Combine(mergedRoot, "complete", "FixtureSol.Proj2-complete.md")));
+        Assert.True(File.Exists(Path.Combine(mergedRoot, "complete", "FixtureSol.Proj3-complete.md")));
+        Assert.True(File.Exists(Path.Combine(mergedRoot, "signatures-only", "FixtureSol.Proj1-signatures-only.md")));
+        Assert.True(File.Exists(Path.Combine(mergedRoot, "signatures-only", "FixtureSol.Proj2-signatures-only.md")));
+        Assert.True(File.Exists(Path.Combine(mergedRoot, "signatures-only", "FixtureSol.Proj3-signatures-only.md")));
+        Assert.True(File.Exists(Path.Combine(mergedRoot, "public-only", "FixtureSol.Proj1-public-only.md")));
+        Assert.True(File.Exists(Path.Combine(mergedRoot, "public-only", "FixtureSol.Proj2-public-only.md")));
+        Assert.False(File.Exists(Path.Combine(mergedRoot, "public-only", "FixtureSol.Proj3-public-only.md")));
+        Assert.True(File.Exists(Path.Combine(mergedRoot, "dto-only", "FixtureSol.Proj1-dto-only.md")));
+        Assert.True(File.Exists(Path.Combine(mergedRoot, "dto-only", "FixtureSol.Proj2-dto-only.md")));
+        Assert.False(File.Exists(Path.Combine(mergedRoot, "dto-only", "FixtureSol.Proj3-dto-only.md")));
 
         var signaturesMd = await File.ReadAllTextAsync(
-            Path.Combine(outRoot, "signatures-only", "FixtureSol.Proj1.md"),
+            Path.Combine(mergedRoot, "signatures-only", "FixtureSol.Proj1-signatures-only.md"),
             TestContext.Current.CancellationToken)
             + await File.ReadAllTextAsync(
-                Path.Combine(outRoot, "signatures-only", "FixtureSol.Proj2.md"),
+                Path.Combine(mergedRoot, "signatures-only", "FixtureSol.Proj2-signatures-only.md"),
                 TestContext.Current.CancellationToken)
             + await File.ReadAllTextAsync(
-                Path.Combine(outRoot, "signatures-only", "FixtureSol.Proj3.md"),
+                Path.Combine(mergedRoot, "signatures-only", "FixtureSol.Proj3-signatures-only.md"),
                 TestContext.Current.CancellationToken);
         AiFeedExportIntegrationAsserts.AssertSignatureFencesParseWithoutSyntaxErrors(signaturesMd);
         Assert.Contains("ExprBackedProp", signaturesMd, StringComparison.Ordinal);
         Assert.DoesNotContain("=>", signaturesMd, StringComparison.Ordinal);
 
         var publicApi = await File.ReadAllTextAsync(
-            Path.Combine(outRoot, "public-only", "FixtureSol.Proj1.md"),
+            Path.Combine(mergedRoot, "public-only", "FixtureSol.Proj1-public-only.md"),
             TestContext.Current.CancellationToken);
         Assert.DoesNotContain(PrivateFixtureMethodName, publicApi, StringComparison.Ordinal);
         Assert.Contains("PublicMethod", publicApi, StringComparison.Ordinal);
 
         var publicProj2 = await File.ReadAllTextAsync(
-            Path.Combine(outRoot, "public-only", "FixtureSol.Proj2.md"),
+            Path.Combine(mergedRoot, "public-only", "FixtureSol.Proj2-public-only.md"),
             TestContext.Current.CancellationToken);
         Assert.Contains("LibMarker", publicProj2, StringComparison.Ordinal);
         Assert.DoesNotContain("FixtureInternalOnlyShell.cs", publicProj2, StringComparison.Ordinal);
 
         var completeProj2 = await File.ReadAllTextAsync(
-            Path.Combine(outRoot, "complete", "FixtureSol.Proj2.md"),
+            Path.Combine(mergedRoot, "complete", "FixtureSol.Proj2-complete.md"),
             TestContext.Current.CancellationToken);
         Assert.Contains("FixtureInternalOnlyMarker", completeProj2, StringComparison.Ordinal);
 
         var completeProj3 = await File.ReadAllTextAsync(
-            Path.Combine(outRoot, "complete", "FixtureSol.Proj3.md"),
+            Path.Combine(mergedRoot, "complete", "FixtureSol.Proj3-complete.md"),
             TestContext.Current.CancellationToken);
         Assert.Contains("Proj3InternalOnlyType", completeProj3, StringComparison.Ordinal);
 
         var modelsMd = await File.ReadAllTextAsync(
-            Path.Combine(outRoot, "dto-only", "FixtureSol.Proj1.md"),
+            Path.Combine(mergedRoot, "dto-only", "FixtureSol.Proj1-dto-only.md"),
             TestContext.Current.CancellationToken);
         Assert.Contains(FixtureDtoRecordName, modelsMd, StringComparison.Ordinal);
         Assert.Contains(FixtureEnumName, modelsMd, StringComparison.Ordinal);
         Assert.DoesNotContain("PublicMethod", modelsMd, StringComparison.Ordinal);
 
         var depGraph = await File.ReadAllTextAsync(
-            Path.Combine(outRoot, "dependency-graph.md"),
+            Path.Combine(isolatedSolRoot, "dependency-graph.md"),
             TestContext.Current.CancellationToken);
         Assert.Contains(FixtureNuGetPackageId, depGraph, StringComparison.Ordinal);
         Assert.Contains("2.1.0", depGraph, StringComparison.Ordinal);
 
         var fullSource = await File.ReadAllTextAsync(
-            Path.Combine(outRoot, "complete", "FixtureSol.Proj1.md"),
+            Path.Combine(mergedRoot, "complete", "FixtureSol.Proj1-complete.md"),
             TestContext.Current.CancellationToken);
         Assert.Contains(PrivateFixtureMethodName, fullSource, StringComparison.Ordinal);
         Assert.Contains("sidecar.json", fullSource, StringComparison.Ordinal);
         Assert.Contains("{\"fixture\":true}", fullSource, StringComparison.Ordinal);
 
-        post.Verify(p => p.ExecuteAsync(solutionName, outRoot), Times.Once);
+        post.Verify(p => p.ExecuteAsync(solutionName, isolatedSolRoot), Times.Once);
     }
 }

@@ -14,7 +14,7 @@ namespace SourceToAI.Tests.App;
 
 /// <summary>
 /// E2E-Verifikation der pro-Projekt-AI-Feed-Dateien: Frontmatter, MANIFEST/CONTENT-Konsistenz,
-/// Namensschema <c>Solution.Project.md</c>, View-Filter (<c>public-only</c>).
+/// Namensschema <c>Solution.Project-view.md</c>, View-Filter (<c>public-only</c>).
 /// </summary>
 public sealed class AiFeedProjectGranularityIntegrationTests
 {
@@ -118,28 +118,30 @@ public sealed class AiFeedProjectGranularityIntegrationTests
             TestAppSettingsFactory.Default(),
             [post.Object]);
 
+        await File.WriteAllTextAsync(Path.Combine(export.Root, ".sta-marker"), "", TestContext.Current.CancellationToken);
         await sut.RunAsync([solution.Root], export.Root);
 
-        var outRoot = Path.Combine(export.Root, solutionName);
-        Assert.True(Directory.Exists(outRoot));
+        var isolatedSolRoot = Path.Combine(export.Root, "Isolated", solutionName);
+        Assert.True(Directory.Exists(isolatedSolRoot));
+        var mergedRoot = Path.Combine(export.Root, "Merged");
 
-        // Eine Markdown-Datei pro Projekt und View (Präfix Solution, Suffix .md)
-        Assert.True(File.Exists(Path.Combine(outRoot, "complete", "GranSol.ProjA.md")));
-        Assert.True(File.Exists(Path.Combine(outRoot, "complete", "GranSol.ProjB.md")));
-        Assert.True(File.Exists(Path.Combine(outRoot, "public-only", "GranSol.ProjA.md")));
-        Assert.True(File.Exists(Path.Combine(outRoot, "public-only", "GranSol.ProjB.md")));
+        // Eine Markdown-Datei pro Projekt und View (Präfix Solution, Suffix -view.md)
+        Assert.True(File.Exists(Path.Combine(mergedRoot, "complete", "GranSol.ProjA-complete.md")));
+        Assert.True(File.Exists(Path.Combine(mergedRoot, "complete", "GranSol.ProjB-complete.md")));
+        Assert.True(File.Exists(Path.Combine(mergedRoot, "public-only", "GranSol.ProjA-public-only.md")));
+        Assert.True(File.Exists(Path.Combine(mergedRoot, "public-only", "GranSol.ProjB-public-only.md")));
 
         var completeA = await File.ReadAllTextAsync(
-            Path.Combine(outRoot, "complete", "GranSol.ProjA.md"),
+            Path.Combine(mergedRoot, "complete", "GranSol.ProjA-complete.md"),
             TestContext.Current.CancellationToken);
         var completeB = await File.ReadAllTextAsync(
-            Path.Combine(outRoot, "complete", "GranSol.ProjB.md"),
+            Path.Combine(mergedRoot, "complete", "GranSol.ProjB-complete.md"),
             TestContext.Current.CancellationToken);
         var publicA = await File.ReadAllTextAsync(
-            Path.Combine(outRoot, "public-only", "GranSol.ProjA.md"),
+            Path.Combine(mergedRoot, "public-only", "GranSol.ProjA-public-only.md"),
             TestContext.Current.CancellationToken);
         var publicB = await File.ReadAllTextAsync(
-            Path.Combine(outRoot, "public-only", "GranSol.ProjB.md"),
+            Path.Combine(mergedRoot, "public-only", "GranSol.ProjB-public-only.md"),
             TestContext.Current.CancellationToken);
 
         AiFeedExportIntegrationAsserts.AssertAiFeedStructuralInvariants(completeA);
@@ -152,13 +154,13 @@ public sealed class AiFeedProjectGranularityIntegrationTests
         Assert.Contains("Visible", publicA, StringComparison.Ordinal);
 
         var sigA = await File.ReadAllTextAsync(
-            Path.Combine(outRoot, "signatures-only", "GranSol.ProjA.md"),
+            Path.Combine(mergedRoot, "signatures-only", "GranSol.ProjA-signatures-only.md"),
             TestContext.Current.CancellationToken);
         var sigB = await File.ReadAllTextAsync(
-            Path.Combine(outRoot, "signatures-only", "GranSol.ProjB.md"),
+            Path.Combine(mergedRoot, "signatures-only", "GranSol.ProjB-signatures-only.md"),
             TestContext.Current.CancellationToken);
         AiFeedExportIntegrationAsserts.AssertSignatureFencesParseWithoutSyntaxErrors(sigA + sigB);
 
-        post.Verify(p => p.ExecuteAsync(solutionName, outRoot), Times.Once);
+        post.Verify(p => p.ExecuteAsync(solutionName, isolatedSolRoot), Times.Once);
     }
 }

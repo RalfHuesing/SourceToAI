@@ -215,6 +215,7 @@ public class ConsoleOrchestrator(
             var depGraphResult = dependencyGraphMarkdownGenerator.Generate(effectiveRoot, projects);
             if (depGraphResult.IsSuccess)
             {
+                Directory.CreateDirectory(outputDir);
                 File.WriteAllText(Path.Combine(outputDir, "dependency-graph.md"), depGraphResult.Value!);
                 Console.WriteLine($"[INFO] dependency-graph.md → {outputDir}");
             }
