@@ -141,31 +141,22 @@ public sealed class MultiViewExportService(
         if (workCount <= 0)
             return;
 
-        var degree = Math.Clamp(maxConcurrency, 1, int.MaxValue);
-        using var semaphore = new SemaphoreSlim(degree);
-        var tasks = new Task[workCount];
-        for (var i = 0; i < workCount; i++)
+        var options = new ParallelOptions
         {
-            var index = i;
-            tasks[i] = Task.Run(() =>
-            {
-                semaphore.Wait();
-                try
-                {
-                    work(index);
-                }
-                catch (Exception ex)
-                {
-                    errors.Enqueue(ex);
-                }
-                finally
-                {
-                    _ = semaphore.Release();
-                }
-            });
-        }
+            MaxDegreeOfParallelism = Math.Clamp(maxConcurrency, 1, int.MaxValue)
+        };
 
-        Task.WaitAll(tasks);
+        Parallel.For(0, workCount, options, i =>
+        {
+            try
+            {
+                work(i);
+            }
+            catch (Exception ex)
+            {
+                errors.Enqueue(ex);
+            }
+        });
     }
 
     private sealed record ViewWorkSlot(
