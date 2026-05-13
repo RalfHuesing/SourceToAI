@@ -88,8 +88,8 @@ static async Task<int> RunExportPipelineAsync(
     try
     {
         var orchestrator = serviceProvider.GetRequiredService<ConsoleOrchestrator>();
-        await orchestrator.RunAsync(expandedPaths, exportPath);
-        return 0;
+        var allAssemblySourcesOk = await orchestrator.RunAsync(expandedPaths, exportPath);
+        return allAssemblySourcesOk ? 0 : 1;
     }
     catch (SourceToAiValidationException ex)
     {

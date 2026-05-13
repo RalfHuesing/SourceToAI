@@ -56,7 +56,7 @@ SourceToAI C:\AI_Feeds\Exports C:\Apps\MyLib\bin\Debug\net10.0\MyLib.dll
 ```
 
 ```cmd
-SourceToAI C:\AI_Feeds\Exports "C:\Program Files (x86)\Sage\Sage 100\9.0\Shared\Sagede.*.dll"
+SourceToAI C:\AI_Feeds\Exports "C:\Apps\ContosoTools\bin\Release\net10.0\Contoso.*.dll"
 ```
 
 ```cmd
