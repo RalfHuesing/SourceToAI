@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using SourceToAI.CLI.App;
+using SourceToAI.CLI.App.Cli;
 using SourceToAI.CLI.App.Exceptions;
 using SourceToAI.CLI.Configuration;
 using SourceToAI.CLI.Infrastructure;
@@ -8,73 +9,75 @@ using SourceToAI.CLI.Services.Discovery;
 using SourceToAI.CLI.Services.Export;
 using SourceToAI.CLI.Services.Export.AiFeed;
 using SourceToAI.CLI.Services.Processing;
+using System.CommandLine;
 
-// 1. CLI Argumente prüfen (Jetzt 2 Argumente erforderlich)
-if (args.Length < 2 || string.IsNullOrWhiteSpace(args[0]) || string.IsNullOrWhiteSpace(args[1]))
+var rootCommand = SourceToAiCli.CreateRootCommand(RunExportPipelineAsync);
+var parseResult = rootCommand.Parse(args);
+
+if (parseResult.Errors.Count > 0)
 {
-    Console.WriteLine("Verwendung: SourceToAI.exe <Export-Pfad> <Pfad-zur-Solution>");
-    Console.WriteLine("Beispiel: SourceToAI.exe ./exports C:\\Daten\\MeineSolution\\");
+    foreach (var error in parseResult.Errors)
+        await Console.Error.WriteLineAsync(error.Message);
+    await Console.Error.WriteLineAsync(SourceToAiCli.Usage.UsageLine);
+    Environment.ExitCode = 1;
     return;
 }
 
-string exportPath = args[0];   // Erstes Argument: Wo soll es hin?
-string solutionPath = args[1]; // Zweites Argument: Was soll gelesen werden?
+Environment.ExitCode = await parseResult.InvokeAsync(parseResult.InvocationConfiguration);
 
-// 2. Konfiguration laden
-var configuration = new ConfigurationBuilder()
-    .SetBasePath(Directory.GetCurrentDirectory())
-    .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
-    .Build();
-
-var appSettings = configuration.GetSection("SourceToAI").Get<AppSettings>()
-                  ?? new AppSettings();
-
-// 3. Dependency Injection Container aufbauen
-var services = new ServiceCollection();
-
-// Config registrieren
-services.AddSingleton(appSettings);
-
-// Discovery Services registrieren
-services.AddTransient<ISolutionDiscoveryService, SolutionDiscoveryService>();
-services.AddSingleton<IDirectoryEnumerator, DefaultDirectoryEnumerator>();
-services.AddTransient<IFileDiscoveryService, FileDiscoveryService>();
-
-// Processing Services registrieren
-services.AddSingleton<ICSharpDocumentLoader, CSharpDocumentLoader>();
-services.AddTransient<IFeedGenerator, MarkdownFeedGenerator>();
-services.AddTransient<IDependencyGraphMarkdownGenerator, CsprojDependencyGraphMarkdownGenerator>();
-services.AddTransient<IMultiViewExportService, MultiViewExportService>();
-services.AddSingleton<IMultiViewReadmeMarkdownGenerator, MultiViewReadmeMarkdownGenerator>();
-services.AddSingleton<IAiFeedMarkdownComposer, AiFeedMarkdownComposer>();
-services.AddViewGenerators();
-services.AddMarkdownProjectViewBuilders();
-
-// App registrieren
-services.AddTransient<ConsoleOrchestrator>();
-
-var serviceProvider = services.BuildServiceProvider();
-
-// 4. Anwendung starten
-try
+static async Task<int> RunExportPipelineAsync(
+    string exportPath,
+    string solutionPath,
+    CancellationToken cancellationToken)
 {
-    var orchestrator = serviceProvider.GetRequiredService<ConsoleOrchestrator>();
-    await orchestrator.RunAsync(solutionPath, exportPath);
-}
-catch (SourceToAiValidationException ex)
-{
-    Console.WriteLine($"[FEHLER] {ex.Message}");
-    Environment.ExitCode = 1;
-}
-catch (SourceToAiExportException ex)
-{
-    Console.WriteLine($"[FEHLER] {ex.Message}");
-    if (ex.InnerException is not null)
-        Console.WriteLine(ex.InnerException.ToString());
-    Environment.ExitCode = 1;
-}
-catch (Exception ex)
-{
-    Console.WriteLine($"[FATAL ERROR] Ein unerwarteter Fehler ist aufgetreten: {ex.Message}");
-    Environment.ExitCode = 1;
+    cancellationToken.ThrowIfCancellationRequested();
+
+    var configuration = new ConfigurationBuilder()
+        .SetBasePath(Directory.GetCurrentDirectory())
+        .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+        .Build();
+
+    var appSettings = configuration.GetSection("SourceToAI").Get<AppSettings>()
+                      ?? new AppSettings();
+
+    var services = new ServiceCollection();
+    services.AddSingleton(appSettings);
+    services.AddTransient<ISolutionDiscoveryService, SolutionDiscoveryService>();
+    services.AddSingleton<IDirectoryEnumerator, DefaultDirectoryEnumerator>();
+    services.AddTransient<IFileDiscoveryService, FileDiscoveryService>();
+    services.AddSingleton<ICSharpDocumentLoader, CSharpDocumentLoader>();
+    services.AddTransient<IFeedGenerator, MarkdownFeedGenerator>();
+    services.AddTransient<IDependencyGraphMarkdownGenerator, CsprojDependencyGraphMarkdownGenerator>();
+    services.AddTransient<IMultiViewExportService, MultiViewExportService>();
+    services.AddSingleton<IMultiViewReadmeMarkdownGenerator, MultiViewReadmeMarkdownGenerator>();
+    services.AddSingleton<IAiFeedMarkdownComposer, AiFeedMarkdownComposer>();
+    services.AddViewGenerators();
+    services.AddMarkdownProjectViewBuilders();
+    services.AddTransient<ConsoleOrchestrator>();
+
+    var serviceProvider = services.BuildServiceProvider();
+
+    try
+    {
+        var orchestrator = serviceProvider.GetRequiredService<ConsoleOrchestrator>();
+        await orchestrator.RunAsync(solutionPath, exportPath);
+        return 0;
+    }
+    catch (SourceToAiValidationException ex)
+    {
+        Console.WriteLine($"[FEHLER] {ex.Message}");
+        return 1;
+    }
+    catch (SourceToAiExportException ex)
+    {
+        Console.WriteLine($"[FEHLER] {ex.Message}");
+        if (ex.InnerException is not null)
+            Console.WriteLine(ex.InnerException.ToString());
+        return 1;
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"[FATAL ERROR] Ein unerwarteter Fehler ist aufgetreten: {ex.Message}");
+        return 1;
+    }
 }
