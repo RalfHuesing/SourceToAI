@@ -6,9 +6,7 @@ using System.Text;
 
 namespace SourceToAI.CLI.Services.Processing;
 
-public class MarkdownFeedGenerator(
-    IFileTypeService fileTypeService,
-    ICSharpDocumentLoader csharpDocumentLoader) : IFeedGenerator
+public class MarkdownFeedGenerator(ICSharpDocumentLoader csharpDocumentLoader) : IFeedGenerator
 {
     public ExtractionResult<string> GenerateFeed(string solutionName, ProjectDefinition project, List<string> filePaths)
     {
@@ -76,7 +74,7 @@ public class MarkdownFeedGenerator(
                 var extension = Path.GetExtension(fullPath);
                 var relativePath = Path.GetRelativePath(project.RootDirectory, fullPath);
 
-                var (type, language) = fileTypeService.GetFileTypeAndLanguage(extension);
+                var (type, language) = FileTypeService.GetFileTypeAndLanguage(extension);
                 var hash = HashUtility.ComputeShortHash(content);
 
                 fileContents.Add(new FileContent(idCounter, relativePath, content, type, language, hash, size));

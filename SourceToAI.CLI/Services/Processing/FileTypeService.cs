@@ -1,8 +1,15 @@
 ﻿namespace SourceToAI.CLI.Services.Processing;
 
-public class FileTypeService : IFileTypeService
+/// <summary>
+/// Ermittelt aus der Dateiendung Kategorie (z. B. „Code“, „Doc“) und Markdown-Sprach-Tag — reine Heuristik, ohne I/O.
+/// </summary>
+public static class FileTypeService
 {
-    public (string Type, string Language) GetFileTypeAndLanguage(string extension)
+    /// <summary>
+    /// Ermittelt basierend auf der Dateiendung den übergeordneten Typ (z.B. "Code", "Doc")
+    /// und den Markdown-Language-Tag (z.B. "csharp", "xml").
+    /// </summary>
+    public static (string Type, string Language) GetFileTypeAndLanguage(string extension)
     {
         var ext = extension.ToLowerInvariant();
 

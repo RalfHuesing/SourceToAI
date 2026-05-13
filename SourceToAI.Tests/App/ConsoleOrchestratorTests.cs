@@ -19,7 +19,6 @@ public class ConsoleOrchestratorTests
     {
         var services = new ServiceCollection();
         services.AddSingleton<ICSharpDocumentLoader, CSharpDocumentLoader>();
-        services.AddTransient<IFileTypeService, FileTypeService>();
         services.AddViewGenerators();
         services.AddMarkdownProjectViewBuilders();
         services.AddSingleton<IAiFeedMarkdownComposer, AiFeedMarkdownComposer>();

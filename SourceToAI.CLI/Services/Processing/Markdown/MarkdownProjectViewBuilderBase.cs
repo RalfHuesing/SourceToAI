@@ -23,7 +23,6 @@ namespace SourceToAI.CLI.Services.Processing.Markdown;
 /// </remarks>
 public abstract class MarkdownProjectViewBuilderBase(
     ICSharpDocumentLoader csharpDocumentLoader,
-    IFileTypeService fileTypeService,
     IViewGenerator viewGenerator,
     bool includeNonCSharpFiles,
     bool passOriginalSourceTextForCSharp) : IMarkdownProjectViewBuilder
@@ -101,7 +100,7 @@ public abstract class MarkdownProjectViewBuilderBase(
                     continue;
                 }
 
-                var (typeCategory, language) = fileTypeService.GetFileTypeAndLanguage(extension);
+                var (typeCategory, language) = FileTypeService.GetFileTypeAndLanguage(extension);
                 segments.Add(new AiFeedContentSegment(relativePath, typeCategory, language, content));
             }
 
