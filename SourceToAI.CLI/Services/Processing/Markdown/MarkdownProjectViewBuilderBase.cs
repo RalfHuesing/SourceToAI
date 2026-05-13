@@ -11,9 +11,9 @@ namespace SourceToAI.CLI.Services.Processing.Markdown;
 /// Rewriter-Reihenfolge je View (Task 06, Abgleich Konzept):
 /// <list type="bullet">
 /// <item><description><b>complete</b> — keine Rewriter; C#-Text = <see cref="ParsedCSharpDocument.SourceText"/> (über <see cref="ViewGeneratorContext.OriginalSourceText"/>).</description></item>
-/// <item><description><b>signatures-only</b> — nur <c>SignaturesRewriter</c> (<c>SignaturesOnlyViewGenerator</c>).</description></item>
-/// <item><description><b>public-only</b> — nur <c>VisibilityRewriter</c> (<c>PublicOnlyViewGenerator</c>); Bodies öffentlicher Member bleiben, kein <c>SignaturesRewriter</c>.</description></item>
-/// <item><description><b>dto-only</b> — nur <c>DtoRewriter</c> (<c>DtoOnlyViewGenerator</c>).</description></item>
+/// <item><description><b>signatures-only</b> — nur <c>SignaturesRewriter</c> (<c>RoslynRewriteViewGenerator</c>).</description></item>
+/// <item><description><b>public-only</b> — nur <c>VisibilityRewriter</c> (<c>RoslynRewriteViewGenerator</c>); Bodies öffentlicher Member bleiben, kein <c>SignaturesRewriter</c>.</description></item>
+/// <item><description><b>dto-only</b> — nur <c>DtoRewriter</c> (<c>RoslynRewriteViewGenerator</c>).</description></item>
 /// </list>
 /// Nicht-<c>.cs</c>-Dateien erscheinen nur in <b>complete</b> (wie Konzept „alles 1:1“); andere Views nur <c>.cs</c>.
 /// Segmente ohne exportierbaren Inhalt (Task 05) werden vor der Rückgabe entfernt — siehe <see cref="AiFeedSegmentExportability"/>.
