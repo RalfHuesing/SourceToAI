@@ -1,7 +1,7 @@
 namespace SourceToAI.CLI.Services.Export.AiFeed;
 
 /// <summary>
-/// Abbildung der heuristischen Dateityp-Strings (z. B. aus <see cref="SourceToAI.CLI.Services.Processing.IFileTypeService"/>) auf die Konzept-Manifest-Typen.
+/// Abbildung der heuristischen Dateityp-Strings (z. B. aus <see cref="SourceToAI.CLI.Services.Processing.FileTypeService"/>) auf die Konzept-Manifest-Typen.
 /// </summary>
 public static class AiFeedManifestEntryTypeMapping
 {

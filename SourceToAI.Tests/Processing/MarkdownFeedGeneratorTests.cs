@@ -8,9 +8,7 @@ public class MarkdownFeedGeneratorTests
 {
     private static MarkdownFeedGenerator CreateSut()
     {
-        return new MarkdownFeedGenerator(
-            new FileTypeService(),
-            new CSharpDocumentLoader());
+        return new MarkdownFeedGenerator(new CSharpDocumentLoader());
     }
 
     private readonly MarkdownFeedGenerator _sut = CreateSut();

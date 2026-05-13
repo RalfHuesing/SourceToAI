@@ -14,7 +14,6 @@ public class MarkdownProjectViewBuilderTests
     {
         var services = new ServiceCollection();
         services.AddSingleton<ICSharpDocumentLoader, CSharpDocumentLoader>();
-        services.AddTransient<IFileTypeService, FileTypeService>();
         services.AddViewGenerators();
         services.AddMarkdownProjectViewBuilders();
         return services.BuildServiceProvider();

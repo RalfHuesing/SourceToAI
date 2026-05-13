@@ -27,3 +27,27 @@ Hinweis: Die im Konzept genannten `IFileReader` / `IHashService` sind im aktuell
 ## Abschluss
 
 [`step-00-uebersicht.md`](step-00-uebersicht.md) aktualisieren (Status-Spalte), wenn alle Schritte erledigt sind.
+
+---
+
+## Audit-Ergebnis (umgesetzt)
+
+Inventar `SourceToAI.CLI` — alle `public interface I*`:
+
+| Interface | Verbleib / Begründung |
+|-----------|------------------------|
+| `ICSharpDocumentLoader` | **Behalten** — Zustand (Parse-Cache), Singleton, sinnvolle DI-Grenze (vgl. Nicht-Ziele im Schritt). |
+| `IDirectoryEnumerator` | **Behalten** — kapselt `Directory.*` für testbare Aufzählung; `FileDiscoveryServiceTests` nutzen Moq. |
+| `IFileDiscoveryService` | **Behalten** — Orchestrierung der Dateisuche. |
+| `ISolutionDiscoveryService` | **Behalten** — Orchestrierung Solution/Projekte. |
+| `IFeedGenerator` | **Behalten** — Pipeline-Einstieg, austauschbar sinnvoll. |
+| `IViewGenerator` | **Behalten** — mehrere keyed Implementierungen (Views). |
+| `IMarkdownProjectViewBuilder` | **Behalten** — vier View-Builder-Implementierungen. |
+| `IMultiViewExportService` | **Behalten** — Export-Orchestrierung. |
+| `IMultiViewReadmeMarkdownGenerator` | **Behalten** — README-Generierung. |
+| `IDependencyGraphMarkdownGenerator` | **Behalten** — Markdown-Export eines Aspekts. |
+| `IAiFeedMarkdownComposer` | **Behalten** — Zusammensetzen des Ai-Feed-Markdowns. |
+| `IPostExportTask` | **Behalten** — Erweiterungspunkt laut Architektur (`IPostExportTask`). |
+| `IFileTypeService` | **Entfernt** — reine, zustandslose Extension→(Typ, Sprache)-Heuristik ohne Mocking-Bedarf; ersetzt durch `static class FileTypeService`, keine DI-Registrierung mehr (`Program.cs` bereinigt). |
+
+`dotnet test`: grün, 0 Compiler-Warnungen.

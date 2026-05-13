@@ -41,7 +41,6 @@ services.AddTransient<IFileDiscoveryService, FileDiscoveryService>();
 
 // Processing Services registrieren
 services.AddSingleton<ICSharpDocumentLoader, CSharpDocumentLoader>();
-services.AddTransient<IFileTypeService, FileTypeService>();
 services.AddTransient<IFeedGenerator, MarkdownFeedGenerator>();
 services.AddTransient<IDependencyGraphMarkdownGenerator, CsprojDependencyGraphMarkdownGenerator>();
 services.AddTransient<IMultiViewExportService, MultiViewExportService>();

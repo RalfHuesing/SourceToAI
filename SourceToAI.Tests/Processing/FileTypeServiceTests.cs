@@ -4,8 +4,6 @@ namespace SourceToAI.Tests.Processing;
 
 public class FileTypeServiceTests
 {
-    private readonly FileTypeService _sut = new();
-
     [Theory]
     [InlineData(".cs", "Code", "csharp")]
     [InlineData(".CS", "Code", "csharp")]
@@ -17,7 +15,7 @@ public class FileTypeServiceTests
     [InlineData(".unknownext", "Unknown", "text")]
     public void GetFileTypeAndLanguage_maps_known_extensions(string extension, string expectedType, string expectedLanguage)
     {
-        var (type, language) = _sut.GetFileTypeAndLanguage(extension);
+        var (type, language) = FileTypeService.GetFileTypeAndLanguage(extension);
 
         Assert.Equal(expectedType, type);
         Assert.Equal(expectedLanguage, language);
