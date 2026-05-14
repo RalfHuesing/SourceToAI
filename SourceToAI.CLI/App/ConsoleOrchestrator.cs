@@ -319,7 +319,7 @@ public class ConsoleOrchestrator(
         }
         else
         {
-            Console.WriteLine("   -> Keine Solution-Docs gefunden (Root/.cursor …).\n");
+            Console.WriteLine("   -> Keine Solution-Docs gefunden (Root-README, Docs/, .cursor, .github …).\n");
         }
 
         var projectsWithFiles = new List<(ProjectDefinition Project, IReadOnlyList<string> AbsoluteFilePaths)>();

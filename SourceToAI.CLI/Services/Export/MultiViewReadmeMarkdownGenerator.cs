@@ -33,7 +33,7 @@ public sealed class MultiViewReadmeMarkdownGenerator : IMultiViewReadmeMarkdownG
             "Jede View ist ein anderer „Zoom“ auf dieselben geparsten C#-Dateien (pro Lauf ein Parse, mehrere Sichten):");
         sb.AppendLine();
         sb.AppendLine(
-            $"- **`{MultiViewExportPaths.CompleteFolderName}`** — vollständiger Text pro Projekt inkl. Nicht-`.cs`-Dateien. Virtuelle Solution-Doku (Root-`README`, `.cursor/rules`, …) erscheint als `<Solution>..Docs-complete.md` (Projektname `.Docs`).");
+            $"- **`{MultiViewExportPaths.CompleteFolderName}`** — vollständiger Text pro Projekt inkl. Nicht-`.cs`-Dateien. Virtuelle Solution-Doku (Root-`README`, flaches `Docs/` mit `.md`/`.mdc`, `.cursor/rules`, …) erscheint als `<Solution>.Docs-complete.md` (Projektname `.Docs`).");
         sb.AppendLine(
             $"- **`{MultiViewExportPaths.SignaturesOnlyFolderName}`** — nur Signaturen, wenig Tokens, gut für Architektur und Schnittstellen.");
         sb.AppendLine(
@@ -123,7 +123,7 @@ public sealed class MultiViewReadmeMarkdownGenerator : IMultiViewReadmeMarkdownG
         sb.AppendLine();
         sb.AppendLine("Dabei entspricht `<view>` einer der folgenden Sichten:");
         sb.AppendLine(
-            $"- `{MultiViewExportPaths.CompleteFolderName}`: **Vollständiger** Stand pro Projekt inkl. Nicht-`.cs`-Dateien (1:1-Texte). **Solution-Dokumentation** (Root, `.cursor`, …) liegt als `<Solution>..Docs-complete.md` (Projektname `.Docs`) in diesem Ordner.");
+            $"- `{MultiViewExportPaths.CompleteFolderName}`: **Vollständiger** Stand pro Projekt inkl. Nicht-`.cs`-Dateien (1:1-Texte). **Solution-Dokumentation** (Root, flaches `Docs/`, `.cursor`, …) liegt als `<Solution>.Docs-complete.md` (Projektname `.Docs`) in diesem Ordner.");
         sb.AppendLine(
             $"- `{MultiViewExportPaths.SignaturesOnlyFolderName}`: Nur Signaturen — wenig Tokens, Schnittstellen & Typen für Architekturfragen.");
         sb.AppendLine(

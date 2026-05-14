@@ -67,6 +67,17 @@ public sealed class MultiViewExportPathsTests
     }
 
     [Fact]
+    public void BuildSanitizedExportFileStem_virtual_Docs_no_double_dot_before_project_name()
+    {
+        Assert.Equal(
+            "San.smart.Planner.Platform2.Docs-complete",
+            MultiViewExportPaths.BuildSanitizedExportFileStem(
+                "San.smart.Planner.Platform2",
+                ".Docs",
+                "complete"));
+    }
+
+    [Fact]
     public void GetViewOutputPath_five_arg_overload_matches_stem_builder()
     {
         var root = @"C:\out\Sol";

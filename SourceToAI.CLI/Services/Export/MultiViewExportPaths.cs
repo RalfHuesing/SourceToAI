@@ -14,7 +14,10 @@ namespace SourceToAI.CLI.Services.Export;
 /// <item><term><c>dto-only</c></term><description><see cref="DtoOnlyFolderName"/></description></item>
 /// </list>
 /// <para>
-/// Dateiname je View und Projekt: <c>{SolutionAnzeigename}.{ProjektAnzeigename}-&lt;viewKey&gt;.md</c>.
+/// Dateiname je View und Projekt: <c>{SolutionAnzeigename}.{ProjektAnzeigename}-&lt;viewKey&gt;.md</c>,
+/// außer der Projekt-Anzeigename beginnt nach Sanitisierung mit <c>.</c> (virtuelles <c>.Docs</c>):
+/// dann <c>{SolutionAnzeigename}{ProjektAnzeigename}-&lt;viewKey&gt;.md</c>, damit kein doppelter Punkt
+/// vor dem führenden Projekt-Punkt entsteht.
 /// Der Solution-Anzeigename entspricht dem Rückgabewert von
 /// <see cref="SourceToAI.CLI.Services.Discovery.ISolutionDiscoveryService.GetSolutionName"/> (erste <c>.sln</c> ohne Endung oder Name des Wurzelverzeichnisses)
 /// und ist identisch zum letzten Pfadsegment von <see cref="GetSolutionExportRoot"/>.
@@ -106,14 +109,19 @@ public static class MultiViewExportPaths
 
     /// <summary>
     /// Erzeugt den Dateinamen-Stamm (ohne <c>.md</c>) aus Solution- und Projekt-Anzeigenamen sowie dem View-Key
-    /// im Format <c>Solution.Project-view</c> — jeweils sanitisiert, ohne Kollisionsauflösung.
+    /// — jeweils sanitisiert, ohne Kollisionsauflösung. Normal: <c>Solution.Project-view</c>; beginnt
+    /// <paramref name="projectDisplayName"/> nach Sanitisierung mit <c>.</c> (z. B. <c>.Docs</c>), entfällt
+    /// der zusätzliche Trennpunkt: <c>Solution.Docs-view</c>.
     /// </summary>
     public static string BuildSanitizedExportFileStem(string solutionDisplayName, string projectDisplayName, string viewKey)
     {
         var sol = SanitizeFileNameSegment(solutionDisplayName);
         var proj = SanitizeFileNameSegment(projectDisplayName);
         var view = SanitizeFileNameSegment(viewKey);
-        var stem = $"{sol}.{proj}-{view}";
+        // Virtuelle Projektnamen wie ".Docs": kein "{sol}.{proj}" — sonst "..Docs" im Dateinamen.
+        var stem = proj.Length > 0 && proj[0] == '.'
+            ? $"{sol}{proj}-{view}"
+            : $"{sol}.{proj}-{view}";
         stem = EnsureNotReservedWindowsStem(stem);
         return stem;
     }
