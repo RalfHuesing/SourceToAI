@@ -162,4 +162,48 @@ public class FileDiscoveryServiceTests
         Assert.True(CollectionContainsPath(result.Value, html));
         Assert.True(CollectionContainsPath(result.Value, razor));
     }
+
+    [Fact]
+    public void FindFilesForProject_excludes_path_patterns_recursive_under_wwwroot_lib()
+    {
+        using var ws = new TempWorkspace();
+        ws.WriteFile("WebApp/WebApp.csproj", "<Project></Project>");
+        var inLib = ws.WriteFile("WebApp/wwwroot/lib/vendor/deep/x.js", "x");
+        var atWwwRoot = ws.WriteFile("WebApp/wwwroot/index.html", "<html></html>");
+        var project = new ProjectDefinition("WebApp", Path.Combine(ws.Root, "WebApp", "WebApp.csproj"));
+        var settings = TestAppSettingsFactory.Default();
+        settings.ExcludedPathPatterns = ["wwwroot/lib/**"];
+
+        var result = CreateSut().FindFilesForProject(project, settings);
+
+        Assert.True(result.IsSuccess, result.ErrorMessage);
+        Assert.NotNull(result.Value);
+        Assert.False(CollectionContainsPath(result.Value, inLib));
+        Assert.True(CollectionContainsPath(result.Value, atWwwRoot));
+    }
+
+    [Fact]
+    public void FindFilesForProject_excludes_specific_min_files_by_glob()
+    {
+        using var ws = new TempWorkspace();
+        ws.WriteFile("WebApp/WebApp.csproj", "<Project></Project>");
+        var visJs = ws.WriteFile("WebApp/wwwroot/lib/vis-timeline-graph2d.min.js", "min");
+        var visCss = ws.WriteFile("WebApp/wwwroot/lib/vis-timeline-graph2d.min.css", "c");
+        var otherJs = ws.WriteFile("WebApp/wwwroot/app.js", "ok");
+        var project = new ProjectDefinition("WebApp", Path.Combine(ws.Root, "WebApp", "WebApp.csproj"));
+        var settings = TestAppSettingsFactory.Default();
+        settings.ExcludedPathPatterns =
+        [
+            "**/vis-timeline-graph2d.min.js",
+            "**/vis-timeline-graph2d.min.css",
+        ];
+
+        var result = CreateSut().FindFilesForProject(project, settings);
+
+        Assert.True(result.IsSuccess, result.ErrorMessage);
+        Assert.NotNull(result.Value);
+        Assert.False(CollectionContainsPath(result.Value, visJs));
+        Assert.False(CollectionContainsPath(result.Value, visCss));
+        Assert.True(CollectionContainsPath(result.Value, otherJs));
+    }
 }

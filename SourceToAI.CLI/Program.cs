@@ -25,6 +25,7 @@ if (parseResult.Errors.Count > 0)
     await Console.Error.WriteLineAsync(SourceToAiCli.Usage.UsageExampleAssembly);
     await Console.Error.WriteLineAsync(SourceToAiCli.Usage.UsageExampleAssemblyWildcard);
     await Console.Error.WriteLineAsync(SourceToAiCli.Usage.UsageExampleOptions);
+    await Console.Error.WriteLineAsync(SourceToAiCli.Usage.UsageExampleExclude);
     Environment.ExitCode = 1;
     return;
 }
@@ -34,6 +35,7 @@ Environment.ExitCode = await parseResult.InvokeAsync(parseResult.InvocationConfi
 static async Task<int> RunExportPipelineAsync(
     string exportPath,
     IReadOnlyList<string> solutionPaths,
+    IReadOnlyList<string> excludePatternsFromCli,
     CancellationToken cancellationToken)
 {
     cancellationToken.ThrowIfCancellationRequested();
@@ -66,6 +68,17 @@ static async Task<int> RunExportPipelineAsync(
 
     var appSettings = configuration.GetSection("SourceToAI").Get<AppSettings>()
                       ?? new AppSettings();
+
+    if (excludePatternsFromCli.Count > 0)
+    {
+        var merged = new List<string>();
+        var fromConfig = appSettings.ExcludedPathPatterns;
+        if (fromConfig is { Length: > 0 })
+            merged.AddRange(fromConfig);
+        foreach (var p in excludePatternsFromCli)
+            merged.Add(p);
+        appSettings.ExcludedPathPatterns = merged.ToArray();
+    }
 
     var services = new ServiceCollection();
     services.AddSingleton(appSettings);
