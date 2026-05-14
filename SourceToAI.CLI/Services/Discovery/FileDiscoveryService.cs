@@ -29,7 +29,7 @@ public class FileDiscoveryService(IDirectoryEnumerator directoryEnumerator) : IF
 
                 foundFiles.AddRange(ruleFiles);
             }
-            // 3. .cursor/rules Verzeichnis prüfen
+            // 3. .github/workflows Verzeichnis prüfen
             var githubDir = Path.Combine(rootPath, ".github", "workflows");
             if (Directory.Exists(githubDir))
             {
@@ -38,6 +38,24 @@ public class FileDiscoveryService(IDirectoryEnumerator directoryEnumerator) : IF
 
                 foundFiles.AddRange(gitHubFiles);
             }
+
+            // 4. Docs/ — nur oberste Ebene: kein rekursiver Scan (bewusst, um große Unterbäume
+            //    nicht in den virtuellen .Docs-Feed zu ziehen und das Verhalten vorhersehbar zu halten).
+            var docsDir = Path.Combine(rootPath, "Docs");
+            if (Directory.Exists(docsDir))
+            {
+                var docsFiles = Directory.GetFiles(docsDir, "*.*", SearchOption.TopDirectoryOnly)
+                    .Where(f =>
+                    {
+                        var ext = Path.GetExtension(f);
+                        return ext.Equals(".md", StringComparison.OrdinalIgnoreCase)
+                            || ext.Equals(".mdc", StringComparison.OrdinalIgnoreCase);
+                    })
+                    .OrderBy(f => f, StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+                foundFiles.AddRange(docsFiles);
+            }
+
             return ExtractionResult<List<string>>.Success(foundFiles);
         }
         catch (Exception ex)

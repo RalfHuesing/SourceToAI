@@ -10,7 +10,7 @@
 
 ## Was es macht
 
-- **Multi-View-Export:** In den Ordnern `complete/`, `signatures-only/`, `public-only/` und `dto-only/` liegt pro Projekt jeweils **eine** Markdown-Datei. Dateinamen tragen das View-Suffix: `<Solution>.<Projekt>-<view>.md` (z. B. `MySol.Proj-complete.md`). Virtuelle Solution-Doku (Root-`README`, `.cursor/rules` usw.) erscheint in `complete/` als `<Solution>..Docs-complete.md`.
+- **Multi-View-Export:** In den Ordnern `complete/`, `signatures-only/`, `public-only/` und `dto-only/` liegt pro Projekt jeweils **eine** Markdown-Datei. Dateinamen tragen das View-Suffix: `<Solution>.<Projekt>-<view>.md` (z. B. `MySol.Proj-complete.md`). Virtuelle Solution-Doku (Root-`README`, flaches `Docs/` mit `.md`/`.mdc`, `.cursor/rules` usw.) erscheint in `complete/` als `<Solution>.Docs-complete.md`.
 - **Mehrere Quellen in einem Lauf:** Du gibst **ein** globales Export-Ziel und **eine oder mehrere** Quellen an. Jede Quelle wird nacheinander verarbeitet. Workspace-weite AI-Kontextdateien fließen in den gemeinsamen Baum `Merged/` ein, isolierte projektbezogene Dateien landen in `Isolated/<SolutionName>/`.
 - **Quellen:** Verzeichnis mit `.sln`/`.csproj` (typisch Repository- oder Solution-Stamm) **oder** eine **.dll/.exe**-Assembly. Bei Assemblies wird der Code zuerst per Decompiler in ein temporäres `decompile/`-Projekt unter `Isolated/<AssemblyName>/decompile/` gelegt und von dort wie gewohnt exportiert.
 - **Robustheit:** Build-Artefakte und übliche Tool-Ordner werden standardmäßig ignoriert; Lesefehler in Unterzweigen führen zu Warnungen, nicht zum kompletten Abbruch.
@@ -20,7 +20,7 @@
 ## Nutzung mit Web-KIs (Kurz)
 
 1. Export ausführen (siehe unten).
-2. Aus dem gemeinsamen Ordner `Merged/complete/` die passenden `<Solution>..Docs-complete.md`- und Projekt-MD-Dateien (z. B. `...-complete.md`) in den Chat laden.
+2. Aus dem gemeinsamen Ordner `Merged/complete/` die passenden `<Solution>.Docs-complete.md`- und Projekt-MD-Dateien (z. B. `...-complete.md`) in den Chat laden.
 3. Im Prompt auf Manifest-Einträge und Views verweisen (Überblick: generiertes `readme.md` im Export-Root; Details pro Lösung: `Isolated/<Solution>/readme.md`).
 
 ---

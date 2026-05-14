@@ -32,6 +32,30 @@ public class FileDiscoveryServiceTests
     }
 
     [Fact]
+    public void FindSolutionDocs_collects_top_level_Docs_md_and_mdc_only_not_subfolders_or_other_extensions()
+    {
+        using var ws = new TempWorkspace();
+        var aMd = ws.WriteFile("Docs/a.md", "a");
+        var bMdc = ws.WriteFile("Docs/b.mdc", "b");
+        ws.WriteFile("Docs/sub/nested.md", "nested");
+        ws.WriteFile("Docs/readme.txt", "txt");
+        var settings = TestAppSettingsFactory.Default();
+
+        var result = CreateSut().FindSolutionDocs(ws.Root, settings);
+
+        Assert.True(result.IsSuccess, result.ErrorMessage);
+        Assert.NotNull(result.Value);
+        Assert.True(CollectionContainsPath(result.Value, aMd));
+        Assert.True(CollectionContainsPath(result.Value, bMdc));
+        Assert.DoesNotContain(
+            result.Value,
+            p => p.EndsWith("nested.md", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(
+            result.Value,
+            p => p.EndsWith("readme.txt", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
     public void FindFilesForProject_respects_excluded_directories()
     {
         using var ws = new TempWorkspace();
