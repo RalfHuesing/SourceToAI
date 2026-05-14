@@ -10,10 +10,10 @@ internal static class SourceToAiCli
     internal static class Usage
     {
         internal const string RootDescription =
-            "Exportiert eine oder mehrere .NET-Quellen (Solution-/Projektverzeichnis oder kompilierte Assembly .dll/.exe) als Multi-View-KI-Feed (Markdown) nacheinander in dasselbe Export-Verzeichnis.";
+            "Exportiert eine oder mehrere .NET-Quellen (Solution-/Projektverzeichnis oder kompilierte Assembly .dll/.exe) als Multi-View-KI-Feed (Markdown) nacheinander in dasselbe Export-Verzeichnis. Optional: wiederholbare Option --exclude mit Glob-Mustern relativ zum jeweiligen Projektstamm.";
 
         internal const string UsageLine =
-            "Verwendung: SourceToAI <Export-Pfad> <Verzeichnis|.dll|.exe>… | SourceToAI --export <Export-Pfad> --input <Pfad>…";
+            "Verwendung: SourceToAI <Export-Pfad> <Verzeichnis|.dll|.exe>… | SourceToAI --export <Export-Pfad> --input <Pfad>… [--exclude <Glob>…]";
 
         internal const string UsageExamplePositional =
             "Beispiel (Positionsargumente): SourceToAI ./exports C:\\Daten\\RepoA\\ C:\\Daten\\RepoB\\";
@@ -27,6 +27,9 @@ internal static class SourceToAiCli
         internal const string UsageExampleOptions =
             "Beispiel (Optionen): SourceToAI --export ./exports --input C:\\Daten\\RepoA\\ --input C:\\Daten\\RepoB\\";
 
+        internal const string UsageExampleExclude =
+            "Beispiel (Ausschluss per Glob, relativ zum jeweiligen Projektordner): SourceToAI ./exports C:\\Repo\\ --exclude \"wwwroot/lib/**\" --exclude \"**/vis-timeline-graph2d.min.js\"";
+
         internal const string ExportPathDescription =
             "Zielverzeichnis für den gesamten Export-Baum (wird bei Bedarf angelegt; bestehender Inhalt wird sicherheitshalber geleert, sofern .sta-marker existiert).";
 
@@ -38,6 +41,9 @@ internal static class SourceToAiCli
 
         internal const string InputOptionDescription =
             "Quellverzeichnis oder Assembly (.dll/.exe); Alternative zu den weiteren Positionsargumenten. Mehrfach angebbare Option.";
+
+        internal const string ExcludeOptionDescription =
+            "Glob-Muster für auszuschließende Dateien/Unterbäume relativ zum jeweiligen Projektstamm (Ordner der .csproj); Microsoft.Extensions.FileSystemGlobbing. Mehrfach angebbbar. Unterbaum z. B. mit wwwroot/lib/** (wwwroot/lib/* nur direkte Kindelemente).";
 
         internal const string ErrorIncompletePositional =
             "Positionsargument <Export-Pfad> und mindestens ein Quellpfad (Verzeichnis oder .dll/.exe) sind erforderlich, wenn ohne --export/--input gearbeitet wird.";
@@ -53,7 +59,7 @@ internal static class SourceToAiCli
     /// Erzeugt den Root-Command; <paramref name="runAsync"/> wird bei gültiger CLI aufgerufen.
     /// </summary>
     internal static RootCommand CreateRootCommand(
-        Func<string, IReadOnlyList<string>, CancellationToken, Task<int>> runAsync)
+        Func<string, IReadOnlyList<string>, IReadOnlyList<string>, CancellationToken, Task<int>> runAsync)
     {
         var exportPositional = new Argument<string?>("export-path")
         {
@@ -76,6 +82,11 @@ internal static class SourceToAiCli
             Description = Usage.InputOptionDescription,
             Arity = ArgumentArity.OneOrMore,
         };
+        var excludeOption = new Option<string[]>("--exclude")
+        {
+            Description = Usage.ExcludeOptionDescription,
+            Arity = ArgumentArity.OneOrMore,
+        };
 
         var root = new RootCommand(Usage.RootDescription)
         {
@@ -85,6 +96,7 @@ internal static class SourceToAiCli
         root.Add(solutionPositional);
         root.Add(exportOption);
         root.Add(inputOption);
+        root.Add(excludeOption);
 
         root.SetAction(async (ParseResult parseResult, CancellationToken cancellationToken) =>
         {
@@ -103,10 +115,15 @@ internal static class SourceToAiCli
                 await Console.Error.WriteLineAsync(Usage.UsageExampleAssembly);
                 await Console.Error.WriteLineAsync(Usage.UsageExampleAssemblyWildcard);
                 await Console.Error.WriteLineAsync(Usage.UsageExampleOptions);
+                await Console.Error.WriteLineAsync(Usage.UsageExampleExclude);
                 return 1;
             }
 
-            return await runAsync(resolution.ExportPath!, resolution.SolutionPaths, cancellationToken);
+            string? TrimTok(string? s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim();
+            var excludeRaw = parseResult.GetValue(excludeOption);
+            var excludePatterns = NormalizePathList(excludeRaw ?? Array.Empty<string>(), TrimTok);
+
+            return await runAsync(resolution.ExportPath!, resolution.SolutionPaths, excludePatterns, cancellationToken);
         });
 
         return root;

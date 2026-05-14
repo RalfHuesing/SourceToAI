@@ -10,6 +10,11 @@ public class AppSettings
         "bin", "obj", ".git", ".vs", ".idea", "node_modules"
     ];
 
+    /// <summary>
+    /// Glob-Muster relativ zum jeweiligen Projektstamm (Ordner der .csproj); siehe Microsoft.Extensions.FileSystemGlobbing.
+    /// </summary>
+    public string[] ExcludedPathPatterns { get; set; } = [];
+
     public string[] IncludedExtensions { get; set; } =
     [
         ".cs", ".sql", ".json", ".xml", ".xaml", ".yml", ".md", ".mdc", ".js", ".ts", ".css",

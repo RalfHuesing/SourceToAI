@@ -10,7 +10,7 @@ public sealed class SourceToAiCliTests
     {
         string? gotExport = null;
         IReadOnlyList<string>? gotSolutions = null;
-        var root = SourceToAiCli.CreateRootCommand((export, solutions, _) =>
+        var root = SourceToAiCli.CreateRootCommand((export, solutions, _, _) =>
         {
             gotExport = export;
             gotSolutions = solutions;
@@ -34,7 +34,7 @@ public sealed class SourceToAiCliTests
     {
         string? gotExport = null;
         IReadOnlyList<string>? gotSolutions = null;
-        var root = SourceToAiCli.CreateRootCommand((export, solutions, _) =>
+        var root = SourceToAiCli.CreateRootCommand((export, solutions, _, _) =>
         {
             gotExport = export;
             gotSolutions = solutions;
@@ -58,7 +58,7 @@ public sealed class SourceToAiCliTests
     {
         string? gotExport = null;
         IReadOnlyList<string>? gotSolutions = null;
-        var root = SourceToAiCli.CreateRootCommand((export, solutions, _) =>
+        var root = SourceToAiCli.CreateRootCommand((export, solutions, _, _) =>
         {
             gotExport = export;
             gotSolutions = solutions;
@@ -82,7 +82,7 @@ public sealed class SourceToAiCliTests
     {
         string? gotExport = null;
         IReadOnlyList<string>? gotSolutions = null;
-        var root = SourceToAiCli.CreateRootCommand((export, solutions, _) =>
+        var root = SourceToAiCli.CreateRootCommand((export, solutions, _, _) =>
         {
             gotExport = export;
             gotSolutions = solutions;
@@ -102,11 +102,39 @@ public sealed class SourceToAiCliTests
     }
 
     [Fact]
+    public async Task Parse_MultipleExcludeArgs_PassedToHandler()
+    {
+        IReadOnlyList<string>? gotExcludes = null;
+        var root = SourceToAiCli.CreateRootCommand((_, _, excludes, _) =>
+        {
+            gotExcludes = excludes;
+            return Task.FromResult(0);
+        });
+
+        var parseResult = root.Parse([
+            "--export", "out",
+            "--input", "src",
+            "--exclude", "wwwroot/lib/**",
+            "--exclude", "**/vis-timeline-graph2d.min.js",
+        ]);
+        Assert.Empty(parseResult.Errors);
+
+        var exitCode = await parseResult.InvokeAsync(
+            parseResult.InvocationConfiguration,
+            TestContext.Current.CancellationToken);
+        Assert.Equal(0, exitCode);
+        Assert.NotNull(gotExcludes);
+        Assert.Equal(
+            new[] { "wwwroot/lib/**", "**/vis-timeline-graph2d.min.js" },
+            gotExcludes);
+    }
+
+    [Fact]
     public async Task Parse_NamedExportAndInputShortAlias_InvokesHandlerWithPaths()
     {
         string? gotExport = null;
         IReadOnlyList<string>? gotSolutions = null;
-        var root = SourceToAiCli.CreateRootCommand((export, solutions, _) =>
+        var root = SourceToAiCli.CreateRootCommand((export, solutions, _, _) =>
         {
             gotExport = export;
             gotSolutions = solutions;
@@ -128,7 +156,7 @@ public sealed class SourceToAiCliTests
     [Fact]
     public async Task Parse_PositionalAndNamed_ReturnsErrorExitCode()
     {
-        var root = SourceToAiCli.CreateRootCommand((_, _, _) => Task.FromResult(0));
+        var root = SourceToAiCli.CreateRootCommand((_, _, _, _) => Task.FromResult(0));
         var parseResult = root.Parse(["a", "b", "--export", "e", "--input", "i"]);
         Assert.Empty(parseResult.Errors);
 
@@ -141,7 +169,7 @@ public sealed class SourceToAiCliTests
     [Fact]
     public void Parse_OptionMissingValue_ProducesParseError()
     {
-        var root = SourceToAiCli.CreateRootCommand((_, _, _) => Task.FromResult(0));
+        var root = SourceToAiCli.CreateRootCommand((_, _, _, _) => Task.FromResult(0));
         var parseResult = root.Parse(["--export", "e", "--input"]);
         Assert.NotEmpty(parseResult.Errors);
     }
