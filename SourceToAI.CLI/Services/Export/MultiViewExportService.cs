@@ -26,7 +26,8 @@ public sealed class MultiViewExportService(
         Guid sessionId,
         DateTimeOffset generated,
         IReadOnlyList<(ProjectDefinition Project, IReadOnlyList<string> AbsoluteFilePaths)> projectsWithFiles,
-        IReadOnlyList<string>? solutionDocumentationAbsolutePaths)
+        IReadOnlyList<string>? solutionDocumentationAbsolutePaths,
+        IReadOnlyList<(string DirectoryName, IReadOnlyList<string> AbsoluteFilePaths)> unmappedDirectories)
     {
         csharpDocumentLoader.Clear();
 
@@ -51,6 +52,15 @@ public sealed class MultiViewExportService(
             if (paths.Count == 0)
                 continue;
             exportUnits.Add((project, paths, false));
+        }
+
+        foreach (var (directoryName, paths) in unmappedDirectories
+                     .Where(u => u.AbsoluteFilePaths.Count > 0)
+                     .OrderBy(u => u.DirectoryName, StringComparer.OrdinalIgnoreCase))
+        {
+            var virtualCsproj = Path.Combine(solutionRootPath, directoryName, "virtual.csproj");
+            var virtualProject = new ProjectDefinition(directoryName, virtualCsproj);
+            exportUnits.Add((virtualProject, paths, true));
         }
 
         var workSlots = new List<ViewWorkSlot>();

@@ -8,7 +8,8 @@ namespace SourceToAI.CLI.Services.Export;
 public interface IMultiViewExportService
 {
     /// <summary>
-    /// Für jede registrierte View wird pro Projekt (und ggf. virtuellem „.Docs“-Projekt in <c>complete</c>)
+    /// Für jede registrierte View wird pro Projekt, virtuellem „.Docs“-Projekt in <c>complete</c> sowie pro
+    /// nicht zugeordnetem Wurzel-Unterordner (nur <c>complete</c>)
     /// die Markdown-Datei zweimal mit gleichem Inhalt geschrieben:
     /// einmal unter <see cref="MultiViewExportPaths.IsolatedFolderName"/>/<c>{Solution}</c>/...
     /// und einmal unter <see cref="MultiViewExportPaths.MergedFolderName"/>/...
@@ -21,6 +22,7 @@ public interface IMultiViewExportService
     /// <param name="generated">Zeitstempel für Frontmatter (z. B. identisch mit Readme-Lauf).</param>
     /// <param name="projectsWithFiles">Zu exportierende Projekte und deren Dateien.</param>
     /// <param name="solutionDocumentationAbsolutePaths">Optionale Lösungsdokumentation.</param>
+    /// <param name="unmappedDirectories">Ordner unter der Solution-Wurzel ohne <c>.csproj</c> — nur <c>complete</c>-View (wie virtuelles „.Docs“).</param>
     /// <exception cref="SourceToAI.CLI.App.Exceptions.SourceToAiExportException">Bei Build-, Compose- oder I/O-Fehlern.</exception>
     void WriteMergedSolutionViews(
         string outputRoot,
@@ -29,5 +31,6 @@ public interface IMultiViewExportService
         Guid sessionId,
         DateTimeOffset generated,
         IReadOnlyList<(ProjectDefinition Project, IReadOnlyList<string> AbsoluteFilePaths)> projectsWithFiles,
-        IReadOnlyList<string>? solutionDocumentationAbsolutePaths);
+        IReadOnlyList<string>? solutionDocumentationAbsolutePaths,
+        IReadOnlyList<(string DirectoryName, IReadOnlyList<string> AbsoluteFilePaths)> unmappedDirectories);
 }

@@ -206,4 +206,51 @@ public class FileDiscoveryServiceTests
         Assert.False(CollectionContainsPath(result.Value, visCss));
         Assert.True(CollectionContainsPath(result.Value, otherJs));
     }
+
+    [Fact]
+    public void FindUnmappedDirectories_collects_extensions_under_non_project_directories()
+    {
+        using var ws = new TempWorkspace();
+        ws.WriteFile("App/App.csproj", "<Project></Project>");
+        var sqlPath = ws.WriteFile("SqlMigrations/001_init.sql", "select 1;");
+        var notePath = ws.WriteFile("LegacyAssets/readme.txt", "x");
+        ws.WriteFile("Docs/root.md", "d");
+        ws.WriteFile(".cursor/rules/r.mdc", "r");
+        var project = new ProjectDefinition("App", Path.Combine(ws.Root, "App", "App.csproj"));
+        var settings = TestAppSettingsFactory.Default();
+
+        var result = CreateSut().FindUnmappedDirectories(ws.Root, [project], settings);
+
+        Assert.True(result.IsSuccess, result.ErrorMessage);
+        Assert.NotNull(result.Value);
+        Assert.Equal(2, result.Value!.Count);
+
+        var byName = result.Value.ToDictionary(x => x.DirectoryName, StringComparer.OrdinalIgnoreCase);
+        Assert.True(byName.TryGetValue("LegacyAssets", out var leg));
+        Assert.True(byName.TryGetValue("SqlMigrations", out var mig));
+        Assert.True(CollectionContainsPath(leg.AbsolutePaths, notePath));
+        Assert.True(CollectionContainsPath(mig.AbsolutePaths, sqlPath));
+    }
+
+    [Fact]
+    public void FindUnmappedDirectories_applies_excluded_path_patterns_relative_to_unmapped_root()
+    {
+        using var ws = new TempWorkspace();
+        ws.WriteFile("P/P.csproj", "<Project></Project>");
+        var kept = ws.WriteFile("Data/keep/a.sql", "a");
+        var dropped = ws.WriteFile("Data/legacy/b.sql", "b");
+        var project = new ProjectDefinition("P", Path.Combine(ws.Root, "P", "P.csproj"));
+        var settings = TestAppSettingsFactory.Default();
+        settings.ExcludedPathPatterns = ["legacy/**"];
+
+        var result = CreateSut().FindUnmappedDirectories(ws.Root, [project], settings);
+
+        Assert.True(result.IsSuccess, result.ErrorMessage);
+        var list = result.Value;
+        Assert.NotNull(list);
+        Assert.Single(list);
+        var paths = list[0].AbsolutePaths;
+        Assert.True(CollectionContainsPath(paths, kept));
+        Assert.False(CollectionContainsPath(paths, dropped));
+    }
 }
