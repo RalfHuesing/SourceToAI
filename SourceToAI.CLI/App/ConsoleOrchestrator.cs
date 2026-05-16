@@ -350,6 +350,38 @@ public class ConsoleOrchestrator(
             Console.WriteLine($"   -> Multi-View-Quellen: {project.ProjectName} ({filesResult.Value.Count} Dateien)");
         }
 
+        var unmappedResult = fileDiscovery.FindUnmappedDirectories(effectiveRoot, projects, settings);
+        IReadOnlyList<(string DirectoryName, IReadOnlyList<string> AbsoluteFilePaths)> unmappedForExport;
+        var unmappedExportCount = 0;
+
+        if (!unmappedResult.IsSuccess)
+        {
+            Console.WriteLine($"   -> [WARN] Unmapped-Verzeichnisse: {unmappedResult.ErrorMessage}");
+            unmappedForExport = [];
+        }
+        else
+        {
+            var raw = unmappedResult.Value!;
+            unmappedExportCount = raw.Count;
+            unmappedForExport = raw
+                .OrderBy(x => x.DirectoryName, StringComparer.OrdinalIgnoreCase)
+                .Select(x => (x.DirectoryName, (IReadOnlyList<string>)x.AbsolutePaths))
+                .ToList();
+
+            foreach (var (name, paths) in unmappedForExport)
+            {
+                Console.WriteLine($"[INFO] Unmapped Directory found: {name} ({paths.Count} Dateien)");
+            }
+
+            if (unmappedResult.Warnings is { Count: > 0 } unmappedWarnings)
+            {
+                foreach (var line in unmappedWarnings)
+                {
+                    Console.WriteLine($"   -> [WARN] Unmapped-Verzeichnis-Scan: {line}");
+                }
+            }
+        }
+
         Console.WriteLine();
         multiViewExportService.WriteMergedSolutionViews(
             exportPath,
@@ -358,13 +390,17 @@ public class ConsoleOrchestrator(
             exportSessionId,
             generatedAt,
             projectsWithFiles,
-            solutionDocPaths);
+            solutionDocPaths,
+            unmappedForExport);
 
         var successCount = projectsWithFiles.Count;
         Console.WriteLine("[INFO] Multi-View-Export (complete, signatures-only, public-only, dto-only) abgeschlossen.");
 
         Console.WriteLine("\n==================================================");
-        Console.WriteLine($"- Fertig! {successCount} von {projects.Count} Projekten mit exportierbaren Dateien.");
+        var unmappedSummary = unmappedExportCount > 0
+            ? $" Zusätzlich {unmappedExportCount} nicht zugeordnete(s) Verzeichnis(se) mit Dateien."
+            : string.Empty;
+        Console.WriteLine($"- Fertig! {successCount} von {projects.Count} Projekten mit exportierbaren Dateien.{unmappedSummary}");
         Console.WriteLine($"- Ausgabe (Lösung): {outputDir}");
         Console.WriteLine($"- Ausgabe (Global): {exportPath}");
         Console.WriteLine("==================================================");

@@ -145,6 +145,9 @@ public sealed class MultiViewExportIntegrationTests
         var fileDiscovery = new Mock<IFileDiscoveryService>();
         fileDiscovery.Setup(f => f.FindSolutionDocs(solution.Root, It.IsAny<AppSettings>())).Returns(ExtractionResult<List<string>>.Success([]));
         fileDiscovery
+            .Setup(f => f.FindUnmappedDirectories(solution.Root, It.IsAny<IReadOnlyList<ProjectDefinition>>(), It.IsAny<AppSettings>()))
+            .Returns(ExtractionResult<List<(string, List<string>)>>.Success([]));
+        fileDiscovery
             .Setup(f => f.FindFilesForProject(project1, It.IsAny<AppSettings>()))
             .Returns(
                 ExtractionResult<List<string>>.Success(

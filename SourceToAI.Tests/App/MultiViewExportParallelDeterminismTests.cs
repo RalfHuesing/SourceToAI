@@ -70,7 +70,8 @@ public sealed class MultiViewExportParallelDeterminismTests
                 sessionId,
                 generated,
                 shuffled,
-                solutionDocumentationAbsolutePaths: null);
+                solutionDocumentationAbsolutePaths: null,
+                unmappedDirectories: []);
 
             foreach (var name in orderedNames)
             {

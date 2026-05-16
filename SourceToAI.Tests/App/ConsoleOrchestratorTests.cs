@@ -172,6 +172,9 @@ public class ConsoleOrchestratorTests
         fileDiscovery
             .Setup(f => f.FindFilesForProject(project1, It.IsAny<AppSettings>()))
             .Returns(ExtractionResult<List<string>>.Success([csPath]));
+        fileDiscovery
+            .Setup(f => f.FindUnmappedDirectories(solution.Root, It.IsAny<IReadOnlyList<ProjectDefinition>>(), It.IsAny<AppSettings>()))
+            .Returns(ExtractionResult<List<(string, List<string>)>>.Success([]));
 
         var post = new Mock<IPostExportTask>();
         post.Setup(p => p.ExecuteAsync(It.IsAny<string>(), It.IsAny<string>())).Returns(Task.CompletedTask);
@@ -259,6 +262,9 @@ public class ConsoleOrchestratorTests
         fileDiscovery
             .Setup(f => f.FindFilesForProject(project2, It.IsAny<AppSettings>()))
             .Returns(ExtractionResult<List<string>>.Success([]));
+        fileDiscovery
+            .Setup(f => f.FindUnmappedDirectories(solution.Root, It.IsAny<IReadOnlyList<ProjectDefinition>>(), It.IsAny<AppSettings>()))
+            .Returns(ExtractionResult<List<(string, List<string>)>>.Success([]));
 
         var post = new Mock<IPostExportTask>();
         post.Setup(p => p.ExecuteAsync(It.IsAny<string>(), It.IsAny<string>())).Returns(Task.CompletedTask);
@@ -383,6 +389,9 @@ public class ConsoleOrchestratorTests
         fileDiscovery
             .Setup(f => f.FindFilesForProject(project, It.IsAny<AppSettings>()))
             .Returns(ExtractionResult<List<string>>.Success([csPath]));
+        fileDiscovery
+            .Setup(f => f.FindUnmappedDirectories(effectiveRoot, It.IsAny<IReadOnlyList<ProjectDefinition>>(), It.IsAny<AppSettings>()))
+            .Returns(ExtractionResult<List<(string, List<string>)>>.Success([]));
 
         var post = new Mock<IPostExportTask>();
         post.Setup(p => p.ExecuteAsync(It.IsAny<string>(), It.IsAny<string>())).Returns(Task.CompletedTask);
@@ -474,6 +483,9 @@ public class ConsoleOrchestratorTests
         fileDiscovery
             .Setup(f => f.FindFilesForProject(projectOk, It.IsAny<AppSettings>()))
             .Returns(ExtractionResult<List<string>>.Success([csOk]));
+        fileDiscovery
+            .Setup(f => f.FindUnmappedDirectories(effectiveRootOk, It.IsAny<IReadOnlyList<ProjectDefinition>>(), It.IsAny<AppSettings>()))
+            .Returns(ExtractionResult<List<(string, List<string>)>>.Success([]));
 
         var post = new Mock<IPostExportTask>();
         post.Setup(p => p.ExecuteAsync(It.IsAny<string>(), It.IsAny<string>())).Returns(Task.CompletedTask);
@@ -544,6 +556,9 @@ public class ConsoleOrchestratorTests
         fileDiscovery
             .Setup(f => f.FindFilesForProject(project, It.IsAny<AppSettings>()))
             .Returns(ExtractionResult<List<string>>.Success([csPath]));
+        fileDiscovery
+            .Setup(f => f.FindUnmappedDirectories(solution.Root, It.IsAny<IReadOnlyList<ProjectDefinition>>(), It.IsAny<AppSettings>()))
+            .Returns(ExtractionResult<List<(string, List<string>)>>.Success([]));
 
         var assemblyDecompiler = new Mock<IAssemblyDecompilerService>(MockBehavior.Strict);
         var post = new Mock<IPostExportTask>();

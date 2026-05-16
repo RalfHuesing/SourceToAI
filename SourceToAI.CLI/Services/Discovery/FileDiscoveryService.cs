@@ -1,4 +1,5 @@
-﻿using SourceToAI.CLI.Configuration;
+﻿using System.Linq;
+using SourceToAI.CLI.Configuration;
 using SourceToAI.CLI.Models;
 using SourceToAI.CLI.Services;
 
@@ -6,6 +7,12 @@ namespace SourceToAI.CLI.Services.Discovery;
 
 public class FileDiscoveryService(IDirectoryEnumerator directoryEnumerator) : IFileDiscoveryService
 {
+    /// <summary>
+    /// Direkt unter der Solution-Wurzel — gleiche Sonderfälle wie <see cref="FindSolutionDocs"/> (kein rekursiver „Unmapped“-Export dieser Bäume).
+    /// </summary>
+    private static readonly HashSet<string> UnmappedSkippedTopLevelDirectoryNames =
+        new(StringComparer.OrdinalIgnoreCase) { ".cursor", ".github", "Docs" };
+
     public ExtractionResult<List<string>> FindSolutionDocs(string rootPath, AppSettings settings)
     {
         var foundFiles = new List<string>();
@@ -85,6 +92,79 @@ public class FileDiscoveryService(IDirectoryEnumerator directoryEnumerator) : IF
         catch (Exception ex)
         {
             return ExtractionResult<List<string>>.Failure($"Fehler beim Scannen von {project.ProjectName}: {ex.Message}");
+        }
+    }
+
+    public ExtractionResult<List<(string DirectoryName, List<string> AbsolutePaths)>> FindUnmappedDirectories(
+        string rootPath,
+        IReadOnlyList<ProjectDefinition> projects,
+        AppSettings settings)
+    {
+        var mergedWarnings = new List<string>();
+
+        try
+        {
+            var rootFull = Path.GetFullPath(rootPath);
+            if (!Directory.Exists(rootFull))
+            {
+                return ExtractionResult<List<(string DirectoryName, List<string> AbsolutePaths)>>.Failure(
+                    $"Solution-Wurzel „{rootPath}“ existiert nicht.");
+            }
+
+            var projectRoots = new HashSet<string>(
+                projects
+                    .Where(p => !string.IsNullOrEmpty(p.RootDirectory))
+                    .Select(p => Path.GetFullPath(p.RootDirectory)),
+                StringComparer.OrdinalIgnoreCase);
+
+            var included = new HashSet<string>(settings.IncludedExtensions, StringComparer.OrdinalIgnoreCase);
+            var excluded = new HashSet<string>(settings.ExcludedDirectories, StringComparer.OrdinalIgnoreCase);
+
+            string[] directSubDirs;
+            try
+            {
+                directSubDirs = directoryEnumerator.EnumerateDirectories(rootFull).ToArray();
+            }
+            catch (Exception ex)
+            {
+                return ExtractionResult<List<(string DirectoryName, List<string> AbsolutePaths)>>.Failure(
+                    $"Unmapped-Verzeichnisse unter „{rootFull}“ nicht lesbar: {ex.Message}");
+            }
+
+            var results = new List<(string DirectoryName, List<string> AbsolutePaths)>();
+
+            foreach (var dir in directSubDirs.OrderBy(d => d, StringComparer.OrdinalIgnoreCase))
+            {
+                var dirFull = Path.GetFullPath(dir);
+                var dirName = new DirectoryInfo(dir).Name;
+
+                if (excluded.Contains(dirName))
+                    continue;
+
+                if (UnmappedSkippedTopLevelDirectoryNames.Contains(dirName))
+                    continue;
+
+                if (projectRoots.Contains(dirFull))
+                    continue;
+
+                var pathExclude = ProjectPathExcludeFilter.TryCreate(settings.ExcludedPathPatterns, dirFull);
+                var foundFiles = new List<string>();
+                ScanDirectory(dirFull, dirFull, pathExclude, foundFiles, included, excluded, mergedWarnings);
+
+                if (foundFiles.Count == 0)
+                    continue;
+
+                results.Add((dirName, foundFiles));
+            }
+
+            return ExtractionResult<List<(string DirectoryName, List<string> AbsolutePaths)>>.Success(
+                results,
+                mergedWarnings.Count > 0 ? mergedWarnings : null);
+        }
+        catch (Exception ex)
+        {
+            return ExtractionResult<List<(string DirectoryName, List<string> AbsolutePaths)>>.Failure(
+                $"Fehler bei Unmapped-Verzeichnis-Erkennung: {ex.Message}");
         }
     }
 

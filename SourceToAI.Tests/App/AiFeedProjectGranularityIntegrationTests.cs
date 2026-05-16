@@ -97,6 +97,9 @@ public sealed class AiFeedProjectGranularityIntegrationTests
         var fileDiscovery = new Mock<IFileDiscoveryService>();
         fileDiscovery.Setup(f => f.FindSolutionDocs(solution.Root, It.IsAny<AppSettings>())).Returns(ExtractionResult<List<string>>.Success([]));
         fileDiscovery
+            .Setup(f => f.FindUnmappedDirectories(solution.Root, It.IsAny<IReadOnlyList<ProjectDefinition>>(), It.IsAny<AppSettings>()))
+            .Returns(ExtractionResult<List<(string, List<string>)>>.Success([]));
+        fileDiscovery
             .Setup(f => f.FindFilesForProject(projectA, It.IsAny<AppSettings>()))
             .Returns(ExtractionResult<List<string>>.Success([appCs, noteMd]));
         fileDiscovery
