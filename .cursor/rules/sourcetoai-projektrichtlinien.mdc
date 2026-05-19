@@ -1,9 +1,15 @@
 ---
-description: Architektur, DI, I/O/Parse, Anti-Bloat, Dateigröße, Warnungen, Commits (SourceToAI)
+description: Windows/Shell, Architektur, DI, I/O/Parse, Anti-Bloat, Dateigröße, Warnungen, Commits (SourceToAI)
 alwaysApply: true
 ---
 
 # SourceToAI – Projektrichtlinien
+
+## Entwicklungsumgebung (Windows)
+
+- **Shell:** PowerShell — keine Bash-Syntax (`&&`, `|`, Heredocs wie in sh).
+- **Kein `&` zum Verketten:** `cmd1 & cmd2` ist Bash/`cmd`-Stil und scheitert in PowerShell (`&` = Call-Operator). Stattdessen: `;` für „nacheinander“, oder getrennte Shell-Aufrufe pro Schritt.
+- **Pfade:** Windows-Pfade (`C:\…`, Backslashes); bei Bedarf in Anführungszeichen.
 
 ## Architektur
 
