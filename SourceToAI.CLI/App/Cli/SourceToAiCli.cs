@@ -43,7 +43,7 @@ internal static class SourceToAiCli
             "Quellverzeichnis oder Assembly (.dll/.exe); Alternative zu den weiteren Positionsargumenten. Mehrfach angebbare Option.";
 
         internal const string ExcludeOptionDescription =
-            "Glob-Muster für auszuschließende Dateien/Unterbäume relativ zum jeweiligen Projektstamm (Ordner der .csproj); Microsoft.Extensions.FileSystemGlobbing. Mehrfach angebbbar. Unterbaum z. B. mit wwwroot/lib/** (wwwroot/lib/* nur direkte Kindelemente).";
+            "Glob-Muster für auszuschließende Dateien/Unterbäume (Microsoft.Extensions.FileSystemGlobbing). Relativ zum jeweiligen Projektstamm (Ordner der .csproj) und zusätzlich zur Solution-/Eingabe-Wurzel (z. B. Leitstand.VBA.Addin für Ordner direkt unter der Wurzel). Mehrfach angebbbar. Unterbaum: wwwroot/lib/** oder Ordnername ohne Wildcards.";
 
         internal const string ErrorIncompletePositional =
             "Positionsargument <Export-Pfad> und mindestens ein Quellpfad (Verzeichnis oder .dll/.exe) sind erforderlich, wenn ohne --export/--input gearbeitet wird.";
