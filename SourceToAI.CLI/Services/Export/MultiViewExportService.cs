@@ -74,7 +74,7 @@ public sealed class MultiViewExportService(
                 if (!buildersByKey.TryGetValue(viewKey, out var builder))
                 {
                     throw new SourceToAiExportException(
-                        $"Kein Markdown-View-Builder für „{viewKey}“ registriert.");
+                        $"Kein Markdown-View-Builder fuer \"{viewKey}\" registriert.");
                 }
 
                 workSlots.Add(new ViewWorkSlot(viewKey, builder, project, paths));

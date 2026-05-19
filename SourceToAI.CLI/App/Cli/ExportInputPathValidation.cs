@@ -21,10 +21,10 @@ internal static class ExportInputPathValidation
                 return null;
 
             return
-                $"Ungültiger Eingabepfad (nicht unterstützter Dateityp): \"{path}\". Erlaubt sind Verzeichnisse oder .NET-Assemblies (.dll, .exe).";
+                $"Ungueltiger Eingabepfad (nicht unterstuetzter Dateityp): \"{path}\". Erlaubt sind Verzeichnisse oder .NET-Assemblies (.dll, .exe).";
         }
 
         return
-            $"Ungültiger Eingabepfad (nicht vorhanden): \"{path}\". Erwartet wird ein existierendes Verzeichnis oder eine .dll/.exe-Datei.";
+            $"Ungueltiger Eingabepfad (nicht vorhanden): \"{path}\". Erwartet wird ein existierendes Verzeichnis oder eine .dll/.exe-Datei.";
     }
 }

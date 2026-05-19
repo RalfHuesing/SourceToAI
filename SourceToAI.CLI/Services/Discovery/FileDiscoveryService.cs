@@ -124,7 +124,7 @@ public class FileDiscoveryService(IDirectoryEnumerator directoryEnumerator) : IF
             if (!Directory.Exists(rootFull))
             {
                 return ExtractionResult<List<(string DirectoryName, List<string> AbsolutePaths)>>.Failure(
-                    $"Solution-Wurzel „{rootPath}“ existiert nicht.");
+                    $"Solution-Wurzel \"{rootPath}\" existiert nicht.");
             }
 
             var projectRoots = new HashSet<string>(
@@ -145,7 +145,7 @@ public class FileDiscoveryService(IDirectoryEnumerator directoryEnumerator) : IF
             catch (Exception ex)
             {
                 return ExtractionResult<List<(string DirectoryName, List<string> AbsolutePaths)>>.Failure(
-                    $"Unmapped-Verzeichnisse unter „{rootFull}“ nicht lesbar: {ex.Message}");
+                    $"Unmapped-Verzeichnisse unter \"{rootFull}\" nicht lesbar: {ex.Message}");
             }
 
             var results = new List<(string DirectoryName, List<string> AbsolutePaths)>();
@@ -213,7 +213,7 @@ public class FileDiscoveryService(IDirectoryEnumerator directoryEnumerator) : IF
         }
         catch (Exception ex) when (SkippableLocalFileIoExceptions.Matches(ex))
         {
-            warnings.Add($"Dateien in „{currentDir}“ nicht lesbar ({ex.GetType().Name}): {ex.Message}");
+            warnings.Add($"Dateien in \"{currentDir}\" nicht lesbar ({ex.GetType().Name}): {ex.Message}");
             return;
         }
 
@@ -235,7 +235,7 @@ public class FileDiscoveryService(IDirectoryEnumerator directoryEnumerator) : IF
         }
         catch (Exception ex) when (SkippableLocalFileIoExceptions.Matches(ex))
         {
-            warnings.Add($"Unterverzeichnisse von „{currentDir}“ nicht lesbar ({ex.GetType().Name}): {ex.Message}");
+            warnings.Add($"Unterverzeichnisse von \"{currentDir}\" nicht lesbar ({ex.GetType().Name}): {ex.Message}");
             return;
         }
 

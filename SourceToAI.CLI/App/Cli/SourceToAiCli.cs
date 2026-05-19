@@ -13,7 +13,7 @@ internal static class SourceToAiCli
             "Exportiert eine oder mehrere .NET-Quellen (Solution-/Projektverzeichnis oder kompilierte Assembly .dll/.exe) als Multi-View-KI-Feed (Markdown) nacheinander in dasselbe Export-Verzeichnis. Optional: wiederholbare Option --exclude mit Glob-Mustern relativ zum jeweiligen Projektstamm.";
 
         internal const string UsageLine =
-            "Verwendung: SourceToAI <Export-Pfad> <Verzeichnis|.dll|.exe>… | SourceToAI --export <Export-Pfad> --input <Pfad>… [--exclude <Glob>…]";
+            "Verwendung: SourceToAI <Export-Pfad> <Verzeichnis|.dll|.exe>... | SourceToAI --export <Export-Pfad> --input <Pfad>... [--exclude <Glob>...]";
 
         internal const string UsageExamplePositional =
             "Beispiel (Positionsargumente): SourceToAI ./exports C:\\Daten\\RepoA\\ C:\\Daten\\RepoB\\";
@@ -52,7 +52,7 @@ internal static class SourceToAiCli
             "Option --export und mindestens ein --input sind erforderlich, wenn ohne Positionsargumente gearbeitet wird.";
 
         internal const string ErrorPositionalAndNamed =
-            "Positionsargumente und --export/--input dürfen nicht kombiniert werden.";
+            "Positionsargumente und --export/--input duerfen nicht kombiniert werden.";
     }
 
     /// <summary>

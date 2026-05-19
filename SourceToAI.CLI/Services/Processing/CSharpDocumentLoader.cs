@@ -65,7 +65,7 @@ public sealed class CSharpDocumentLoader : ICSharpDocumentLoader
                         LazyThreadSafetyMode.ExecutionAndPublication);
                     _ = _parseCache.TryUpdate(fullPath, retryLazy, lazyParse);
                     warnings.Add(
-                        $"„{fullPath}“ übersprungen ({ex.GetType().Name}): {ex.Message}");
+                        $"\"{fullPath}\" uebersprungen ({ex.GetType().Name}): {ex.Message}");
                     continue;
                 }
 

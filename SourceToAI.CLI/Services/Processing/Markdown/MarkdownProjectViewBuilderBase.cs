@@ -96,7 +96,7 @@ public class MarkdownProjectViewBuilderBase(
                 catch (Exception ex) when (SkippableLocalFileIoExceptions.Matches(ex))
                 {
                     mergedWarnings.Add(
-                        $"„{fullPath}“ übersprungen ({ex.GetType().Name}): {ex.Message}");
+                        $"\"{fullPath}\" uebersprungen ({ex.GetType().Name}): {ex.Message}");
                     continue;
                 }
 
