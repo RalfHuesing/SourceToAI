@@ -325,7 +325,7 @@ public class ConsoleOrchestrator(
         var projectsWithFiles = new List<(ProjectDefinition Project, IReadOnlyList<string> AbsoluteFilePaths)>();
         foreach (var project in projects)
         {
-            var filesResult = fileDiscovery.FindFilesForProject(project, settings);
+            var filesResult = fileDiscovery.FindFilesForProject(project, effectiveRoot, settings);
             if (!filesResult.IsSuccess)
             {
                 Console.WriteLine($"   -> [FEHLER] {project.ProjectName}: {filesResult.ErrorMessage}");

@@ -100,10 +100,10 @@ public sealed class AiFeedProjectGranularityIntegrationTests
             .Setup(f => f.FindUnmappedDirectories(solution.Root, It.IsAny<IReadOnlyList<ProjectDefinition>>(), It.IsAny<AppSettings>()))
             .Returns(ExtractionResult<List<(string, List<string>)>>.Success([]));
         fileDiscovery
-            .Setup(f => f.FindFilesForProject(projectA, It.IsAny<AppSettings>()))
+            .Setup(f => f.FindFilesForProject(projectA, It.IsAny<string>(), It.IsAny<AppSettings>()))
             .Returns(ExtractionResult<List<string>>.Success([appCs, noteMd]));
         fileDiscovery
-            .Setup(f => f.FindFilesForProject(projectB, It.IsAny<AppSettings>()))
+            .Setup(f => f.FindFilesForProject(projectB, It.IsAny<string>(), It.IsAny<AppSettings>()))
             .Returns(ExtractionResult<List<string>>.Success([libCs]));
 
         var post = new Mock<IPostExportTask>();

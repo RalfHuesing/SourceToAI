@@ -65,7 +65,7 @@ public class FileDiscoveryServiceTests
         var project = new ProjectDefinition("App", Path.Combine(ws.Root, "App", "App.csproj"));
         var settings = TestAppSettingsFactory.Default();
 
-        var result = CreateSut().FindFilesForProject(project, settings);
+        var result = CreateSut().FindFilesForProject(project, ws.Root, settings);
 
         Assert.True(result.IsSuccess, result.ErrorMessage);
         Assert.NotNull(result.Value);
@@ -84,7 +84,7 @@ public class FileDiscoveryServiceTests
             Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "missing", "x.csproj"));
         var settings = TestAppSettingsFactory.Default();
 
-        var result = CreateSut().FindFilesForProject(project, settings);
+        var result = CreateSut().FindFilesForProject(project, Path.GetTempPath(), settings);
 
         Assert.False(result.IsSuccess);
         Assert.NotNull(result.ErrorMessage);
@@ -111,7 +111,7 @@ public class FileDiscoveryServiceTests
         var project = new ProjectDefinition("App", csproj);
         var settings = TestAppSettingsFactory.Default();
 
-        var result = CreateSut(mock.Object).FindFilesForProject(project, settings);
+        var result = CreateSut(mock.Object).FindFilesForProject(project, ws.Root, settings);
 
         Assert.True(result.IsSuccess, result.ErrorMessage);
         Assert.NotNull(result.Value);
@@ -138,7 +138,7 @@ public class FileDiscoveryServiceTests
         var project = new ProjectDefinition("App", csproj);
         var settings = TestAppSettingsFactory.Default();
 
-        var result = CreateSut(mock.Object).FindFilesForProject(project, settings);
+        var result = CreateSut(mock.Object).FindFilesForProject(project, ws.Root, settings);
 
         Assert.True(result.IsSuccess, result.ErrorMessage);
         Assert.NotNull(result.Value);
@@ -155,7 +155,7 @@ public class FileDiscoveryServiceTests
         var project = new ProjectDefinition("WebApp", Path.Combine(ws.Root, "WebApp", "WebApp.csproj"));
         var settings = TestAppSettingsFactory.Default();
 
-        var result = CreateSut().FindFilesForProject(project, settings);
+        var result = CreateSut().FindFilesForProject(project, ws.Root, settings);
 
         Assert.True(result.IsSuccess, result.ErrorMessage);
         Assert.NotNull(result.Value);
@@ -174,7 +174,7 @@ public class FileDiscoveryServiceTests
         var settings = TestAppSettingsFactory.Default();
         settings.ExcludedPathPatterns = ["wwwroot/lib/**"];
 
-        var result = CreateSut().FindFilesForProject(project, settings);
+        var result = CreateSut().FindFilesForProject(project, ws.Root, settings);
 
         Assert.True(result.IsSuccess, result.ErrorMessage);
         Assert.NotNull(result.Value);
@@ -198,7 +198,7 @@ public class FileDiscoveryServiceTests
             "**/vis-timeline-graph2d.min.css",
         ];
 
-        var result = CreateSut().FindFilesForProject(project, settings);
+        var result = CreateSut().FindFilesForProject(project, ws.Root, settings);
 
         Assert.True(result.IsSuccess, result.ErrorMessage);
         Assert.NotNull(result.Value);
@@ -252,5 +252,48 @@ public class FileDiscoveryServiceTests
         var paths = list[0].AbsolutePaths;
         Assert.True(CollectionContainsPath(paths, kept));
         Assert.False(CollectionContainsPath(paths, dropped));
+    }
+
+    [Fact]
+    public void FindUnmappedDirectories_excludes_top_level_folder_by_solution_relative_pattern()
+    {
+        using var ws = new TempWorkspace();
+        ws.WriteFile("App/App.csproj", "<Project></Project>");
+        var inAddin = ws.WriteFile("Leitstand.VBA.Addin/module.bas", "x");
+        var kept = ws.WriteFile("SqlMigrations/001.sql", "select 1");
+        var project = new ProjectDefinition("App", Path.Combine(ws.Root, "App", "App.csproj"));
+        var settings = TestAppSettingsFactory.Default();
+        settings.ExcludedPathPatterns = ["Leitstand.VBA.Addin"];
+
+        var result = CreateSut().FindUnmappedDirectories(ws.Root, [project], settings);
+
+        Assert.True(result.IsSuccess, result.ErrorMessage);
+        Assert.NotNull(result.Value);
+        Assert.Single(result.Value!);
+        Assert.Equal("SqlMigrations", result.Value[0].DirectoryName, StringComparer.OrdinalIgnoreCase);
+        Assert.True(CollectionContainsPath(result.Value[0].AbsolutePaths, kept));
+        Assert.DoesNotContain(
+            result.Value,
+            x => string.Equals(x.DirectoryName, "Leitstand.VBA.Addin", StringComparison.OrdinalIgnoreCase));
+        _ = inAddin;
+    }
+
+    [Fact]
+    public void FindFilesForProject_excludes_root_level_subdirectory_without_double_star_suffix()
+    {
+        using var ws = new TempWorkspace();
+        ws.WriteFile("WebApp/WebApp.csproj", "<Project></Project>");
+        var dropped = ws.WriteFile("WebApp/Leitstand.VBA.Addin/module.bas", "x");
+        var kept = ws.WriteFile("WebApp/Program.cs", "// ok");
+        var project = new ProjectDefinition("WebApp", Path.Combine(ws.Root, "WebApp", "WebApp.csproj"));
+        var settings = TestAppSettingsFactory.Default();
+        settings.ExcludedPathPatterns = ["Leitstand.VBA.Addin"];
+
+        var result = CreateSut().FindFilesForProject(project, ws.Root, settings);
+
+        Assert.True(result.IsSuccess, result.ErrorMessage);
+        Assert.NotNull(result.Value);
+        Assert.False(CollectionContainsPath(result.Value, dropped));
+        Assert.True(CollectionContainsPath(result.Value, kept));
     }
 }

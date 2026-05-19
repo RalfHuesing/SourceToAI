@@ -148,7 +148,7 @@ public sealed class MultiViewExportIntegrationTests
             .Setup(f => f.FindUnmappedDirectories(solution.Root, It.IsAny<IReadOnlyList<ProjectDefinition>>(), It.IsAny<AppSettings>()))
             .Returns(ExtractionResult<List<(string, List<string>)>>.Success([]));
         fileDiscovery
-            .Setup(f => f.FindFilesForProject(project1, It.IsAny<AppSettings>()))
+            .Setup(f => f.FindFilesForProject(project1, It.IsAny<string>(), It.IsAny<AppSettings>()))
             .Returns(
                 ExtractionResult<List<string>>.Success(
                 [
@@ -157,10 +157,10 @@ public sealed class MultiViewExportIntegrationTests
                     sidecarJson
                 ]));
         fileDiscovery
-            .Setup(f => f.FindFilesForProject(project2, It.IsAny<AppSettings>()))
+            .Setup(f => f.FindFilesForProject(project2, It.IsAny<string>(), It.IsAny<AppSettings>()))
             .Returns(ExtractionResult<List<string>>.Success([libCs, proj2InternalOnly]));
         fileDiscovery
-            .Setup(f => f.FindFilesForProject(project3, It.IsAny<AppSettings>()))
+            .Setup(f => f.FindFilesForProject(project3, It.IsAny<string>(), It.IsAny<AppSettings>()))
             .Returns(ExtractionResult<List<string>>.Success([proj3OnlyInternal]));
 
         var post = new Mock<IPostExportTask>();

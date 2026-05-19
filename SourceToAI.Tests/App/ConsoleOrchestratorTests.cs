@@ -170,7 +170,7 @@ public class ConsoleOrchestratorTests
             .Setup(f => f.FindSolutionDocs(solution.Root, It.IsAny<AppSettings>()))
             .Returns(ExtractionResult<List<string>>.Success([]));
         fileDiscovery
-            .Setup(f => f.FindFilesForProject(project1, It.IsAny<AppSettings>()))
+            .Setup(f => f.FindFilesForProject(project1, It.IsAny<string>(), It.IsAny<AppSettings>()))
             .Returns(ExtractionResult<List<string>>.Success([csPath]));
         fileDiscovery
             .Setup(f => f.FindUnmappedDirectories(solution.Root, It.IsAny<IReadOnlyList<ProjectDefinition>>(), It.IsAny<AppSettings>()))
@@ -257,10 +257,10 @@ public class ConsoleOrchestratorTests
             .Setup(f => f.FindSolutionDocs(solution.Root, It.IsAny<AppSettings>()))
             .Returns(ExtractionResult<List<string>>.Success([]));
         fileDiscovery
-            .Setup(f => f.FindFilesForProject(project1, It.IsAny<AppSettings>()))
+            .Setup(f => f.FindFilesForProject(project1, It.IsAny<string>(), It.IsAny<AppSettings>()))
             .Returns(ExtractionResult<List<string>>.Success([csPath]));
         fileDiscovery
-            .Setup(f => f.FindFilesForProject(project2, It.IsAny<AppSettings>()))
+            .Setup(f => f.FindFilesForProject(project2, It.IsAny<string>(), It.IsAny<AppSettings>()))
             .Returns(ExtractionResult<List<string>>.Success([]));
         fileDiscovery
             .Setup(f => f.FindUnmappedDirectories(solution.Root, It.IsAny<IReadOnlyList<ProjectDefinition>>(), It.IsAny<AppSettings>()))
@@ -387,7 +387,7 @@ public class ConsoleOrchestratorTests
             .Setup(f => f.FindSolutionDocs(effectiveRoot, It.IsAny<AppSettings>()))
             .Returns(ExtractionResult<List<string>>.Success([]));
         fileDiscovery
-            .Setup(f => f.FindFilesForProject(project, It.IsAny<AppSettings>()))
+            .Setup(f => f.FindFilesForProject(project, It.IsAny<string>(), It.IsAny<AppSettings>()))
             .Returns(ExtractionResult<List<string>>.Success([csPath]));
         fileDiscovery
             .Setup(f => f.FindUnmappedDirectories(effectiveRoot, It.IsAny<IReadOnlyList<ProjectDefinition>>(), It.IsAny<AppSettings>()))
@@ -481,7 +481,7 @@ public class ConsoleOrchestratorTests
             .Setup(f => f.FindSolutionDocs(effectiveRootOk, It.IsAny<AppSettings>()))
             .Returns(ExtractionResult<List<string>>.Success([]));
         fileDiscovery
-            .Setup(f => f.FindFilesForProject(projectOk, It.IsAny<AppSettings>()))
+            .Setup(f => f.FindFilesForProject(projectOk, It.IsAny<string>(), It.IsAny<AppSettings>()))
             .Returns(ExtractionResult<List<string>>.Success([csOk]));
         fileDiscovery
             .Setup(f => f.FindUnmappedDirectories(effectiveRootOk, It.IsAny<IReadOnlyList<ProjectDefinition>>(), It.IsAny<AppSettings>()))
@@ -554,7 +554,7 @@ public class ConsoleOrchestratorTests
             .Setup(f => f.FindSolutionDocs(solution.Root, It.IsAny<AppSettings>()))
             .Returns(ExtractionResult<List<string>>.Success([]));
         fileDiscovery
-            .Setup(f => f.FindFilesForProject(project, It.IsAny<AppSettings>()))
+            .Setup(f => f.FindFilesForProject(project, It.IsAny<string>(), It.IsAny<AppSettings>()))
             .Returns(ExtractionResult<List<string>>.Success([csPath]));
         fileDiscovery
             .Setup(f => f.FindUnmappedDirectories(solution.Root, It.IsAny<IReadOnlyList<ProjectDefinition>>(), It.IsAny<AppSettings>()))

@@ -43,7 +43,7 @@ Für ein einzelnes, portables Binary: im CLI-Projekt z. B. `dotnet publish -c 
 
 **Quelle** ist jeweils ein existierendes **Verzeichnis** (Solution/Repo mit `.sln` oder `.csproj`) oder eine **.dll**-/.**exe**-Assembly.
 
-**Optional `--exclude`:** Mehrfach angebbare Glob-Muster ([`Microsoft.Extensions.FileSystemGlobbing`](https://learn.microsoft.com/en-us/dotnet/core/extensions/file-globbing)), jeweils relativ zum **Projektstamm** (Ordner der jeweiligen `.csproj`), nicht zur Solution-Root. Sie wirken nur auf den **rekursiven Projekt-Dateiscan** (die View `complete` und eingebettete Nicht-C#-Dateien), nicht auf die separat erfassten Solution-Doku-Pfade (Root-`README`, `.cursor/rules`, `.github/workflows`, flaches `Docs/`). Muster aus der CLI werden an die optionalen Einträge in `appsettings.json` unter `ExcludedPathPatterns` **angehängt**. `*` deckt ein Pfadsegment ab; `**` beliebige Tiefe. Beispiel: `wwwroot/lib/*` schließt nur direkte Kindelemente von `lib` ein, für den **gesamten Unterbaum** eher `wwwroot/lib/**` verwenden.
+**Optional `--exclude`:** Mehrfach angebbare Glob-Muster ([`Microsoft.Extensions.FileSystemGlobbing`](https://learn.microsoft.com/en-us/dotnet/core/extensions/file-globbing)), ausgewertet **relativ zum Projektstamm** (Ordner der jeweiligen `.csproj`) und **zusätzlich relativ zur Solution-/Eingabe-Wurzel** (wichtig für Ordner direkt unter der Wurzel ohne eigenes `.csproj`, z. B. `Leitstand.VBA.Addin`). Sie wirken auf den rekursiven Dateiscan (View `complete`, Unmapped-Ordner, eingebettete Nicht-C#-Dateien), nicht auf die separat erfassten Solution-Doku-Pfade (Root-`README`, `.cursor/rules`, `.github/workflows`, flaches `Docs/`). Muster aus der CLI werden an `ExcludedPathPatterns` in `appsettings.json` **angehängt**. `*` deckt ein Pfadsegment ab; `**` beliebige Tiefe. Ein Ordnername **ohne Wildcards** (z. B. `Leitstand.VBA.Addin`) schließt den gesamten Unterbaum ein; alternativ `Leitstand.VBA.Addin/**`. `wwwroot/lib/*` nur direkte Kindelemente von `lib`, für den **gesamten Unterbaum** `wwwroot/lib/**`.
 
 **Platzhalter (`*`, `?`) im letzten Pfadsegment:** Unter Windows löst die Shell solche Muster nicht auf. SourceToAI expandiert sie vor der Verarbeitung zu konkreten Datei- und Verzeichnispfaden (wie `Directory.GetFiles` / `GetDirectories`). Liefert ein Muster keinen Treffer oder fehlt der Basisordner, bricht die CLI mit einer klaren Meldung ab. Rekursive Muster (z. B. `**\*.dll`) werden nicht unterstützt.
 
@@ -66,7 +66,7 @@ SourceToAI --export ./exports -i C:\Daten\RepoA\ -i C:\Daten\RepoB\
 ```
 
 ```cmd
-SourceToAI C:\AI_Feeds\Exports C:\Daten\MeinWeb\ --exclude "wwwroot/lib/**" --exclude "**/vis-timeline-graph2d.min.js" --exclude "**/vis-timeline-graph2d.min.css"
+SourceToAI C:\AI_Feeds\Exports C:\Daten\MeinWeb\ --exclude "wwwroot/lib/**" --exclude "Leitstand.VBA.Addin" --exclude "**/vis-timeline-graph2d.min.js" --exclude "**/vis-timeline-graph2d.min.css"
 ```
 
 ---
@@ -100,7 +100,7 @@ Die Datei muss **neben der ausführbaren Datei** liegen (wird mit ausgeliefert).
 }
 ```
 
-Die Liste entspricht den Fallback-Defaults in `AppSettings.cs` und der mitgelieferten `appsettings.json`. `ExcludedDirectories` sind weiterhin **nur Verzeichnisnamen** (ein Segment, z. B. `bin`), die an jeder Ebene übersprungen werden. `ExcludedPathPatterns` sind optionale **Glob-Pfade** relativ zum jeweiligen Projektordner (siehe `--exclude` oben). Dateien mit den konfigurierten Endungen unterhalb jeder gefundenen `.csproj` (z. B. `wwwroot/`) werden in der View **`complete`** als Text eingebettet; C#-spezifische Views nutzen weiterhin nur `.cs` (Roslyn). **XAML**, **Razor** und **HTML** laufen nicht durch den C#-Parser, sondern über den gleichen Verzeichnis-Scan wie andere Textdateien.
+Die Liste entspricht den Fallback-Defaults in `AppSettings.cs` und der mitgelieferten `appsettings.json`. `ExcludedDirectories` sind weiterhin **nur Verzeichnisnamen** (ein Segment, z. B. `bin`), die an jeder Ebene übersprungen werden. `ExcludedPathPatterns` sind optionale **Glob-Pfade** relativ zum Projektordner und zur Solution-Wurzel (siehe `--exclude` oben). Dateien mit den konfigurierten Endungen unterhalb jeder gefundenen `.csproj` (z. B. `wwwroot/`) werden in der View **`complete`** als Text eingebettet; C#-spezifische Views nutzen weiterhin nur `.cs` (Roslyn). **XAML**, **Razor** und **HTML** laufen nicht durch den C#-Parser, sondern über den gleichen Verzeichnis-Scan wie andere Textdateien.
 
 **Grenzen (Stand heute):** Unter dem angegebenen Quellverzeichnis muss mindestens eine `*.csproj` existieren — reine Static-Sites oder HTML-Sammlungen ohne .NET-Projekt werden nicht als Solution erkannt. Binärdateien (z. B. `.png`, Schriftarten) werden nicht in den Markdown-Feed übernommen; dafür wäre eine spätere Erweiterung (z. B. Manifest oder `IPostExportTask`) nötig.
 

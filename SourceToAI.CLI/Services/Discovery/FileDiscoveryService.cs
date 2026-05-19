@@ -71,7 +71,10 @@ public class FileDiscoveryService(IDirectoryEnumerator directoryEnumerator) : IF
         }
     }
 
-    public ExtractionResult<List<string>> FindFilesForProject(ProjectDefinition project, AppSettings settings)
+    public ExtractionResult<List<string>> FindFilesForProject(
+        ProjectDefinition project,
+        string solutionRoot,
+        AppSettings settings)
     {
         if (!Directory.Exists(project.RootDirectory))
             return ExtractionResult<List<string>>.Failure($"Projektverzeichnis {project.RootDirectory} existiert nicht.");
@@ -83,8 +86,21 @@ public class FileDiscoveryService(IDirectoryEnumerator directoryEnumerator) : IF
         {
             var included = new HashSet<string>(settings.IncludedExtensions, StringComparer.OrdinalIgnoreCase);
             var excluded = new HashSet<string>(settings.ExcludedDirectories, StringComparer.OrdinalIgnoreCase);
-            var pathExclude = ProjectPathExcludeFilter.TryCreate(settings.ExcludedPathPatterns, project.RootDirectory);
-            ScanDirectory(project.RootDirectory, project.RootDirectory, pathExclude, foundFiles, included, excluded, warnings);
+            var projectPathExclude = ProjectPathExcludeFilter.TryCreate(
+                settings.ExcludedPathPatterns,
+                project.RootDirectory);
+            var solutionPathExclude = ProjectPathExcludeFilter.TryCreate(
+                settings.ExcludedPathPatterns,
+                solutionRoot);
+            ScanDirectory(
+                project.RootDirectory,
+                project.RootDirectory,
+                projectPathExclude,
+                solutionPathExclude,
+                foundFiles,
+                included,
+                excluded,
+                warnings);
             return ExtractionResult<List<string>>.Success(
                 foundFiles,
                 warnings.Count > 0 ? warnings : null);
@@ -119,6 +135,7 @@ public class FileDiscoveryService(IDirectoryEnumerator directoryEnumerator) : IF
 
             var included = new HashSet<string>(settings.IncludedExtensions, StringComparer.OrdinalIgnoreCase);
             var excluded = new HashSet<string>(settings.ExcludedDirectories, StringComparer.OrdinalIgnoreCase);
+            var solutionPathExclude = ProjectPathExcludeFilter.TryCreate(settings.ExcludedPathPatterns, rootFull);
 
             string[] directSubDirs;
             try
@@ -147,9 +164,20 @@ public class FileDiscoveryService(IDirectoryEnumerator directoryEnumerator) : IF
                 if (projectRoots.Contains(dirFull))
                     continue;
 
-                var pathExclude = ProjectPathExcludeFilter.TryCreate(settings.ExcludedPathPatterns, dirFull);
+                if (ProjectPathExcludeFilter.IsDirectoryExcluded(solutionPathExclude, dirFull))
+                    continue;
+
+                var unmappedPathExclude = ProjectPathExcludeFilter.TryCreate(settings.ExcludedPathPatterns, dirFull);
                 var foundFiles = new List<string>();
-                ScanDirectory(dirFull, dirFull, pathExclude, foundFiles, included, excluded, mergedWarnings);
+                ScanDirectory(
+                    dirFull,
+                    dirFull,
+                    unmappedPathExclude,
+                    solutionPathExclude,
+                    foundFiles,
+                    included,
+                    excluded,
+                    mergedWarnings);
 
                 if (foundFiles.Count == 0)
                     continue;
@@ -169,9 +197,10 @@ public class FileDiscoveryService(IDirectoryEnumerator directoryEnumerator) : IF
     }
 
     private void ScanDirectory(
-        string projectRoot,
+        string scanRoot,
         string currentDir,
-        ProjectPathExcludeSpec? pathExclude,
+        ProjectPathExcludeSpec? scanPathExclude,
+        ProjectPathExcludeSpec? solutionPathExclude,
         List<string> foundFiles,
         HashSet<string> includedExtensions,
         HashSet<string> excludedDirectories,
@@ -193,8 +222,7 @@ public class FileDiscoveryService(IDirectoryEnumerator directoryEnumerator) : IF
             if (!includedExtensions.Contains(Path.GetExtension(file)))
                 continue;
 
-            if (pathExclude is not null
-                && ProjectPathExcludeFilter.IsFileExcludedByMatcher(pathExclude.Matcher, projectRoot, file))
+            if (ProjectPathExcludeFilter.IsPathExcludedByAny(scanPathExclude, solutionPathExclude, file, isDirectory: false))
                 continue;
 
             foundFiles.Add(file);
@@ -218,11 +246,10 @@ public class FileDiscoveryService(IDirectoryEnumerator directoryEnumerator) : IF
             if (excludedDirectories.Contains(dirName))
                 continue;
 
-            if (pathExclude is not null
-                && ProjectPathExcludeFilter.IsDirectorySubtreeExcluded(pathExclude.SubtreePrefixes, projectRoot, dir))
+            if (ProjectPathExcludeFilter.IsPathExcludedByAny(scanPathExclude, solutionPathExclude, dir, isDirectory: true))
                 continue;
 
-            ScanDirectory(projectRoot, dir, pathExclude, foundFiles, includedExtensions, excludedDirectories, warnings);
+            ScanDirectory(scanRoot, dir, scanPathExclude, solutionPathExclude, foundFiles, includedExtensions, excludedDirectories, warnings);
         }
     }
 }
