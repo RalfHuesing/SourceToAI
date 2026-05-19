@@ -259,11 +259,11 @@ public class FileDiscoveryServiceTests
     {
         using var ws = new TempWorkspace();
         ws.WriteFile("App/App.csproj", "<Project></Project>");
-        var inAddin = ws.WriteFile("Leitstand.VBA.Addin/module.bas", "x");
+        var inExternal = ws.WriteFile("ExternalTools/module.bas", "x");
         var kept = ws.WriteFile("SqlMigrations/001.sql", "select 1");
         var project = new ProjectDefinition("App", Path.Combine(ws.Root, "App", "App.csproj"));
         var settings = TestAppSettingsFactory.Default();
-        settings.ExcludedPathPatterns = ["Leitstand.VBA.Addin"];
+        settings.ExcludedPathPatterns = ["ExternalTools"];
 
         var result = CreateSut().FindUnmappedDirectories(ws.Root, [project], settings);
 
@@ -274,8 +274,8 @@ public class FileDiscoveryServiceTests
         Assert.True(CollectionContainsPath(result.Value[0].AbsolutePaths, kept));
         Assert.DoesNotContain(
             result.Value,
-            x => string.Equals(x.DirectoryName, "Leitstand.VBA.Addin", StringComparison.OrdinalIgnoreCase));
-        _ = inAddin;
+            x => string.Equals(x.DirectoryName, "ExternalTools", StringComparison.OrdinalIgnoreCase));
+        _ = inExternal;
     }
 
     [Fact]
@@ -283,11 +283,11 @@ public class FileDiscoveryServiceTests
     {
         using var ws = new TempWorkspace();
         ws.WriteFile("WebApp/WebApp.csproj", "<Project></Project>");
-        var dropped = ws.WriteFile("WebApp/Leitstand.VBA.Addin/module.bas", "x");
+        var dropped = ws.WriteFile("WebApp/ExternalTools/module.bas", "x");
         var kept = ws.WriteFile("WebApp/Program.cs", "// ok");
         var project = new ProjectDefinition("WebApp", Path.Combine(ws.Root, "WebApp", "WebApp.csproj"));
         var settings = TestAppSettingsFactory.Default();
-        settings.ExcludedPathPatterns = ["Leitstand.VBA.Addin"];
+        settings.ExcludedPathPatterns = ["ExternalTools"];
 
         var result = CreateSut().FindFilesForProject(project, ws.Root, settings);
 
