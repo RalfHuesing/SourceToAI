@@ -66,7 +66,7 @@ public class MarkdownFeedGenerator(ICSharpDocumentLoader csharpDocumentLoader) :
                     catch (Exception ex) when (SkippableLocalFileIoExceptions.Matches(ex))
                     {
                         warnings.Add(
-                            $"„{fullPath}“ übersprungen ({ex.GetType().Name}): {ex.Message}");
+                            $"\"{fullPath}\" uebersprungen ({ex.GetType().Name}): {ex.Message}");
                         continue;
                     }
                 }

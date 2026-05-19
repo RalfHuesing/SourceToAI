@@ -31,7 +31,7 @@ internal static class InputPathResolver
             if (string.IsNullOrEmpty(pattern))
             {
                 throw new SourceToAiValidationException(
-                    $"Ungültiger Platzhalter-Pfad (kein Dateiname/Muster): \"{raw}\".");
+                    $"Ungueltiger Platzhalter-Pfad (kein Dateiname/Muster): \"{raw}\".");
             }
 
             if (!Directory.Exists(directory))

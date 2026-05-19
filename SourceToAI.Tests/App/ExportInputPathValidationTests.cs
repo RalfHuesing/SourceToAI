@@ -46,7 +46,7 @@ public sealed class ExportInputPathValidationTests
         {
             var err = ExportInputPathValidation.GetValidationError(tempFile);
             Assert.NotNull(err);
-            Assert.Contains("nicht unterstützter Dateityp", err, StringComparison.Ordinal);
+            Assert.Contains("nicht unterstuetzter Dateityp", err, StringComparison.Ordinal);
         }
         finally
         {

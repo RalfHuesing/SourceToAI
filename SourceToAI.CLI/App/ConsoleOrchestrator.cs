@@ -68,10 +68,10 @@ public class ConsoleOrchestrator(
             .ToArray();
 
         if (roots.Length == 0)
-            throw new SourceToAiValidationException("Mindestens ein gültiger Quellpfad ist erforderlich.");
+            throw new SourceToAiValidationException("Mindestens ein gueltiger Quellpfad ist erforderlich.");
 
         Console.WriteLine("==================================================");
-        Console.WriteLine("🚀 SourceToAI - Standalone AI Feed Generator");
+        Console.WriteLine("SourceToAI - Standalone AI Feed Generator");
         Console.WriteLine("==================================================\n");
         Console.WriteLine($"[INFO] {roots.Length} Quelle(n), Export-Ziel: {exportPath}\n");
 
@@ -145,15 +145,15 @@ public class ConsoleOrchestrator(
         if (Directory.Exists(exportPath) && !File.Exists(markerPath))
         {
             throw new SourceToAiValidationException(
-                $"Sicherheitsabbruch: Das Zielverzeichnis '{exportPath}' existiert bereits, enthält aber keine Sicherheits-Markerdatei ({MultiViewExportPaths.SafetyMarkerFileName}). Um Datenverlust zu vermeiden, wurde die Operation abgebrochen. "
-                + $"Zum Fortfahren: Entweder den Ordner einmal manuell löschen oder — nur wenn Sie sicher sind, dass dies der richtige Exportordner ist — eine Datei „{MultiViewExportPaths.SafetyMarkerFileName}“ anlegen und den Befehl erneut ausführen.");
+                $"Sicherheitsabbruch: Das Zielverzeichnis '{exportPath}' existiert bereits, enthaelt aber keine Sicherheits-Markerdatei ({MultiViewExportPaths.SafetyMarkerFileName}). Um Datenverlust zu vermeiden, wurde die Operation abgebrochen. "
+                + $"Zum Fortfahren: Entweder den Ordner einmal manuell loeschen oder - nur wenn Sie sicher sind, dass dies der richtige Exportordner ist - eine Datei \"{MultiViewExportPaths.SafetyMarkerFileName}\" anlegen und den Befehl erneut ausfuehren.");
         }
 
         try
         {
             if (Directory.Exists(exportPath))
             {
-                Console.WriteLine($"[INFO] Räume Ausgabeordner vollständig auf: {exportPath}");
+                Console.WriteLine($"[INFO] Raeume Ausgabeordner vollstaendig auf: {exportPath}");
                 Directory.Delete(exportPath, recursive: true);
             }
 
@@ -184,7 +184,7 @@ public class ConsoleOrchestrator(
         {
             var readme = readmeMarkdownGenerator.GenerateGlobalExportOverview(DateTimeOffset.UtcNow);
             File.WriteAllText(Path.Combine(exportPath, "readme.md"), readme);
-            Console.WriteLine($"[INFO] readme.md (global) → {exportPath}");
+            Console.WriteLine($"[INFO] readme.md (global) -> {exportPath}");
         }
         catch (Exception ex)
         {
@@ -230,14 +230,14 @@ public class ConsoleOrchestrator(
                 if (!string.Equals(solutionName, assemblyBaseName, StringComparison.OrdinalIgnoreCase))
                 {
                     throw new SourceToAiValidationException(
-                        $"Ermittelter Solution-Name „{solutionName}“ weicht vom Assembly-Basisnamen „{assemblyBaseName}“ ab (Export-Pfad-Invariante).");
+                        $"Ermittelter Solution-Name \"{solutionName}\" weicht vom Assembly-Basisnamen \"{assemblyBaseName}\" ab (Export-Pfad-Invariante).");
                 }
 
                 var exportRootFromName = Path.GetFullPath(MultiViewExportPaths.GetSolutionExportRoot(exportPath, solutionName));
                 if (!string.Equals(exportRootFromName, plannedSolutionExportRoot, StringComparison.OrdinalIgnoreCase))
                 {
                     throw new SourceToAiValidationException(
-                        $"Export-Wurzel „{exportRootFromName}“ entspricht nicht der erwarteten Assembly-Export-Wurzel „{plannedSolutionExportRoot}“.");
+                        $"Export-Wurzel \"{exportRootFromName}\" entspricht nicht der erwarteten Assembly-Export-Wurzel \"{plannedSolutionExportRoot}\".");
                 }
 
                 Console.WriteLine($"[INFO] Solution erkannt: {solutionName}");
@@ -249,7 +249,7 @@ public class ConsoleOrchestrator(
             {
                 var detail = BuildAssemblyProcessingFailureDetail(ex);
                 assemblyFailures.Add(new AssemblySourceFailure(assemblyPath, detail));
-                Console.WriteLine($"[WARN] Assembly-Quelle übersprungen ({assemblyPath}): {ex.Message}");
+                Console.WriteLine($"[WARN] Assembly-Quelle uebersprungen ({assemblyPath}): {ex.Message}");
                 return;
             }
         }
@@ -284,11 +284,11 @@ public class ConsoleOrchestrator(
                 repositoryFolderName,
                 generatedAt);
             File.WriteAllText(Path.Combine(outputDir, "readme.md"), readme);
-            Console.WriteLine($"[INFO] readme.md (Lösung) → {outputDir}");
+            Console.WriteLine($"[INFO] readme.md (Loesung) -> {outputDir}");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[WARN] readme.md (Lösung) konnte nicht geschrieben werden: {ex.Message}");
+            Console.WriteLine($"[WARN] readme.md (Loesung) konnte nicht geschrieben werden: {ex.Message}");
         }
 
         try
@@ -297,7 +297,7 @@ public class ConsoleOrchestrator(
             if (depGraphResult.IsSuccess)
             {
                 File.WriteAllText(Path.Combine(outputDir, "dependency-graph.md"), depGraphResult.Value!);
-                Console.WriteLine($"[INFO] dependency-graph.md → {outputDir}");
+                Console.WriteLine($"[INFO] dependency-graph.md -> {outputDir}");
             }
             else
             {
@@ -315,11 +315,11 @@ public class ConsoleOrchestrator(
         {
             solutionDocPaths = docsResult.Value;
             Console.WriteLine(
-                $"[INFO] Solution-Dokumentation: {solutionDocPaths.Count} Datei(en) → eigene Datei unter complete/ (Projekt „.Docs“).\n");
+                $"[INFO] Solution-Dokumentation: {solutionDocPaths.Count} Datei(en) -> eigene Datei unter complete/ (Projekt \".Docs\").\n");
         }
         else
         {
-            Console.WriteLine("   -> Keine Solution-Docs gefunden (Root-README, Docs/, .cursor, .github …).\n");
+            Console.WriteLine("   -> Keine Solution-Docs gefunden (Root-README, Docs/, .cursor, .github ...).\n");
         }
 
         var projectsWithFiles = new List<(ProjectDefinition Project, IReadOnlyList<string> AbsoluteFilePaths)>();
@@ -342,7 +342,7 @@ public class ConsoleOrchestrator(
 
             if (filesResult.Value!.Count == 0)
             {
-                Console.WriteLine($"   -> Übersprungen (Keine relevanten Dateien): {project.ProjectName}");
+                Console.WriteLine($"   -> Uebersprungen (Keine relevanten Dateien): {project.ProjectName}");
                 continue;
             }
 
@@ -398,16 +398,16 @@ public class ConsoleOrchestrator(
 
         Console.WriteLine("\n==================================================");
         var unmappedSummary = unmappedExportCount > 0
-            ? $" Zusätzlich {unmappedExportCount} nicht zugeordnete(s) Verzeichnis(se) mit Dateien."
+            ? $" Zusaetzlich {unmappedExportCount} nicht zugeordnete(s) Verzeichnis(se) mit Dateien."
             : string.Empty;
         Console.WriteLine($"- Fertig! {successCount} von {projects.Count} Projekten mit exportierbaren Dateien.{unmappedSummary}");
-        Console.WriteLine($"- Ausgabe (Lösung): {outputDir}");
+        Console.WriteLine($"- Ausgabe (Loesung): {outputDir}");
         Console.WriteLine($"- Ausgabe (Global): {exportPath}");
         Console.WriteLine("==================================================");
 
         if (postExportTasks.Any())
         {
-            Console.WriteLine("\n- Führe Post-Export Tasks aus...");
+            Console.WriteLine("\n- Fuehre Post-Export Tasks aus...");
             foreach (var task in postExportTasks)
             {
                 await task.ExecuteAsync(solutionName, outputDir);
