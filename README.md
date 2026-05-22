@@ -4,7 +4,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**SourceToAI** ist ein eigenständiges .NET-10-CLI-Tool. Es liest lokale C#-Solutions (oder entpackt kompilierte .NET-Assemblies) und erzeugt daraus **Markdown-KI-Feeds** mit Metadaten, Manifest und mehreren „Views“ (vollständiger Code, Signaturen, öffentliche API, DTO-Fokus). Alles läuft offline auf deiner Maschine.
+**SourceToAI** ist ein eigenständiges .NET-10-CLI-Tool. Es liest lokale C#-Solutions **oder decompiliert kompilierte .NET-Assemblies** (`.dll`/`.exe` per Pfad oder aus dem GAC) und erzeugt daraus **Markdown-KI-Feeds** mit Metadaten, Manifest und mehreren „Views“ (vollständiger Code, Signaturen, öffentliche API, DTO-Fokus). Alles läuft offline auf deiner Maschine.
 
 ---
 
@@ -12,8 +12,30 @@
 
 - **Multi-View-Export:** In den Ordnern `complete/`, `signatures-only/`, `public-only/` und `dto-only/` liegt pro Projekt jeweils **eine** Markdown-Datei. Dateinamen tragen das View-Suffix: `<Solution>.<Projekt>-<view>.md` (z. B. `MySol.Proj-complete.md`). Virtuelle Solution-Doku (Root-`README`, flaches `Docs/` mit `.md`/`.mdc`, `.cursor/rules` usw.) erscheint in `complete/` als `<Solution>.Docs-complete.md`.
 - **Mehrere Quellen in einem Lauf:** Du gibst **ein** globales Export-Ziel und **eine oder mehrere** Quellen an. Jede Quelle wird nacheinander verarbeitet. Workspace-weite AI-Kontextdateien fließen in den gemeinsamen Baum `Merged/` ein, isolierte projektbezogene Dateien landen in `Isolated/<SolutionName>/`.
-- **Quellen:** Verzeichnis mit `.sln`/`.csproj` (typisch Repository- oder Solution-Stamm) **oder** eine **.dll/.exe**-Assembly. Bei Assemblies wird der Code zuerst per Decompiler in ein temporäres `decompile/`-Projekt unter `Isolated/<AssemblyName>/decompile/` gelegt und von dort wie gewohnt exportiert.
+- **Quellen:** Verzeichnis mit `.sln`/`.csproj` (typisch Repository- oder Solution-Stamm), eine **.dll/.exe** per Dateipfad oder Assemblys aus dem **.NET-Framework-GAC** (siehe Abschnitt [Assemblies decompilieren](#assemblies-decompilieren-dll--exe-und-gac)).
 - **Robustheit:** Build-Artefakte und übliche Tool-Ordner werden standardmäßig ignoriert; Lesefehler in Unterzweigen führen zu Warnungen, nicht zum kompletten Abbruch.
+
+---
+
+## Assemblies decompilieren (DLL / EXE und GAC)
+
+Ohne Quellcode-Repositories kannst du **kompilierte .NET-Assemblies** als Eingabe nutzen. SourceToAI erkennt `.dll` und `.exe`, **decompiliert** sie mit der [ILSpy](https://github.com/icsharpcode/ILSpy)-Engine (`ICSharpCode.Decompiler`) in ein vollständiges C#-Projekt und exportiert danach wie bei einer normalen Solution.
+
+```mermaid
+flowchart LR
+  A[".dll / .exe\n(Pfad oder GAC)"] --> B["Decompiler\n(ILSpy)"]
+  B --> C["Isolated/AssemblyName/decompile/\n.csproj und .cs"]
+  C --> D["Multi-View-Export\nMerged und Isolated"]
+```
+
+| Weg | CLI | Hinweise |
+|-----|-----|----------|
+| **Dateipfad** | Positionsargument oder `--input` auf eine existierende `.dll`/`.exe` | Optional Wildcards im **letzten** Segment (`Contoso.*.dll`); CMD/PowerShell expandieren das nicht — SourceToAI löst es auf. |
+| **GAC** | `--gac <Dateinamen-Muster>` (mehrfach) | Nur unter Windows mit .NET-Framework-GAC (`%WINDIR%\Microsoft.NET\assembly`). Pro Assembly-Name + Public-Key-Token die **höchste** Version; bei gleicher Identität in mehreren Flavors: **MSIL** vor 32 vor 64. |
+
+Beide Wege können **im selben Lauf** mit Verzeichnis-Quellen kombiniert werden (z. B. eigenes Repo plus eine Vendor-DLL aus dem GAC). Der decompilierte Baum bleibt unter **`Isolated/<AssemblyName>/decompile/`** erhalten (nützlich zum Nachschlagen oder erneuten Export).
+
+**Abhängigkeiten:** Der Decompiler sucht Referenzen im Ordner der Assembly und per Framework-Auflösung. Fehlen Abhängigkeiten, kann der Lauf für diese Assembly fehlschlagen (Details in der Konsole); der Export anderer Quellen im selben Lauf wird trotzdem versucht.
 
 ---
 
@@ -41,9 +63,9 @@ Für ein einzelnes, portables Binary: im CLI-Projekt z. B. `dotnet publish -c 
 - **Positionsargumente:** `SourceToAI <Export-Pfad> <Quelle> [<Quelle> …]` oder nur Export plus `--gac`
 - **Optionen:** `SourceToAI --export <Export-Pfad> [--input <Quelle> …] [--gac <DLL-Muster> …] [--exclude <Glob> …]` (Kurzform: `-i`)
 
-**Quelle** ist jeweils ein existierendes **Verzeichnis** (Solution/Repo mit `.sln` oder `.csproj`) oder eine **.dll**-/.**exe**-Assembly. Alternativ oder zusätzlich liefert **`--gac`** Pfade aus dem .NET-Framework-GAC (siehe unten). Mindestens ein Quellpfad oder mindestens ein `--gac`-Muster ist erforderlich.
+**Quelle** ist jeweils ein existierendes **Verzeichnis** (Solution/Repo mit `.sln` oder `.csproj`) oder eine **.dll**-/.**exe**-Assembly (wird decompiliert, siehe oben). Alternativ oder zusätzlich liefert **`--gac`** Assembly-Pfade aus dem .NET-Framework-GAC (ebenfalls decompiliert). Mindestens ein Quellpfad oder mindestens ein `--gac`-Muster ist erforderlich.
 
-**`--gac`:** Mehrfach angebbare **Dateinamen-Muster** (`*`, `?`) für DLLs im GAC (z. B. `Contoso.*.dll`). Der GAC-Root wird automatisch unter `%WINDIR%\Microsoft.NET\assembly` ermittelt; optional überschreibbar über `GacAssemblyRoot` in `appsettings.json`. Pro Assembly-Name und Public-Key-Token wird die **höchste** installierte Version gewählt; existiert dieselbe Identität in `GAC_MSIL` und `GAC_32`, wird **MSIL** bevorzugt. Liefert ein angegebenes Muster keinen Treffer, bricht die CLI mit einer klaren Meldung ab.
+**`--gac`:** Mehrfach angebbare **Dateinamen-Muster** (`*`, `?`) für DLLs im GAC (z. B. `Contoso.*.dll`). Details zur Auflösung: Abschnitt [Assemblies decompilieren](#assemblies-decompilieren-dll--exe-und-gac). Der GAC-Root wird automatisch unter `%WINDIR%\Microsoft.NET\assembly` ermittelt; optional überschreibbar über `GacAssemblyRoot` in `appsettings.json`. Liefert ein angegebenes Muster keinen Treffer, bricht die CLI mit einer klaren Meldung ab.
 
 **Optional `--exclude`:** Mehrfach angebbare Glob-Muster ([`Microsoft.Extensions.FileSystemGlobbing`](https://learn.microsoft.com/en-us/dotnet/core/extensions/file-globbing)), ausgewertet **relativ zum Projektstamm** (Ordner der jeweiligen `.csproj`) und **zusätzlich relativ zur Solution-/Eingabe-Wurzel** (wichtig für Ordner direkt unter der Wurzel ohne eigenes `.csproj`, z. B. `ExternalTools`). Sie wirken auf den rekursiven Dateiscan (View `complete`, Unmapped-Ordner, eingebettete Nicht-C#-Dateien), nicht auf die separat erfassten Solution-Doku-Pfade (Root-`README`, `.cursor/rules`, `.github/workflows`, flaches `Docs/`). Muster aus der CLI werden an `ExcludedPathPatterns` in `appsettings.json` **angehängt**. `*` deckt ein Pfadsegment ab; `**` beliebige Tiefe. Ein Ordnername **ohne Wildcards** (z. B. `ExternalTools`) schließt den gesamten Unterbaum ein; alternativ `ExternalTools/**`. `wwwroot/lib/*` nur direkte Kindelemente von `lib`, für den **gesamten Unterbaum** `wwwroot/lib/**`.
 
@@ -72,7 +94,15 @@ SourceToAI C:\AI_Feeds\Exports --gac "Contoso.*.dll" --gac "Acme.Core.*.dll"
 ```
 
 ```cmd
+SourceToAI C:\AI_Feeds\Exports --gac "System.Data.dll"
+```
+
+```cmd
 SourceToAI --export ./exports --input C:\Daten\RepoA\ --gac "Contoso.*.dll"
+```
+
+```cmd
+SourceToAI C:\AI_Feeds\Exports C:\Daten\MeinWeb\ --gac "Vendor.Lib.*.dll"
 ```
 
 ```cmd
@@ -113,7 +143,7 @@ Die Datei muss **neben der ausführbaren Datei** liegen (wird mit ausgeliefert).
 
 Die Liste entspricht den Fallback-Defaults in `AppSettings.cs` und der mitgelieferten `appsettings.json`. `ExcludedDirectories` sind weiterhin **nur Verzeichnisnamen** (ein Segment, z. B. `bin`), die an jeder Ebene übersprungen werden. `ExcludedPathPatterns` sind optionale **Glob-Pfade** relativ zum Projektordner und zur Solution-Wurzel (siehe `--exclude` oben). Dateien mit den konfigurierten Endungen unterhalb jeder gefundenen `.csproj` (z. B. `wwwroot/`) werden in der View **`complete`** als Text eingebettet; C#-spezifische Views nutzen weiterhin nur `.cs` (Roslyn). **XAML**, **Razor** und **HTML** laufen nicht durch den C#-Parser, sondern über den gleichen Verzeichnis-Scan wie andere Textdateien.
 
-**Grenzen (Stand heute):** Unter dem angegebenen Quellverzeichnis muss mindestens eine `*.csproj` existieren — reine Static-Sites oder HTML-Sammlungen ohne .NET-Projekt werden nicht als Solution erkannt. Binärdateien (z. B. `.png`, Schriftarten) werden nicht in den Markdown-Feed übernommen; dafür wäre eine spätere Erweiterung (z. B. Manifest oder `IPostExportTask`) nötig.
+**Grenzen (Stand heute):** Unter einem **Verzeichnis**-Eingabepfad muss mindestens eine `*.csproj` existieren — reine Static-Sites ohne .NET-Projekt werden nicht erkannt. **Assembly-Eingaben** (Pfad oder GAC) brauchen kein vorgefertigtes Repo; die `.csproj` entsteht durch die Decompilierung. GAC-Zugriff setzt einen Windows-.NET-Framework-GAC voraus. Binärdateien (z. B. `.png`, Schriftarten) werden nicht in den Markdown-Feed übernommen.
 
 ---
 
