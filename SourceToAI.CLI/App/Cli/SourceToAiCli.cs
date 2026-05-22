@@ -10,10 +10,10 @@ internal static class SourceToAiCli
     internal static class Usage
     {
         internal const string RootDescription =
-            "Exportiert eine oder mehrere .NET-Quellen (Solution-/Projektverzeichnis oder kompilierte Assembly .dll/.exe) als Multi-View-KI-Feed (Markdown) nacheinander in dasselbe Export-Verzeichnis. Optional: wiederholbare Option --exclude mit Glob-Mustern relativ zum jeweiligen Projektstamm.";
+            "Exportiert eine oder mehrere .NET-Quellen (Solution-/Projektverzeichnis, kompilierte Assembly .dll/.exe oder GAC-Assemblys per --gac) als Multi-View-KI-Feed (Markdown) nacheinander in dasselbe Export-Verzeichnis. Optional: wiederholbare Option --exclude mit Glob-Mustern relativ zum jeweiligen Projektstamm.";
 
         internal const string UsageLine =
-            "Verwendung: SourceToAI <Export-Pfad> <Verzeichnis|.dll|.exe>... | SourceToAI --export <Export-Pfad> --input <Pfad>... [--exclude <Glob>...]";
+            "Verwendung: SourceToAI <Export-Pfad> <Verzeichnis|.dll|.exe>... | SourceToAI <Export-Pfad> --gac <Muster>... | SourceToAI --export <Export-Pfad> [--input <Pfad>...] [--gac <Muster>...] [--exclude <Glob>...]";
 
         internal const string UsageExamplePositional =
             "Beispiel (Positionsargumente): SourceToAI ./exports C:\\Daten\\RepoA\\ C:\\Daten\\RepoB\\";
@@ -23,6 +23,9 @@ internal static class SourceToAiCli
 
         internal const string UsageExampleAssemblyWildcard =
             "Beispiel (Assemblies mit Platzhalter * / ? im Dateinamen): SourceToAI ./exports C:\\Apps\\MyLib\\bin\\Debug\\net10.0\\*.dll";
+
+        internal const string UsageExampleGac =
+            "Beispiel (GAC): SourceToAI ./exports --gac \"Contoso.*.dll\" --gac \"Acme.Core.*.dll\"";
 
         internal const string UsageExampleOptions =
             "Beispiel (Optionen): SourceToAI --export ./exports --input C:\\Daten\\RepoA\\ --input C:\\Daten\\RepoB\\";
@@ -34,7 +37,7 @@ internal static class SourceToAiCli
             "Zielverzeichnis für den gesamten Export-Baum (wird bei Bedarf angelegt; bestehender Inhalt wird sicherheitshalber geleert, sofern .sta-marker existiert).";
 
         internal const string SolutionRootDescription =
-            "Quellverzeichnis (Solution/Repository mit .sln oder darüber) oder Pfad zu einer .NET-Assembly (.dll/.exe). Mindestens ein Pfad; weitere Pfade als weitere Positionsargumente.";
+            "Quellverzeichnis (Solution/Repository mit .sln oder darüber) oder Pfad zu einer .NET-Assembly (.dll/.exe). Mehrere Pfade als weitere Positionsargumente; optional leer, wenn nur --gac genutzt wird.";
 
         internal const string ExportOptionDescription =
             "Export-Verzeichnis (Alternative zu Positionsargument <Export-Pfad>).";
@@ -42,24 +45,30 @@ internal static class SourceToAiCli
         internal const string InputOptionDescription =
             "Quellverzeichnis oder Assembly (.dll/.exe); Alternative zu den weiteren Positionsargumenten. Mehrfach angebbare Option.";
 
+        internal const string GacOptionDescription =
+            "Dateinamen-Muster (*, ?) für DLLs im .NET-Framework-GAC; pro Assembly wird die höchste Version gewählt (MSIL vor GAC_32). Mehrfach angebbare Option. Mindestens ein --gac oder Quellpfad erforderlich.";
+
         internal const string ExcludeOptionDescription =
             "Glob-Muster für auszuschließende Dateien/Unterbäume (Microsoft.Extensions.FileSystemGlobbing). Relativ zum jeweiligen Projektstamm (Ordner der .csproj) und zusätzlich zur Solution-/Eingabe-Wurzel (z. B. ExternalTools für Ordner direkt unter der Wurzel). Mehrfach angebbbar. Unterbaum: wwwroot/lib/** oder Ordnername ohne Wildcards.";
 
         internal const string ErrorIncompletePositional =
-            "Positionsargument <Export-Pfad> und mindestens ein Quellpfad (Verzeichnis oder .dll/.exe) sind erforderlich, wenn ohne --export/--input gearbeitet wird.";
+            "Positionsargument <Export-Pfad> und mindestens ein Quellpfad (Verzeichnis, .dll/.exe) oder --gac sind erforderlich, wenn ohne --export/--input gearbeitet wird.";
 
         internal const string ErrorIncompleteNamed =
-            "Option --export und mindestens ein --input sind erforderlich, wenn ohne Positionsargumente gearbeitet wird.";
+            "Option --export und mindestens ein --input oder --gac sind erforderlich, wenn ohne Positionsargumente gearbeitet wird.";
 
         internal const string ErrorPositionalAndNamed =
             "Positionsargumente und --export/--input duerfen nicht kombiniert werden.";
+
+        internal const string ErrorNoInputOrGac =
+            "Mindestens ein Quellpfad (--input / Positionsargument) oder mindestens ein --gac-Muster ist erforderlich.";
     }
 
     /// <summary>
     /// Erzeugt den Root-Command; <paramref name="runAsync"/> wird bei gültiger CLI aufgerufen.
     /// </summary>
     internal static RootCommand CreateRootCommand(
-        Func<string, IReadOnlyList<string>, IReadOnlyList<string>, CancellationToken, Task<int>> runAsync)
+        Func<string, IReadOnlyList<string>, IReadOnlyList<string>, IReadOnlyList<string>, CancellationToken, Task<int>> runAsync)
     {
         var exportPositional = new Argument<string?>("export-path")
         {
@@ -82,6 +91,11 @@ internal static class SourceToAiCli
             Description = Usage.InputOptionDescription,
             Arity = ArgumentArity.OneOrMore,
         };
+        var gacOption = new Option<string[]>("--gac")
+        {
+            Description = Usage.GacOptionDescription,
+            Arity = ArgumentArity.OneOrMore,
+        };
         var excludeOption = new Option<string[]>("--exclude")
         {
             Description = Usage.ExcludeOptionDescription,
@@ -96,6 +110,7 @@ internal static class SourceToAiCli
         root.Add(solutionPositional);
         root.Add(exportOption);
         root.Add(inputOption);
+        root.Add(gacOption);
         root.Add(excludeOption);
 
         root.SetAction(async (ParseResult parseResult, CancellationToken cancellationToken) =>
@@ -105,8 +120,10 @@ internal static class SourceToAiCli
                 exportPositional,
                 solutionPositional,
                 inputOption,
-                exportOption);
-            if (resolution.ExportPath is null || resolution.SolutionPaths.Count == 0)
+                exportOption,
+                gacOption);
+            if (resolution.ExportPath is null
+                || (resolution.SolutionPaths.Count == 0 && resolution.GacPatterns.Count == 0))
             {
                 if (resolution.ErrorMessage is not null)
                     await Console.Error.WriteLineAsync(resolution.ErrorMessage);
@@ -114,6 +131,7 @@ internal static class SourceToAiCli
                 await Console.Error.WriteLineAsync(Usage.UsageExamplePositional);
                 await Console.Error.WriteLineAsync(Usage.UsageExampleAssembly);
                 await Console.Error.WriteLineAsync(Usage.UsageExampleAssemblyWildcard);
+                await Console.Error.WriteLineAsync(Usage.UsageExampleGac);
                 await Console.Error.WriteLineAsync(Usage.UsageExampleOptions);
                 await Console.Error.WriteLineAsync(Usage.UsageExampleExclude);
                 return 1;
@@ -123,7 +141,12 @@ internal static class SourceToAiCli
             var excludeRaw = parseResult.GetValue(excludeOption);
             var excludePatterns = NormalizePathList(excludeRaw ?? Array.Empty<string>(), TrimTok);
 
-            return await runAsync(resolution.ExportPath!, resolution.SolutionPaths, excludePatterns, cancellationToken);
+            return await runAsync(
+                resolution.ExportPath!,
+                resolution.SolutionPaths,
+                resolution.GacPatterns,
+                excludePatterns,
+                cancellationToken);
         });
 
         return root;
@@ -134,7 +157,8 @@ internal static class SourceToAiCli
         Argument<string?> exportPositional,
         Argument<string[]> solutionPositional,
         Option<string[]> inputOption,
-        Option<string?> exportOption)
+        Option<string?> exportOption,
+        Option<string[]> gacOption)
     {
         static string? N(string? s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim();
 
@@ -144,16 +168,24 @@ internal static class SourceToAiCli
         var exportOpt = N(parseResult.GetValue(exportOption));
         var inputOptRaw = parseResult.GetValue(inputOption);
         var inputOpt = NormalizePathList(inputOptRaw, N);
+        var gacRaw = parseResult.GetValue(gacOption);
+        var gacPatterns = NormalizePathList(gacRaw, N);
 
         var hasExportPos = exportPos is not null;
         var hasSolutionPos = solutionPos.Count > 0;
-        var hasPositional = hasExportPos && hasSolutionPos;
-        var hasPartialPositional = hasExportPos ^ hasSolutionPos;
+        var hasGac = gacPatterns.Count > 0;
+        var hasPositionalExportWithSource = hasExportPos && (hasSolutionPos || hasGac);
+        var hasPartialPositional = (hasExportPos && !hasSolutionPos && !hasGac)
+                                   || (!hasExportPos && hasSolutionPos);
 
         var hasExportOpt = exportOpt is not null;
         var hasInputOpt = inputOpt.Count > 0;
-        var hasNamed = hasExportOpt && hasInputOpt;
-        var hasPartialNamed = hasExportOpt ^ hasInputOpt;
+        var hasNamedExportWithSource = hasExportOpt && (hasInputOpt || hasGac);
+        var hasPartialNamed = (hasExportOpt && !hasInputOpt && !hasGac)
+                              || (!hasExportOpt && hasInputOpt);
+
+        var hasPositional = hasPositionalExportWithSource;
+        var hasNamed = hasNamedExportWithSource;
 
         if (hasPartialPositional)
             return CliPathResolution.Fail(Usage.ErrorIncompletePositional);
@@ -165,10 +197,10 @@ internal static class SourceToAiCli
             return CliPathResolution.Fail(Usage.ErrorPositionalAndNamed);
 
         if (hasPositional)
-            return CliPathResolution.Ok(exportPos!, solutionPos);
+            return CliPathResolution.Ok(exportPos!, solutionPos, gacPatterns);
 
         if (hasNamed)
-            return CliPathResolution.Ok(exportOpt!, inputOpt);
+            return CliPathResolution.Ok(exportOpt!, inputOpt, gacPatterns);
 
         return CliPathResolution.Fail(null);
     }
@@ -191,21 +223,30 @@ internal static class SourceToAiCli
 
     private readonly struct CliPathResolution
     {
-        private CliPathResolution(string? exportPath, IReadOnlyList<string> solutionPaths, string? errorMessage)
+        private CliPathResolution(
+            string? exportPath,
+            IReadOnlyList<string> solutionPaths,
+            IReadOnlyList<string> gacPatterns,
+            string? errorMessage)
         {
             ExportPath = exportPath;
             SolutionPaths = solutionPaths;
+            GacPatterns = gacPatterns;
             ErrorMessage = errorMessage;
         }
 
         internal string? ExportPath { get; }
         internal IReadOnlyList<string> SolutionPaths { get; }
+        internal IReadOnlyList<string> GacPatterns { get; }
         internal string? ErrorMessage { get; }
 
-        internal static CliPathResolution Ok(string exportPath, IReadOnlyList<string> solutionPaths) =>
-            new(exportPath, solutionPaths, null);
+        internal static CliPathResolution Ok(
+            string exportPath,
+            IReadOnlyList<string> solutionPaths,
+            IReadOnlyList<string> gacPatterns) =>
+            new(exportPath, solutionPaths, gacPatterns, null);
 
         internal static CliPathResolution Fail(string? errorMessage) =>
-            new(null, Array.Empty<string>(), errorMessage);
+            new(null, Array.Empty<string>(), Array.Empty<string>(), errorMessage);
     }
 }
