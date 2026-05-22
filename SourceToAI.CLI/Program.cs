@@ -24,6 +24,7 @@ if (parseResult.Errors.Count > 0)
     await Console.Error.WriteLineAsync(SourceToAiCli.Usage.UsageExamplePositional);
     await Console.Error.WriteLineAsync(SourceToAiCli.Usage.UsageExampleAssembly);
     await Console.Error.WriteLineAsync(SourceToAiCli.Usage.UsageExampleAssemblyWildcard);
+    await Console.Error.WriteLineAsync(SourceToAiCli.Usage.UsageExampleGac);
     await Console.Error.WriteLineAsync(SourceToAiCli.Usage.UsageExampleOptions);
     await Console.Error.WriteLineAsync(SourceToAiCli.Usage.UsageExampleExclude);
     Environment.ExitCode = 1;
@@ -35,19 +36,59 @@ Environment.ExitCode = await parseResult.InvokeAsync(parseResult.InvocationConfi
 static async Task<int> RunExportPipelineAsync(
     string exportPath,
     IReadOnlyList<string> solutionPaths,
+    IReadOnlyList<string> gacPatterns,
     IReadOnlyList<string> excludePatternsFromCli,
     CancellationToken cancellationToken)
 {
     cancellationToken.ThrowIfCancellationRequested();
 
-    IReadOnlyList<string> expandedPaths;
+    var configuration = new ConfigurationBuilder()
+        .SetBasePath(AppContext.BaseDirectory)
+        .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
+        .Build();
+
+    var appSettings = configuration.GetSection("SourceToAI").Get<AppSettings>()
+                      ?? new AppSettings();
+
+    IReadOnlyList<GacAssemblyDiscovery.GacResolvedAssembly> fromGac;
     try
     {
-        expandedPaths = InputPathResolver.Resolve(solutionPaths);
+        fromGac = gacPatterns.Count > 0
+            ? GacAssemblyDiscovery.Resolve(
+                gacPatterns,
+                GacPathResolver.ResolveRoot(appSettings.GacAssemblyRoot))
+            : [];
     }
     catch (SourceToAiValidationException ex)
     {
         await Console.Error.WriteLineAsync($"[FEHLER] {ex.Message}");
+        return 1;
+    }
+
+    foreach (var resolved in fromGac)
+    {
+        Console.WriteLine(
+            $"[INFO] GAC: {resolved.SimpleName} {resolved.Version} ({resolved.FlavorLabel}) -> {resolved.FullPath}");
+    }
+
+    var merged = solutionPaths.Concat(fromGac.Select(static r => r.FullPath)).ToList();
+
+    IReadOnlyList<string> expandedPaths;
+    try
+    {
+        expandedPaths = merged.Count > 0
+            ? InputPathResolver.Resolve(merged)
+            : [];
+    }
+    catch (SourceToAiValidationException ex)
+    {
+        await Console.Error.WriteLineAsync($"[FEHLER] {ex.Message}");
+        return 1;
+    }
+
+    if (expandedPaths.Count == 0)
+    {
+        await Console.Error.WriteLineAsync($"[FEHLER] {SourceToAiCli.Usage.ErrorNoInputOrGac}");
         return 1;
     }
 
@@ -61,23 +102,15 @@ static async Task<int> RunExportPipelineAsync(
         }
     }
 
-    var configuration = new ConfigurationBuilder()
-        .SetBasePath(AppContext.BaseDirectory)
-        .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
-        .Build();
-
-    var appSettings = configuration.GetSection("SourceToAI").Get<AppSettings>()
-                      ?? new AppSettings();
-
     if (excludePatternsFromCli.Count > 0)
     {
-        var merged = new List<string>();
+        var mergedExcludes = new List<string>();
         var fromConfig = appSettings.ExcludedPathPatterns;
         if (fromConfig is { Length: > 0 })
-            merged.AddRange(fromConfig);
+            mergedExcludes.AddRange(fromConfig);
         foreach (var p in excludePatternsFromCli)
-            merged.Add(p);
-        appSettings.ExcludedPathPatterns = merged.ToArray();
+            mergedExcludes.Add(p);
+        appSettings.ExcludedPathPatterns = mergedExcludes.ToArray();
     }
 
     var services = new ServiceCollection();

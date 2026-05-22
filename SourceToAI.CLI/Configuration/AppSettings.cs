@@ -20,4 +20,10 @@ public class AppSettings
         ".cs", ".sql", ".json", ".xml", ".xaml", ".yml", ".md", ".mdc", ".js", ".ts", ".css",
         ".cshtml", ".html", ".http", ".razor", ".svg", ".txt", ".csproj"
     ];
+
+    /// <summary>
+    /// Optionaler vollständiger Pfad zum .NET-4+-GAC-<c>assembly</c>-Ordner (enthält <c>GAC_MSIL</c> usw.).
+    /// Leer = automatisch unter %WINDIR%\Microsoft.NET\assembly.
+    /// </summary>
+    public string? GacAssemblyRoot { get; set; }
 }

@@ -38,10 +38,12 @@ Für ein einzelnes, portables Binary: im CLI-Projekt z. B. `dotnet publish -c 
 
 **Syntax (eine Variante wählen – nicht mischen):**
 
-- **Positionsargumente:** `SourceToAI <Export-Pfad> <Quelle> [<Quelle> …]`
-- **Optionen:** `SourceToAI --export <Export-Pfad> --input <Quelle> [--input <Quelle> …] [--exclude <Glob> …]` (Kurzform: `-i`)
+- **Positionsargumente:** `SourceToAI <Export-Pfad> <Quelle> [<Quelle> …]` oder nur Export plus `--gac`
+- **Optionen:** `SourceToAI --export <Export-Pfad> [--input <Quelle> …] [--gac <DLL-Muster> …] [--exclude <Glob> …]` (Kurzform: `-i`)
 
-**Quelle** ist jeweils ein existierendes **Verzeichnis** (Solution/Repo mit `.sln` oder `.csproj`) oder eine **.dll**-/.**exe**-Assembly.
+**Quelle** ist jeweils ein existierendes **Verzeichnis** (Solution/Repo mit `.sln` oder `.csproj`) oder eine **.dll**-/.**exe**-Assembly. Alternativ oder zusätzlich liefert **`--gac`** Pfade aus dem .NET-Framework-GAC (siehe unten). Mindestens ein Quellpfad oder mindestens ein `--gac`-Muster ist erforderlich.
+
+**`--gac`:** Mehrfach angebbare **Dateinamen-Muster** (`*`, `?`) für DLLs im GAC (z. B. `Contoso.*.dll`). Der GAC-Root wird automatisch unter `%WINDIR%\Microsoft.NET\assembly` ermittelt; optional überschreibbar über `GacAssemblyRoot` in `appsettings.json`. Pro Assembly-Name und Public-Key-Token wird die **höchste** installierte Version gewählt; existiert dieselbe Identität in `GAC_MSIL` und `GAC_32`, wird **MSIL** bevorzugt. Liefert ein angegebenes Muster keinen Treffer, bricht die CLI mit einer klaren Meldung ab.
 
 **Optional `--exclude`:** Mehrfach angebbare Glob-Muster ([`Microsoft.Extensions.FileSystemGlobbing`](https://learn.microsoft.com/en-us/dotnet/core/extensions/file-globbing)), ausgewertet **relativ zum Projektstamm** (Ordner der jeweiligen `.csproj`) und **zusätzlich relativ zur Solution-/Eingabe-Wurzel** (wichtig für Ordner direkt unter der Wurzel ohne eigenes `.csproj`, z. B. `ExternalTools`). Sie wirken auf den rekursiven Dateiscan (View `complete`, Unmapped-Ordner, eingebettete Nicht-C#-Dateien), nicht auf die separat erfassten Solution-Doku-Pfade (Root-`README`, `.cursor/rules`, `.github/workflows`, flaches `Docs/`). Muster aus der CLI werden an `ExcludedPathPatterns` in `appsettings.json` **angehängt**. `*` deckt ein Pfadsegment ab; `**` beliebige Tiefe. Ein Ordnername **ohne Wildcards** (z. B. `ExternalTools`) schließt den gesamten Unterbaum ein; alternativ `ExternalTools/**`. `wwwroot/lib/*` nur direkte Kindelemente von `lib`, für den **gesamten Unterbaum** `wwwroot/lib/**`.
 
@@ -63,6 +65,14 @@ SourceToAI C:\AI_Feeds\Exports "C:\Apps\ContosoTools\bin\Release\net10.0\Contoso
 
 ```cmd
 SourceToAI --export ./exports -i C:\Daten\RepoA\ -i C:\Daten\RepoB\
+```
+
+```cmd
+SourceToAI C:\AI_Feeds\Exports --gac "Contoso.*.dll" --gac "Acme.Core.*.dll"
+```
+
+```cmd
+SourceToAI --export ./exports --input C:\Daten\RepoA\ --gac "Contoso.*.dll"
 ```
 
 ```cmd
@@ -92,6 +102,7 @@ Die Datei muss **neben der ausführbaren Datei** liegen (wird mit ausgeliefert).
     "SourceToAI": {
         "ExcludedDirectories": [ "bin", "obj", ".git", ".vs", ".idea", "node_modules" ],
         "ExcludedPathPatterns": [ "wwwroot/lib/**" ],
+        "GacAssemblyRoot": null,
         "IncludedExtensions": [
             ".cs", ".sql", ".json", ".xml", ".xaml", ".yml", ".md", ".mdc", ".js", ".ts", ".css",
             ".cshtml", ".html", ".http", ".razor", ".svg", ".txt", ".csproj"
