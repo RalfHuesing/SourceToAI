@@ -64,9 +64,29 @@ public sealed class MultiViewExportService(
                 foreach (var partition in partitions)
                 {
                     var partitionName = partition.SubNamespaceName;
-                    var virtualProjName = string.IsNullOrEmpty(partitionName)
-                        ? project.ProjectName
-                        : $"{project.ProjectName}.{partitionName}";
+                    string virtualProjName;
+
+                    if (string.IsNullOrEmpty(partitionName))
+                    {
+                        virtualProjName = project.ProjectName;
+                    }
+                    else
+                    {
+                        var prefix = project.ProjectName + ".";
+                        if (partitionName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                        {
+                            var sub = partitionName.Substring(prefix.Length);
+                            virtualProjName = string.IsNullOrEmpty(sub) ? project.ProjectName : $"{project.ProjectName}.{sub}";
+                        }
+                        else if (string.Equals(partitionName, project.ProjectName, StringComparison.OrdinalIgnoreCase))
+                        {
+                            virtualProjName = project.ProjectName;
+                        }
+                        else
+                        {
+                            virtualProjName = $"{project.ProjectName}.{partitionName}";
+                        }
+                    }
 
                     var virtualCsproj = Path.Combine(project.RootDirectory, $"{virtualProjName}.virtual.csproj");
                     var virtualProject = new ProjectDefinition(virtualProjName, virtualCsproj);

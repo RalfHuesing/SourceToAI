@@ -159,7 +159,7 @@ public sealed class ProjectSplittingEngine(ICSharpDocumentLoader csharpDocumentL
             if (bestParent == null)
                 break;
 
-            CollapseNode(bestParent, activeBuckets);
+            CollapseTwoSmallestChildren(bestParent, activeBuckets);
         }
 
         // 4. Geschwister-Optimierung (Zusammenfassung kleiner Buckets unter maxFileSize)
@@ -179,7 +179,10 @@ public sealed class ProjectSplittingEngine(ICSharpDocumentLoader csharpDocumentL
                 if (childrenBuckets.Count >= 2)
                 {
                     long combinedSize = childrenBuckets.Sum(b => b.Size);
-                    if (combinedSize <= maxSizeBytes)
+                    // Sibling-Optimierung nur fuer sehr kleine Buckets (z. B. unter 20% des Limits oder max. 50 KB),
+                    // damit fachliche Splits bei ausreichend grossen Namespaces erhalten bleiben.
+                    long tinyThresholdBytes = Math.Min(maxSizeBytes / 5, 50 * 1024L);
+                    if (combinedSize <= tinyThresholdBytes)
                     {
                         CollapseNode(parent, activeBuckets);
                         optimized = true;
@@ -266,6 +269,35 @@ public sealed class ProjectSplittingEngine(ICSharpDocumentLoader csharpDocumentL
         }
 
         activeBuckets[parent] = new Bucket(parent, mergedPaths, mergedSize);
+    }
+
+    private static void CollapseTwoSmallestChildren(NamespaceNode parent, Dictionary<NamespaceNode, Bucket> activeBuckets)
+    {
+        var subtreeBuckets = new List<Bucket>();
+        CollectActiveBucketsInSubtree(parent, activeBuckets, subtreeBuckets);
+
+        if (subtreeBuckets.Count < 2)
+            return;
+
+        var sorted = subtreeBuckets.OrderBy(b => b.Size).ToList();
+        var b1 = sorted[0];
+        var b2 = sorted[1];
+
+        var mergedPaths = b1.FilePaths.Concat(b2.FilePaths).ToList();
+        long mergedSize = b1.Size + b2.Size;
+
+        activeBuckets.Remove(b1.Node);
+        activeBuckets.Remove(b2.Node);
+
+        if (activeBuckets.TryGetValue(parent, out var existingParentBucket))
+        {
+            existingParentBucket.FilePaths.AddRange(mergedPaths);
+            activeBuckets[parent] = new Bucket(parent, existingParentBucket.FilePaths, existingParentBucket.Size + mergedSize);
+        }
+        else
+        {
+            activeBuckets[parent] = new Bucket(parent, mergedPaths, mergedSize);
+        }
     }
 
     private static void CollectActiveBucketsInSubtree(NamespaceNode node, Dictionary<NamespaceNode, Bucket> activeBuckets, List<Bucket> results)
