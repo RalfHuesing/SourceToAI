@@ -2,10 +2,12 @@ using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using SourceToAI.CLI.App;
 using SourceToAI.CLI.Configuration;
+using SourceToAI.CLI.Infrastructure;
 using SourceToAI.CLI.Models;
 using SourceToAI.CLI.Services.Decompilation;
 using SourceToAI.CLI.Services.Discovery;
 using SourceToAI.CLI.Services.Export;
+using SourceToAI.CLI.Services.Export.AiFeed;
 using SourceToAI.CLI.Services.Integration;
 using SourceToAI.CLI.Services.Processing;
 using SourceToAI.Tests.Support;
@@ -273,5 +275,101 @@ public sealed class MultiViewExportIntegrationTests
         Assert.Contains("{\"fixture\":true}", fullSource, StringComparison.Ordinal);
 
         post.Verify(p => p.ExecuteAsync(solutionName, isolatedSolRoot), Times.Once);
+    }
+
+    [Fact]
+    public async Task RunAsync_with_splitting_active_generates_correct_file_names()
+    {
+        using var export = new TempWorkspace();
+        using var solution = new TempWorkspace();
+
+        var services = new ServiceCollection();
+        var settings = TestAppSettingsFactory.Default();
+        settings.MaxFileSizeKb = 1; // force splitting
+        settings.MaxFileCount = 3; // allow up to 3 files
+        services.AddSingleton(settings);
+        services.AddSingleton<ICSharpDocumentLoader, CSharpDocumentLoader>();
+        services.AddTransient<ProjectSplittingEngine>();
+        services.AddViewGenerators();
+        services.AddMarkdownProjectViewBuilders();
+        services.AddSingleton<IAiFeedMarkdownComposer, AiFeedMarkdownComposer>();
+        services.AddTransient<IMultiViewExportService, MultiViewExportService>();
+        services.AddSingleton<IMultiViewReadmeMarkdownGenerator, MultiViewReadmeMarkdownGenerator>();
+        using var multiViewSp = services.BuildServiceProvider();
+
+        const string solutionName = "SplitSol";
+
+        var projCsproj = Path.Combine(solution.Root, "Platform", "Platform.csproj");
+        Directory.CreateDirectory(Path.GetDirectoryName(projCsproj)!);
+        await File.WriteAllTextAsync(
+            projCsproj,
+            """<Project Sdk="Microsoft.NET.Sdk"></Project>""",
+            TestContext.Current.CancellationToken);
+
+        // Core namespace (no namespace) - Add padding to prevent sibling collapse
+        await File.WriteAllTextAsync(
+            Path.Combine(solution.Root, "Platform", "Program.cs"),
+            "class Program { }" + new string('x', 500),
+            TestContext.Current.CancellationToken);
+
+        // Core namespace (starts with Platform.Core) - Add padding to prevent sibling collapse
+        await File.WriteAllTextAsync(
+            Path.Combine(solution.Root, "Platform", "Core.cs"),
+            "namespace Platform.Core; public class CoreService { }" + new string('x', 500),
+            TestContext.Current.CancellationToken);
+
+        // Features namespace (starts with Platform.Features) - Add padding to prevent sibling collapse
+        await File.WriteAllTextAsync(
+            Path.Combine(solution.Root, "Platform", "Features.cs"),
+            "namespace Platform.Features; public class FeatureService { }" + new string('x', 500),
+            TestContext.Current.CancellationToken);
+
+        var project = new ProjectDefinition("Platform", projCsproj);
+
+        var solutionDiscovery = new Mock<ISolutionDiscoveryService>();
+        solutionDiscovery.Setup(s => s.GetSolutionName(solution.Root)).Returns(ExtractionResult<string>.Success(solutionName));
+        solutionDiscovery
+            .Setup(s => s.FindProjects(solution.Root))
+            .Returns(ExtractionResult<List<ProjectDefinition>>.Success([project]));
+
+        var fileDiscovery = new Mock<IFileDiscoveryService>();
+        fileDiscovery.Setup(f => f.FindSolutionDocs(solution.Root, It.IsAny<AppSettings>())).Returns(ExtractionResult<List<string>>.Success([]));
+        fileDiscovery
+            .Setup(f => f.FindUnmappedDirectories(solution.Root, It.IsAny<IReadOnlyList<ProjectDefinition>>(), It.IsAny<AppSettings>()))
+            .Returns(ExtractionResult<List<(string, List<string>)>>.Success([]));
+        fileDiscovery
+            .Setup(f => f.FindFilesForProject(project, It.IsAny<string>(), It.IsAny<AppSettings>()))
+            .Returns(
+                ExtractionResult<List<string>>.Success(
+                [
+                    Path.Combine(solution.Root, "Platform", "Program.cs"),
+                    Path.Combine(solution.Root, "Platform", "Core.cs"),
+                    Path.Combine(solution.Root, "Platform", "Features.cs")
+                ]));
+
+        var post = new Mock<IPostExportTask>();
+        post.Setup(p => p.ExecuteAsync(It.IsAny<string>(), It.IsAny<string>())).Returns(Task.CompletedTask);
+
+        var assemblyDecompiler = new Mock<IAssemblyDecompilerService>(MockBehavior.Strict);
+
+        var sut = new ConsoleOrchestrator(
+            solutionDiscovery.Object,
+            fileDiscovery.Object,
+            assemblyDecompiler.Object,
+            new CsprojDependencyGraphMarkdownGenerator(),
+            multiViewSp.GetRequiredService<IMultiViewExportService>(),
+            multiViewSp.GetRequiredService<IMultiViewReadmeMarkdownGenerator>(),
+            settings,
+            [post.Object]);
+
+        await File.WriteAllTextAsync(Path.Combine(export.Root, ".sta-marker"), "", TestContext.Current.CancellationToken);
+        await sut.RunAsync([solution.Root], export.Root);
+
+        var mergedRoot = Path.Combine(export.Root, "Merged", "complete");
+        
+        // Assert that the generated files are named with the sub-namespace suffix before the view key:
+        // {SolutionName}.{ProjectName}.{SubNamespace}-{view}.md
+        Assert.True(File.Exists(Path.Combine(mergedRoot, "SplitSol.Platform.Core-complete.md")), "Platform.Core file missing or incorrectly named");
+        Assert.True(File.Exists(Path.Combine(mergedRoot, "SplitSol.Platform.Features-complete.md")), "Platform.Features file missing or incorrectly named");
     }
 }
