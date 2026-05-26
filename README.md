@@ -10,7 +10,8 @@
 
 ## Was es macht
 
-- **Multi-View-Export:** In den Ordnern `complete/`, `signatures-only/`, `public-only/` und `dto-only/` liegt pro Projekt jeweils **eine** Markdown-Datei. Dateinamen tragen das View-Suffix: `<Solution>.<Projekt>-<view>.md` (z. B. `MySol.Proj-complete.md`). Virtuelle Solution-Doku (Root-`README`, flaches `Docs/` mit `.md`/`.mdc`, `.cursor/rules` usw.) erscheint in `complete/` als `<Solution>.Docs-complete.md`.
+- **Multi-View-Export:** In den Ordnern `complete/`, `signatures-only/`, `public-only/` und `dto-only/` liegt pro Projekt jeweils **eine** Markdown-Datei. Dateinamen tragen das View-Suffix: `<Solution>.<Projekt>_<view>.md` (z. B. `MySol.Proj_complete.md`). Virtuelle Solution-Doku (Root-`README`, flaches `Docs/` mit `.md`/`.mdc`, `.cursor/rules` usw.) erscheint in `complete/` als `<Solution>.Docs_complete.md`.
+- **Namespace-basiertes Splitting (Große Projekte aufteilen):** Große C#-Projekte können automatisch und intelligent in mehrere kleinere, logisch zusammenhängende Markdown-Feeds aufgeteilt werden. Das Splitting basiert auf der C#-Namespace-Hierarchie unter Berücksichtigung von Dateigrößen-Soft-Limits (`--max-file-size`) und einer harten Obergrenze der Dateianzahl (`--max-file-count`).
 - **Mehrere Quellen in einem Lauf:** Du gibst **ein** globales Export-Ziel und **eine oder mehrere** Quellen an. Jede Quelle wird nacheinander verarbeitet. Workspace-weite AI-Kontextdateien fließen in den gemeinsamen Baum `Merged/` ein, isolierte projektbezogene Dateien landen in `Isolated/<SolutionName>/`.
 - **Quellen:** Verzeichnis mit `.sln`/`.csproj` (typisch Repository- oder Solution-Stamm), eine **.dll/.exe** per Dateipfad oder Assemblys aus dem **.NET-Framework-GAC** (siehe Abschnitt [Assemblies decompilieren](#assemblies-decompilieren-dll--exe-und-gac)).
 - **Robustheit:** Build-Artefakte und übliche Tool-Ordner werden standardmäßig ignoriert; Lesefehler in Unterzweigen führen zu Warnungen, nicht zum kompletten Abbruch.
@@ -39,10 +40,28 @@ Beide Wege können **im selben Lauf** mit Verzeichnis-Quellen kombiniert werden 
 
 ---
 
+## Namespace-basiertes Splitting (Große Projekte aufteilen)
+
+Wenn C#-Projekte sehr groß werden (z. B. über 1,5 MB Markdown-Code), stoßen Web-LLMs oft an Kontextgrenzen oder verlieren den roten Faden. Um dies zu verhindern, bietet SourceToAI ein intelligentes, vollautomatisches Splitting-Feature (**Adaptive Namespace-Clustering**).
+
+Das Feature analysiert die C#-Namespace-Hierarchie als Baum und fusioniert kleinere, zusammengehörige Namensräume bottom-up so, dass die gewünschten Grenzwerte perfekt eingehalten werden.
+
+### Funktionsweise & Features
+
+- **Harte Dateigrenze (`--max-file-count`):** Stellt sicher, dass pro realem C#-Projekt niemals mehr als die konfigurierte Anzahl an Markdown-Dateien erzeugt werden. Dies ist nützlich für Web-LLMs mit Upload-Limits (z. B. maximal 8 oder 10 Dateien).
+- **Dateigrößen-Richtwert (`--max-file-size`):** Richtgröße in Kilobyte, die eine einzelne Markdown-Datei anstreben soll (Soft-Limit). Wird bei Bedarf überschritten, um die harte Obergrenze der Dateianzahl zu wahren.
+- **Saubere Trennung:** 
+  - Nicht-C#-Dateien (z. B. `.json`, `.sql`, `.html`, `.css`) werden sauber in einen separaten **Asset-Feed** (`_Assets`) ausgelagert.
+  - C#-Dateien ohne Namespace (`Program.cs` etc.) landen in einem **Core-Feed** (`_Core`).
+- **Garantierte Explorer-Sortierung:** Alle generierten Feeds werden mit dem Hauptprojekt über einen Unterstrich `_` verbunden (z. B. `MyProj_Core_complete.md`, `MyProj_Auth_complete.md`, `MyProj_complete.md`). Dadurch werden alle Feeds des Hauptprojekts im Datei-Explorer **lückenlos untereinander** einsortiert und sauber von eventuellen Test-Projekten (`MyProj.Tests_complete.md`) getrennt.
+- **Aktivierung:** Das Feature ist aktiv, sobald **sowohl** `--max-file-size` **als auch** `--max-file-count` größer als `0` sind (oder in `appsettings.json` konfiguriert).
+
+---
+
 ## Nutzung mit Web-KIs (Kurz)
 
 1. Export ausführen (siehe unten).
-2. Aus dem gemeinsamen Ordner `Merged/complete/` die passenden `<Solution>.Docs-complete.md`- und Projekt-MD-Dateien (z. B. `...-complete.md`) in den Chat laden.
+2. Aus dem gemeinsamen Ordner `Merged/complete/` die passenden `<Solution>.Docs_complete.md`- und Projekt-MD-Dateien (z. B. `..._complete.md` bzw. `..._SubNamespace_complete.md`) in den Chat laden.
 3. Im Prompt auf Manifest-Einträge und Views verweisen (Überblick: generiertes `readme.md` im Export-Root; Details pro Lösung: `Isolated/<Solution>/readme.md`).
 
 ---
@@ -61,13 +80,17 @@ Für ein einzelnes, portables Binary: im CLI-Projekt z. B. `dotnet publish -c 
 **Syntax (eine Variante wählen – nicht mischen):**
 
 - **Positionsargumente:** `SourceToAI <Export-Pfad> <Quelle> [<Quelle> …]` oder nur Export plus `--gac`
-- **Optionen:** `SourceToAI --export <Export-Pfad> [--input <Quelle> …] [--gac <DLL-Muster> …] [--exclude <Glob> …]` (Kurzform: `-i`)
+- **Optionen:** `SourceToAI --export <Export-Pfad> [--input <Quelle> …] [--gac <DLL-Muster> …] [--exclude <Glob> …] [--max-file-size <kb>] [--max-file-count <anzahl>]` (Kurzform: `-i`)
 
 **Quelle** ist jeweils ein existierendes **Verzeichnis** (Solution/Repo mit `.sln` oder `.csproj`) oder eine **.dll**-/.**exe**-Assembly (wird decompiliert, siehe oben). Alternativ oder zusätzlich liefert **`--gac`** Assembly-Pfade aus dem .NET-Framework-GAC (ebenfalls decompiliert). Mindestens ein Quellpfad oder mindestens ein `--gac`-Muster ist erforderlich.
 
 **`--gac`:** Mehrfach angebbare **Dateinamen-Muster** (`*`, `?`) für DLLs im GAC (z. B. `Contoso.*.dll`). Details zur Auflösung: Abschnitt [Assemblies decompilieren](#assemblies-decompilieren-dll--exe-und-gac). Der GAC-Root wird automatisch unter `%WINDIR%\Microsoft.NET\assembly` ermittelt; optional überschreibbar über `GacAssemblyRoot` in `appsettings.json`. Liefert ein angegebenes Muster keinen Treffer, bricht die CLI mit einer klaren Meldung ab.
 
 **Optional `--exclude`:** Mehrfach angebbare Glob-Muster ([`Microsoft.Extensions.FileSystemGlobbing`](https://learn.microsoft.com/en-us/dotnet/core/extensions/file-globbing)), ausgewertet **relativ zum Projektstamm** (Ordner der jeweiligen `.csproj`) und **zusätzlich relativ zur Solution-/Eingabe-Wurzel** (wichtig für Ordner direkt unter der Wurzel ohne eigenes `.csproj`, z. B. `ExternalTools`). Sie wirken auf den rekursiven Dateiscan (View `complete`, Unmapped-Ordner, eingebettete Nicht-C#-Dateien), nicht auf die separat erfassten Solution-Doku-Pfade (Root-`README`, `.cursor/rules`, `.github/workflows`, flaches `Docs/`). Muster aus der CLI werden an `ExcludedPathPatterns` in `appsettings.json` **angehängt**. `*` deckt ein Pfadsegment ab; `**` beliebige Tiefe. Ein Ordnername **ohne Wildcards** (z. B. `ExternalTools`) schließt den gesamten Unterbaum ein; alternativ `ExternalTools/**`. `wwwroot/lib/*` nur direkte Kindelemente von `lib`, für den **gesamten Unterbaum** `wwwroot/lib/**`.
+
+**Optional `--max-file-size <kb>`:** Aktiviert das adaptive Namespace-Splitting mit dem angegebenen Richtwert für die maximale Größe einer einzelnen Markdown-Datei (in KB). Standard: `0` (deaktiviert). Muss zusammen mit `--max-file-count` > 0 verwendet werden.
+
+**Optional `--max-file-count <anzahl>`:** Die harte Obergrenze für die Anzahl der generierten Markdown-Dateien pro realem C#-Projekt (z. B. maximal `8` Dateien). Standard: `0` (deaktiviert).
 
 **Platzhalter (`*`, `?`) im letzten Pfadsegment:** Unter Windows löst die Shell solche Muster nicht auf. SourceToAI expandiert sie vor der Verarbeitung zu konkreten Datei- und Verzeichnispfaden (wie `Directory.GetFiles` / `GetDirectories`). Liefert ein Muster keinen Treffer oder fehlt der Basisordner, bricht die CLI mit einer klaren Meldung ab. Rekursive Muster (z. B. `**\*.dll`) werden nicht unterstützt.
 
@@ -133,6 +156,8 @@ Die Datei muss **neben der ausführbaren Datei** liegen (wird mit ausgeliefert).
         "ExcludedDirectories": [ "bin", "obj", ".git", ".vs", ".idea", "node_modules" ],
         "ExcludedPathPatterns": [ "wwwroot/lib/**" ],
         "GacAssemblyRoot": null,
+        "MaxFileSizeKb": 0,
+        "MaxFileCount": 0,
         "IncludedExtensions": [
             ".cs", ".sql", ".json", ".xml", ".xaml", ".yml", ".md", ".mdc", ".js", ".ts", ".css",
             ".cshtml", ".html", ".http", ".razor", ".svg", ".txt", ".csproj"
