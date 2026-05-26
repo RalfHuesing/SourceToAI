@@ -1,4 +1,4 @@
-﻿namespace SourceToAI.CLI.Configuration;
+namespace SourceToAI.CLI.Configuration;
 
 public class AppSettings
 {
@@ -26,4 +26,15 @@ public class AppSettings
     /// Leer = automatisch unter %WINDIR%\Microsoft.NET\assembly.
     /// </summary>
     public string? GacAssemblyRoot { get; set; }
+
+    /// <summary>
+    /// Gewünschte maximale Dateigröße pro generierter Markdown-Datei in Kilobyte (Soft-Limit).
+    /// </summary>
+    public int MaxFileSizeKb { get; set; } = 0;
+
+    /// <summary>
+    /// Harte Obergrenze für die Anzahl der generierten Markdown-Dateien pro Projekt.
+    /// </summary>
+    public int MaxFileCount { get; set; } = 0;
 }
+

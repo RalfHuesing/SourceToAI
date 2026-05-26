@@ -20,7 +20,9 @@ public class ConsoleOrchestratorTests
     private static ServiceProvider CreateMultiViewServiceProvider()
     {
         var services = new ServiceCollection();
+        services.AddSingleton(TestAppSettingsFactory.Default());
         services.AddSingleton<ICSharpDocumentLoader, CSharpDocumentLoader>();
+        services.AddTransient<ProjectSplittingEngine>();
         services.AddViewGenerators();
         services.AddMarkdownProjectViewBuilders();
         services.AddSingleton<IAiFeedMarkdownComposer, AiFeedMarkdownComposer>();
