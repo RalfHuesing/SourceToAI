@@ -52,6 +52,7 @@ public sealed class MultiViewExportService(
         }
 
         var isSplittingActive = appSettings.MaxFileSizeKb > 0 && appSettings.MaxFileCount > 0;
+        var virtualProjectSplitInfo = new Dictionary<string, (string RealProj, string SubNamespace)>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var (project, paths) in orderedProjects)
         {
@@ -90,6 +91,7 @@ public sealed class MultiViewExportService(
 
                     var virtualCsproj = Path.Combine(project.RootDirectory, $"{virtualProjName}.virtual.csproj");
                     var virtualProject = new ProjectDefinition(virtualProjName, virtualCsproj);
+                    virtualProjectSplitInfo[virtualProjName] = (project.ProjectName, partitionName);
 
                     exportUnits.Add((virtualProject, partition.Paths, false));
                 }
@@ -185,9 +187,39 @@ public sealed class MultiViewExportService(
             var viewFolder = MultiViewExportPaths.GetViewFolderNameForViewKey(slot.ViewKey);
             var usedStems = usedStemsPerView[slot.ViewKey];
 
-            var stem = MultiViewExportPaths.AllocateUniqueFileStem(
-                MultiViewExportPaths.BuildSanitizedExportFileStem(solutionDisplayName, slot.Project.ProjectName, slot.ViewKey),
-                usedStems);
+            string stemName;
+            if (virtualProjectSplitInfo.TryGetValue(slot.Project.ProjectName, out var splitInfo))
+            {
+                string subNamespaceSuffix = string.Empty;
+                if (!string.IsNullOrEmpty(splitInfo.SubNamespace))
+                {
+                    var prefix = splitInfo.RealProj + ".";
+                    if (splitInfo.SubNamespace.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                    {
+                        subNamespaceSuffix = splitInfo.SubNamespace.Substring(prefix.Length);
+                    }
+                    else if (string.Equals(splitInfo.SubNamespace, splitInfo.RealProj, StringComparison.OrdinalIgnoreCase))
+                    {
+                        subNamespaceSuffix = string.Empty;
+                    }
+                    else
+                    {
+                        subNamespaceSuffix = splitInfo.SubNamespace;
+                    }
+                }
+
+                var projectDisplayName = string.IsNullOrEmpty(subNamespaceSuffix)
+                    ? splitInfo.RealProj
+                    : $"{splitInfo.RealProj}.{subNamespaceSuffix}";
+
+                stemName = MultiViewExportPaths.BuildSanitizedExportFileStem(solutionDisplayName, projectDisplayName, slot.ViewKey);
+            }
+            else
+            {
+                stemName = MultiViewExportPaths.BuildSanitizedExportFileStem(solutionDisplayName, slot.Project.ProjectName, slot.ViewKey);
+            }
+
+            var stem = MultiViewExportPaths.AllocateUniqueFileStem(stemName, usedStems);
             WriteProjectViewFiles(outputRoot, solutionDisplayName, viewFolder, stem, body);
         }
     }
