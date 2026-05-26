@@ -137,15 +137,7 @@ internal static class SourceToAiCli
             if (resolution.ExportPath is null
                 || (resolution.SolutionPaths.Count == 0 && resolution.GacPatterns.Count == 0))
             {
-                if (resolution.ErrorMessage is not null)
-                    await Console.Error.WriteLineAsync(resolution.ErrorMessage);
-                await Console.Error.WriteLineAsync(Usage.UsageLine);
-                await Console.Error.WriteLineAsync(Usage.UsageExamplePositional);
-                await Console.Error.WriteLineAsync(Usage.UsageExampleAssembly);
-                await Console.Error.WriteLineAsync(Usage.UsageExampleAssemblyWildcard);
-                await Console.Error.WriteLineAsync(Usage.UsageExampleGac);
-                await Console.Error.WriteLineAsync(Usage.UsageExampleOptions);
-                await Console.Error.WriteLineAsync(Usage.UsageExampleExclude);
+                PrintPremiumHelp(resolution.ErrorMessage);
                 return 1;
             }
 
@@ -264,5 +256,49 @@ internal static class SourceToAiCli
 
         internal static CliPathResolution Fail(string? errorMessage) =>
             new(null, Array.Empty<string>(), Array.Empty<string>(), errorMessage);
+    }
+
+    internal static void PrintPremiumHelp(string? validationError = null)
+    {
+        if (validationError != null)
+        {
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.Error.WriteLine($"[FEHLER] {validationError}");
+            Console.ResetColor();
+            Console.Error.WriteLine();
+        }
+
+        Console.WriteLine("==================================================================================");
+        Console.WriteLine("SourceToAI - Standalone AI Feed Generator Help");
+        Console.WriteLine("==================================================================================");
+        Console.WriteLine();
+        Console.WriteLine("SYNTAX (Eine der folgenden Varianten waehlen):");
+        Console.WriteLine("  1) Positionsargumente:");
+        Console.WriteLine("     SourceToAI <Export-Pfad> <Quell-Verzeichnis|.dll|.exe>... [Optionen]");
+        Console.WriteLine();
+        Console.WriteLine("  2) Benannte Optionen:");
+        Console.WriteLine("     SourceToAI --export <Export-Pfad> --input <Quell-Verzeichnis|.dll|.exe>... [Optionen]");
+        Console.WriteLine();
+        Console.WriteLine("  3) Reiner GAC-Export (Decompilierung):");
+        Console.WriteLine("     SourceToAI <Export-Pfad> --gac <Muster>... [Optionen]");
+        Console.WriteLine();
+        Console.WriteLine("OPTIONEN & ARGUMENTE:");
+        Console.WriteLine("  <Export-Pfad> / --export      Zielverzeichnis fuer den gesamten Markdown-Export-Baum.");
+        Console.WriteLine("  <Quelle> / --input            Quell-Repository, Solution-Ordner, oder Pfad zu einer .dll/.exe.");
+        Console.WriteLine("  --gac <Muster>                Dateinamen-Muster (*, ?) fuer decompilierte Assemblys aus dem GAC.");
+        Console.WriteLine("  --exclude <Glob>              Glob-Muster fuer auszuschliessende Dateien/Verzeichnisse.");
+        Console.WriteLine("  --max-file-size <kb>          Gewuenschte maximale Dateigroesse pro Markdown-Datei (Soft-Limit).");
+        Console.WriteLine("  --max-file-count <anzahl>     Harte Obergrenze fuer die Anzahl der Dateien pro Projekt.");
+        Console.WriteLine();
+        Console.WriteLine("BEISPIELE:");
+        Console.WriteLine("  - Einfacher Export:");
+        Console.WriteLine("    SourceToAI C:\\AI_Feeds C:\\Daten\\MyRepo");
+        Console.WriteLine();
+        Console.WriteLine("  - Export mit intelligentem Namespace-Splitting (Clustering):");
+        Console.WriteLine("    SourceToAI C:\\AI_Feeds C:\\Daten\\MyRepo --max-file-size 500 --max-file-count 8");
+        Console.WriteLine();
+        Console.WriteLine("  - Export mit Ausschluessen:");
+        Console.WriteLine("    SourceToAI C:\\AI_Feeds C:\\Daten\\MyRepo --exclude \"wwwroot/lib/**\"");
+        Console.WriteLine("==================================================================================");
     }
 }

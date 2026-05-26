@@ -18,15 +18,10 @@ var parseResult = rootCommand.Parse(args);
 
 if (parseResult.Errors.Count > 0)
 {
+    var errorBuilder = new System.Text.StringBuilder();
     foreach (var error in parseResult.Errors)
-        await Console.Error.WriteLineAsync(error.Message);
-    await Console.Error.WriteLineAsync(SourceToAiCli.Usage.UsageLine);
-    await Console.Error.WriteLineAsync(SourceToAiCli.Usage.UsageExamplePositional);
-    await Console.Error.WriteLineAsync(SourceToAiCli.Usage.UsageExampleAssembly);
-    await Console.Error.WriteLineAsync(SourceToAiCli.Usage.UsageExampleAssemblyWildcard);
-    await Console.Error.WriteLineAsync(SourceToAiCli.Usage.UsageExampleGac);
-    await Console.Error.WriteLineAsync(SourceToAiCli.Usage.UsageExampleOptions);
-    await Console.Error.WriteLineAsync(SourceToAiCli.Usage.UsageExampleExclude);
+        errorBuilder.AppendLine(error.Message);
+    SourceToAiCli.PrintPremiumHelp(errorBuilder.ToString().TrimEnd());
     Environment.ExitCode = 1;
     return;
 }
