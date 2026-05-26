@@ -14,7 +14,9 @@ public static class MultiViewExportTestHost
     public static ServiceProvider CreateServiceProvider()
     {
         var services = new ServiceCollection();
+        services.AddSingleton(new CLI.Configuration.AppSettings());
         services.AddSingleton<ICSharpDocumentLoader, CSharpDocumentLoader>();
+        services.AddTransient<ProjectSplittingEngine>();
         services.AddViewGenerators();
         services.AddMarkdownProjectViewBuilders();
         services.AddSingleton<IAiFeedMarkdownComposer, AiFeedMarkdownComposer>();

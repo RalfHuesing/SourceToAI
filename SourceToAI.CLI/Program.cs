@@ -38,6 +38,8 @@ static async Task<int> RunExportPipelineAsync(
     IReadOnlyList<string> solutionPaths,
     IReadOnlyList<string> gacPatterns,
     IReadOnlyList<string> excludePatternsFromCli,
+    int maxFileSize,
+    int maxFileCount,
     CancellationToken cancellationToken)
 {
     cancellationToken.ThrowIfCancellationRequested();
@@ -49,6 +51,11 @@ static async Task<int> RunExportPipelineAsync(
 
     var appSettings = configuration.GetSection("SourceToAI").Get<AppSettings>()
                       ?? new AppSettings();
+
+    if (maxFileSize > 0)
+        appSettings.MaxFileSizeKb = maxFileSize;
+    if (maxFileCount > 0)
+        appSettings.MaxFileCount = maxFileCount;
 
     IReadOnlyList<GacAssemblyDiscovery.GacResolvedAssembly> fromGac;
     try
@@ -120,6 +127,7 @@ static async Task<int> RunExportPipelineAsync(
     services.AddSingleton<IDirectoryEnumerator, DefaultDirectoryEnumerator>();
     services.AddTransient<IFileDiscoveryService, FileDiscoveryService>();
     services.AddSingleton<ICSharpDocumentLoader, CSharpDocumentLoader>();
+    services.AddTransient<ProjectSplittingEngine>();
     services.AddTransient<IFeedGenerator, MarkdownFeedGenerator>();
     services.AddTransient<IDependencyGraphMarkdownGenerator, CsprojDependencyGraphMarkdownGenerator>();
     services.AddTransient<IMultiViewExportService, MultiViewExportService>();

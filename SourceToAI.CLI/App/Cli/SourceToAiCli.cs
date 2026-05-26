@@ -68,7 +68,7 @@ internal static class SourceToAiCli
     /// Erzeugt den Root-Command; <paramref name="runAsync"/> wird bei gültiger CLI aufgerufen.
     /// </summary>
     internal static RootCommand CreateRootCommand(
-        Func<string, IReadOnlyList<string>, IReadOnlyList<string>, IReadOnlyList<string>, CancellationToken, Task<int>> runAsync)
+        Func<string, IReadOnlyList<string>, IReadOnlyList<string>, IReadOnlyList<string>, int, int, CancellationToken, Task<int>> runAsync)
     {
         var exportPositional = new Argument<string?>("export-path")
         {
@@ -101,6 +101,16 @@ internal static class SourceToAiCli
             Description = Usage.ExcludeOptionDescription,
             Arity = ArgumentArity.OneOrMore,
         };
+        var maxFileSizeOption = new Option<int>("--max-file-size")
+        {
+            Description = "Gewuenschte maximale Dateigroesse pro generierter Markdown-Datei in Kilobyte (Soft-Limit).",
+            Arity = ArgumentArity.ExactlyOne,
+        };
+        var maxFileCountOption = new Option<int>("--max-file-count")
+        {
+            Description = "Harte Obergrenze fuer die Anzahl der generierten Markdown-Dateien pro Projekt.",
+            Arity = ArgumentArity.ExactlyOne,
+        };
 
         var root = new RootCommand(Usage.RootDescription)
         {
@@ -112,6 +122,8 @@ internal static class SourceToAiCli
         root.Add(inputOption);
         root.Add(gacOption);
         root.Add(excludeOption);
+        root.Add(maxFileSizeOption);
+        root.Add(maxFileCountOption);
 
         root.SetAction(async (ParseResult parseResult, CancellationToken cancellationToken) =>
         {
@@ -140,12 +152,16 @@ internal static class SourceToAiCli
             string? TrimTok(string? s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim();
             var excludeRaw = parseResult.GetValue(excludeOption);
             var excludePatterns = NormalizePathList(excludeRaw ?? Array.Empty<string>(), TrimTok);
+            var maxFileSize = parseResult.GetValue(maxFileSizeOption);
+            var maxFileCount = parseResult.GetValue(maxFileCountOption);
 
             return await runAsync(
                 resolution.ExportPath!,
                 resolution.SolutionPaths,
                 resolution.GacPatterns,
                 excludePatterns,
+                maxFileSize,
+                maxFileCount,
                 cancellationToken);
         });
 

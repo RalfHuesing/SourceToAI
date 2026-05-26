@@ -1,6 +1,8 @@
 using System.Collections.Concurrent;
+using System.IO;
 using System.Linq;
 using SourceToAI.CLI.App.Exceptions;
+using SourceToAI.CLI.Configuration;
 using SourceToAI.CLI.Models;
 using SourceToAI.CLI.Services.Export.AiFeed;
 using SourceToAI.CLI.Services.Processing;
@@ -10,7 +12,9 @@ namespace SourceToAI.CLI.Services.Export;
 public sealed class MultiViewExportService(
     IEnumerable<IMarkdownProjectViewBuilder> viewBuilders,
     ICSharpDocumentLoader csharpDocumentLoader,
-    IAiFeedMarkdownComposer markdownComposer) : IMultiViewExportService
+    IAiFeedMarkdownComposer markdownComposer,
+    ProjectSplittingEngine splittingEngine,
+    AppSettings appSettings) : IMultiViewExportService
 {
     /// <summary>
     /// Obergrenze paralleler View-Builds (Roslyn/Rewrite + Compose) pro Exportlauf — siehe Task 03 / Projektrichtlinien.
@@ -47,11 +51,33 @@ public sealed class MultiViewExportService(
             exportUnits.Add((docProject, solutionDocumentationAbsolutePaths, true));
         }
 
+        var isSplittingActive = appSettings.MaxFileSizeKb > 0 && appSettings.MaxFileCount > 0;
+
         foreach (var (project, paths) in orderedProjects)
         {
             if (paths.Count == 0)
                 continue;
-            exportUnits.Add((project, paths, false));
+
+            if (isSplittingActive)
+            {
+                var partitions = splittingEngine.PartitionProject(project, paths, appSettings.MaxFileSizeKb, appSettings.MaxFileCount);
+                foreach (var partition in partitions)
+                {
+                    var partitionName = partition.SubNamespaceName;
+                    var virtualProjName = string.IsNullOrEmpty(partitionName)
+                        ? project.ProjectName
+                        : $"{project.ProjectName}.{partitionName}";
+
+                    var virtualCsproj = Path.Combine(project.RootDirectory, $"{virtualProjName}.virtual.csproj");
+                    var virtualProject = new ProjectDefinition(virtualProjName, virtualCsproj);
+
+                    exportUnits.Add((virtualProject, partition.Paths, false));
+                }
+            }
+            else
+            {
+                exportUnits.Add((project, paths, false));
+            }
         }
 
         foreach (var (directoryName, paths) in unmappedDirectories
