@@ -62,15 +62,15 @@ public sealed class MultiViewExportPathsTests
     public void GetViewOutputPath_combines_root_folder_and_md_extension()
     {
         var root = Path.Combine(Path.GetTempPath(), "sta-export-test-" + Guid.NewGuid().ToString("N"));
-        var path = MultiViewExportPaths.GetViewOutputPath(root, "complete", "MySol.MyApp-complete");
-        Assert.Equal(Path.Combine(root, "complete", "MySol.MyApp-complete.md"), path);
+        var path = MultiViewExportPaths.GetViewOutputPath(root, "complete", "MySol.MyApp_complete");
+        Assert.Equal(Path.Combine(root, "complete", "MySol.MyApp_complete.md"), path);
     }
 
     [Fact]
     public void BuildSanitizedExportFileStem_virtual_Docs_no_double_dot_before_project_name()
     {
         Assert.Equal(
-            "San.smart.Planner.Platform2.Docs-complete",
+            "San.smart.Planner.Platform2.Docs_complete",
             MultiViewExportPaths.BuildSanitizedExportFileStem(
                 "San.smart.Planner.Platform2",
                 ".Docs",
@@ -102,16 +102,16 @@ public sealed class MultiViewExportPathsTests
             MultiViewExportPaths.BuildSanitizedExportFileStem(sol, "a:b", "complete"),
             used);
 
-        Assert.Equal("FixtureSol.a_b-complete", stem1);
-        Assert.Equal("FixtureSol.a_b-complete_2", stem2);
+        Assert.Equal("FixtureSol.a_b_complete", stem1);
+        Assert.Equal("FixtureSol.a_b_complete_2", stem2);
         Assert.Equal(2, used.Count);
     }
 
     [Fact]
     public void AllocateUniqueFileStem_reuses_suffix_counter_until_free()
     {
-        var used = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "X.a_b-complete", "X.a_b-complete_2" };
-        var stem = MultiViewExportPaths.AllocateUniqueFileStem("X.a_b-complete", used);
-        Assert.Equal("X.a_b-complete_3", stem);
+        var used = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "X.a_b_complete", "X.a_b_complete_2" };
+        var stem = MultiViewExportPaths.AllocateUniqueFileStem("X.a_b_complete", used);
+        Assert.Equal("X.a_b_complete_3", stem);
     }
 }

@@ -120,8 +120,8 @@ public static class MultiViewExportPaths
         var view = SanitizeFileNameSegment(viewKey);
         // Virtuelle Projektnamen wie ".Docs": kein "{sol}.{proj}" — sonst "..Docs" im Dateinamen.
         var stem = proj.Length > 0 && proj[0] == '.'
-            ? $"{sol}{proj}-{view}"
-            : $"{sol}.{proj}-{view}";
+            ? $"{sol}{proj}_{view}"
+            : $"{sol}.{proj}_{view}";
         stem = EnsureNotReservedWindowsStem(stem);
         return stem;
     }

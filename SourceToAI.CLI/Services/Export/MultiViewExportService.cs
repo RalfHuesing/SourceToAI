@@ -210,7 +210,7 @@ public sealed class MultiViewExportService(
 
                 var projectDisplayName = string.IsNullOrEmpty(subNamespaceSuffix)
                     ? splitInfo.RealProj
-                    : $"{splitInfo.RealProj}.{subNamespaceSuffix}";
+                    : $"{splitInfo.RealProj}_{subNamespaceSuffix}";
 
                 stemName = MultiViewExportPaths.BuildSanitizedExportFileStem(solutionDisplayName, projectDisplayName, slot.ViewKey);
             }
