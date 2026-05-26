@@ -76,8 +76,8 @@ public sealed class MultiViewExportParallelDeterminismTests
             foreach (var name in orderedNames)
             {
                 Assert.True(
-                    File.Exists(Path.Combine(outputRoot, "Merged", "complete", $"{solutionDisplayName}.{name}-complete.md")),
-                    $"Run {run}: Merged/complete/{solutionDisplayName}.{name}-complete.md");
+                    File.Exists(Path.Combine(outputRoot, "Merged", "complete", $"{solutionDisplayName}.{name}_complete.md")),
+                    $"Run {run}: Merged/complete/{solutionDisplayName}.{name}_complete.md");
             }
 
             var fingerprint = FingerprintExportTree(outputRoot);

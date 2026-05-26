@@ -33,7 +33,7 @@ public sealed class MultiViewReadmeMarkdownGenerator : IMultiViewReadmeMarkdownG
             "Jede View ist ein anderer „Zoom“ auf dieselben geparsten C#-Dateien (pro Lauf ein Parse, mehrere Sichten):");
         sb.AppendLine();
         sb.AppendLine(
-            $"- **`{MultiViewExportPaths.CompleteFolderName}`** — vollständiger Text pro Projekt inkl. Nicht-`.cs`-Dateien. Virtuelle Solution-Doku (Root-`README`, flaches `Docs/` mit `.md`/`.mdc`, `.cursor/rules`, …) erscheint als `<Solution>.Docs-complete.md` (Projektname `.Docs`).");
+            $"- **`{MultiViewExportPaths.CompleteFolderName}`** — vollständiger Text pro Projekt inkl. Nicht-`.cs`-Dateien. Virtuelle Solution-Doku (Root-`README`, flaches `Docs/` mit `.md`/`.mdc`, `.cursor/rules`, …) erscheint als `<Solution>.Docs_complete.md` (Projektname `.Docs`).");
         sb.AppendLine(
             $"- **`{MultiViewExportPaths.SignaturesOnlyFolderName}`** — nur Signaturen, wenig Tokens, gut für Architektur und Schnittstellen.");
         sb.AppendLine(
@@ -54,9 +54,9 @@ public sealed class MultiViewReadmeMarkdownGenerator : IMultiViewReadmeMarkdownG
         sb.AppendLine("Empfohlene Reihenfolge:");
         sb.AppendLine();
         sb.AppendLine(
-            $"1. **Signaturen / API-Oberfläche:** Zuerst in **`Merged/{MultiViewExportPaths.SignaturesOnlyFolderName}/`** suchen (bei genau einer Solution alternativ `Isolated/<Solution>/{MultiViewExportPaths.SignaturesOnlyFolderName}/`). Dort stehen kompakte Signaturen — ideal, um die **richtige Projekt-Datei** (`<Solution>.<Projekt>-signatures-only.md`) und Stelle zu finden.");
+            $"1. **Signaturen / API-Oberfläche:** Zuerst in **`Merged/{MultiViewExportPaths.SignaturesOnlyFolderName}/`** suchen (bei genau einer Solution alternativ `Isolated/<Solution>/{MultiViewExportPaths.SignaturesOnlyFolderName}/`). Dort stehen kompakte Signaturen — ideal, um die **richtige Projekt-Datei** (`<Solution>.<Projekt>_signatures-only.md`) und Stelle zu finden.");
         sb.AppendLine(
-            $"2. **Implementierung lesen:** Dieselbe logische Datei unter **`Merged/{MultiViewExportPaths.CompleteFolderName}/`** bzw. **`Isolated/<Solution>/{MultiViewExportPaths.CompleteFolderName}/`** öffnen (gleiches Namensschema, Endung `-complete.md`) und den **CONTENT**-Block zur passenden Manifest-ID lesen.");
+            $"2. **Implementierung lesen:** Dieselbe logische Datei unter **`Merged/{MultiViewExportPaths.CompleteFolderName}/`** bzw. **`Isolated/<Solution>/{MultiViewExportPaths.CompleteFolderName}/`** öffnen (gleiches Namensschema, Endung `_complete.md`) und den **CONTENT**-Block zur passenden Manifest-ID lesen.");
         sb.AppendLine(
             $"3. **Nur öffentliche Oberfläche:** Wenn es um `public`/`protected` geht, kann **`Merged/{MultiViewExportPaths.PublicOnlyFolderName}/`** helfen; für reine Datenverträge **`Merged/{MultiViewExportPaths.DtoOnlyFolderName}/`**.");
         sb.AppendLine(
@@ -74,8 +74,8 @@ public sealed class MultiViewReadmeMarkdownGenerator : IMultiViewReadmeMarkdownG
         sb.AppendLine("# 1) Definition/Signatur finden (bevorzugt)");
         sb.AppendLine($"rg -n \"GetOrCreateSession\" Merged/{MultiViewExportPaths.SignaturesOnlyFolderName}");
         sb.AppendLine();
-        sb.AppendLine("# 2) Treffer auf wenige Projekt-Feeds eingrenzen (Dateiname = <Solution>.<Projekt>-<view>.md)");
-        sb.AppendLine($"rg --files -g \"*Examples.Library*-{MultiViewExportPaths.SignaturesOnlyFolderName}.md\" Merged/{MultiViewExportPaths.SignaturesOnlyFolderName}");
+        sb.AppendLine("# 2) Treffer auf wenige Projekt-Feeds eingrenzen (Dateiname = <Solution>.<Projekt>_<view>.md)");
+        sb.AppendLine($"rg --files -g \"*Examples.Library*_{MultiViewExportPaths.SignaturesOnlyFolderName}.md\" Merged/{MultiViewExportPaths.SignaturesOnlyFolderName}");
         sb.AppendLine();
         sb.AppendLine("# 3) Nur Dateiliste (schnell), dann gezielt eine .md öffnen");
         sb.AppendLine($"rg -l \"record TelemetryEnvelope\" Merged/{MultiViewExportPaths.SignaturesOnlyFolderName}");
@@ -118,12 +118,12 @@ public sealed class MultiViewReadmeMarkdownGenerator : IMultiViewReadmeMarkdownG
         sb.AppendLine("|:---|:---|");
         sb.AppendLine("| `./readme.md` | Diese Übersicht — Kontext und Konventionen für **diese** Lösung. |");
         sb.AppendLine("| `./dependency-graph.md` | **Solution-Ebene:** Architektur-Überblick mit csproj-Abhängigkeiten und NuGet-Paketen **ohne** eingebetteten Quellcode. |");
-        sb.AppendLine("| `./<view>/<Solution>.<Projekt>-<view>.md` | Projekt-Feeds gruppiert unter dieser Lösung. |");
-        sb.AppendLine("| `../Merged/<view>/<Solution>.<Projekt>-<view>.md` | Derselbe Inhalt **workspace-weit** unter `Merged/` — ideal, wenn mehrere Quellen im selben Export liegen. |");
+        sb.AppendLine("| `./<view>/<Solution>.<Projekt>_<view>.md` | Projekt-Feeds gruppiert unter dieser Lösung. |");
+        sb.AppendLine("| `../Merged/<view>/<Solution>.<Projekt>_<view>.md` | Derselbe Inhalt **workspace-weit** unter `Merged/` — ideal, wenn mehrere Quellen im selben Export liegen. |");
         sb.AppendLine();
         sb.AppendLine("Dabei entspricht `<view>` einer der folgenden Sichten:");
         sb.AppendLine(
-            $"- `{MultiViewExportPaths.CompleteFolderName}`: **Vollständiger** Stand pro Projekt inkl. Nicht-`.cs`-Dateien (1:1-Texte). **Solution-Dokumentation** (Root, flaches `Docs/`, `.cursor`, …) liegt als `<Solution>.Docs-complete.md` (Projektname `.Docs`) in diesem Ordner.");
+            $"- `{MultiViewExportPaths.CompleteFolderName}`: **Vollständiger** Stand pro Projekt inkl. Nicht-`.cs`-Dateien (1:1-Texte). **Solution-Dokumentation** (Root, flaches `Docs/`, `.cursor`, …) liegt als `<Solution>.Docs_complete.md` (Projektname `.Docs`) in diesem Ordner.");
         sb.AppendLine(
             $"- `{MultiViewExportPaths.SignaturesOnlyFolderName}`: Nur Signaturen — wenig Tokens, Schnittstellen & Typen für Architekturfragen.");
         sb.AppendLine(
@@ -134,13 +134,13 @@ public sealed class MultiViewReadmeMarkdownGenerator : IMultiViewReadmeMarkdownG
         sb.AppendLine("## Gezielte Suche (KI) — dieselbe Logik wie in der globalen `readme.md`");
         sb.AppendLine();
         sb.AppendLine(
-            "Für **Definitionen** zuerst **`./signatures-only/`** durchsuchen, dann die passende Datei unter **`./complete/`** mit gleichem `<Solution>.<Projekt>-…`-Stamm öffnen. **`./complete/`** allein nach einem Methodennamen durchsuchen liefert oft massenhaft **Aufrufe** statt der Definition.");
+            "Für **Definitionen** zuerst **`./signatures-only/`** durchsuchen, dann die passende Datei unter **`./complete/`** mit gleichem `<Solution>.<Projekt>_…`-Stamm öffnen. **`./complete/`** allein nach einem Methodennamen durchsuchen liefert oft massenhaft **Aufrufe** statt der Definition.");
         sb.AppendLine();
         sb.AppendLine("Beispiele (PowerShell, Arbeitsverzeichnis = dieser Ordner):");
         sb.AppendLine();
         sb.AppendLine("```bash");
         sb.AppendLine($"rg -n \"GetOrCreateSession\" ./{MultiViewExportPaths.SignaturesOnlyFolderName}");
-        sb.AppendLine($"rg --files -g \"*Examples.Library*-{MultiViewExportPaths.SignaturesOnlyFolderName}.md\" ./{MultiViewExportPaths.SignaturesOnlyFolderName}");
+        sb.AppendLine($"rg --files -g \"*Examples.Library*_{MultiViewExportPaths.SignaturesOnlyFolderName}.md\" ./{MultiViewExportPaths.SignaturesOnlyFolderName}");
         sb.AppendLine("```");
         sb.AppendLine();
         sb.AppendLine(

@@ -128,23 +128,23 @@ public sealed class AiFeedProjectGranularityIntegrationTests
         Assert.True(Directory.Exists(isolatedSolRoot));
         var mergedRoot = Path.Combine(export.Root, "Merged");
 
-        // Eine Markdown-Datei pro Projekt und View (Präfix Solution, Suffix -view.md)
-        Assert.True(File.Exists(Path.Combine(mergedRoot, "complete", "GranSol.ProjA-complete.md")));
-        Assert.True(File.Exists(Path.Combine(mergedRoot, "complete", "GranSol.ProjB-complete.md")));
-        Assert.True(File.Exists(Path.Combine(mergedRoot, "public-only", "GranSol.ProjA-public-only.md")));
-        Assert.True(File.Exists(Path.Combine(mergedRoot, "public-only", "GranSol.ProjB-public-only.md")));
+        // Eine Markdown-Datei pro Projekt und View (Präfix Solution, Suffix _view.md)
+        Assert.True(File.Exists(Path.Combine(mergedRoot, "complete", "GranSol.ProjA_complete.md")));
+        Assert.True(File.Exists(Path.Combine(mergedRoot, "complete", "GranSol.ProjB_complete.md")));
+        Assert.True(File.Exists(Path.Combine(mergedRoot, "public-only", "GranSol.ProjA_public-only.md")));
+        Assert.True(File.Exists(Path.Combine(mergedRoot, "public-only", "GranSol.ProjB_public-only.md")));
 
         var completeA = await File.ReadAllTextAsync(
-            Path.Combine(mergedRoot, "complete", "GranSol.ProjA-complete.md"),
+            Path.Combine(mergedRoot, "complete", "GranSol.ProjA_complete.md"),
             TestContext.Current.CancellationToken);
         var completeB = await File.ReadAllTextAsync(
-            Path.Combine(mergedRoot, "complete", "GranSol.ProjB-complete.md"),
+            Path.Combine(mergedRoot, "complete", "GranSol.ProjB_complete.md"),
             TestContext.Current.CancellationToken);
         var publicA = await File.ReadAllTextAsync(
-            Path.Combine(mergedRoot, "public-only", "GranSol.ProjA-public-only.md"),
+            Path.Combine(mergedRoot, "public-only", "GranSol.ProjA_public-only.md"),
             TestContext.Current.CancellationToken);
         var publicB = await File.ReadAllTextAsync(
-            Path.Combine(mergedRoot, "public-only", "GranSol.ProjB-public-only.md"),
+            Path.Combine(mergedRoot, "public-only", "GranSol.ProjB_public-only.md"),
             TestContext.Current.CancellationToken);
 
         AiFeedExportIntegrationAsserts.AssertAiFeedStructuralInvariants(completeA);
@@ -157,10 +157,10 @@ public sealed class AiFeedProjectGranularityIntegrationTests
         Assert.Contains("Visible", publicA, StringComparison.Ordinal);
 
         var sigA = await File.ReadAllTextAsync(
-            Path.Combine(mergedRoot, "signatures-only", "GranSol.ProjA-signatures-only.md"),
+            Path.Combine(mergedRoot, "signatures-only", "GranSol.ProjA_signatures-only.md"),
             TestContext.Current.CancellationToken);
         var sigB = await File.ReadAllTextAsync(
-            Path.Combine(mergedRoot, "signatures-only", "GranSol.ProjB-signatures-only.md"),
+            Path.Combine(mergedRoot, "signatures-only", "GranSol.ProjB_signatures-only.md"),
             TestContext.Current.CancellationToken);
         AiFeedExportIntegrationAsserts.AssertSignatureFencesParseWithoutSyntaxErrors(sigA + sigB);
 

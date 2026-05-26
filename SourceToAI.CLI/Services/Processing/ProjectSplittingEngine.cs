@@ -115,7 +115,7 @@ public sealed class ProjectSplittingEngine(ICSharpDocumentLoader csharpDocumentL
             coreBucket = new Bucket(coreNode, coreFiles.Select(f => f.Path).ToList(), coreFiles.Sum(f => f.Size));
         }
 
-        int GetTotalBucketCount() => activeBuckets.Count + (coreBucket != null ? 1 : 0);
+        int GetTotalBucketCount() => activeBuckets.Count + (coreBucket != null ? 1 : 0) + (assetPaths.Count > 0 ? 1 : 0);
 
         // 3. Kollaps-Schleife (Harte Grenze erzwingen)
         while (GetTotalBucketCount() > maxFileCount && activeBuckets.Count > 1)
