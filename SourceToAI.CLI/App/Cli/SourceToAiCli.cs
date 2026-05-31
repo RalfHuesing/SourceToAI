@@ -68,7 +68,7 @@ internal static class SourceToAiCli
     /// Erzeugt den Root-Command; <paramref name="runAsync"/> wird bei gültiger CLI aufgerufen.
     /// </summary>
     internal static RootCommand CreateRootCommand(
-        Func<string, IReadOnlyList<string>, IReadOnlyList<string>, IReadOnlyList<string>, int, int, CancellationToken, Task<int>> runAsync)
+        Func<string, IReadOnlyList<string>, IReadOnlyList<string>, IReadOnlyList<string>, int, int, bool, CancellationToken, Task<int>> runAsync)
     {
         var exportPositional = new Argument<string?>("export-path")
         {
@@ -111,6 +111,10 @@ internal static class SourceToAiCli
             Description = "Harte Obergrenze fuer die Anzahl der generierten Markdown-Dateien pro Projekt.",
             Arity = ArgumentArity.ExactlyOne,
         };
+        var noSuppressCoreOption = new Option<bool>("--no-suppress-core")
+        {
+            Description = "Legacy: C#-Dateien ohne Namespace als eigene Core-Partition (_Core) exportieren.",
+        };
 
         var root = new RootCommand(Usage.RootDescription)
         {
@@ -124,6 +128,7 @@ internal static class SourceToAiCli
         root.Add(excludeOption);
         root.Add(maxFileSizeOption);
         root.Add(maxFileCountOption);
+        root.Add(noSuppressCoreOption);
 
         root.SetAction(async (ParseResult parseResult, CancellationToken cancellationToken) =>
         {
@@ -146,6 +151,7 @@ internal static class SourceToAiCli
             var excludePatterns = NormalizePathList(excludeRaw ?? Array.Empty<string>(), TrimTok);
             var maxFileSize = parseResult.GetValue(maxFileSizeOption);
             var maxFileCount = parseResult.GetValue(maxFileCountOption);
+            var noSuppressCore = parseResult.GetValue(noSuppressCoreOption);
 
             return await runAsync(
                 resolution.ExportPath!,
@@ -154,6 +160,7 @@ internal static class SourceToAiCli
                 excludePatterns,
                 maxFileSize,
                 maxFileCount,
+                noSuppressCore,
                 cancellationToken);
         });
 
@@ -289,6 +296,7 @@ internal static class SourceToAiCli
         Console.WriteLine("  --exclude <Glob>              Glob-Muster fuer auszuschliessende Dateien/Verzeichnisse.");
         Console.WriteLine("  --max-file-size <kb>          Gewuenschte maximale Dateigroesse pro Markdown-Datei (Soft-Limit).");
         Console.WriteLine("  --max-file-count <anzahl>     Harte Obergrenze fuer die Anzahl der Dateien pro Projekt.");
+        Console.WriteLine("  --no-suppress-core            Legacy: eigene Core-Partition fuer C# ohne Namespace.");
         Console.WriteLine();
         Console.WriteLine("BEISPIELE:");
         Console.WriteLine("  - Einfacher Export:");

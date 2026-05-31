@@ -56,7 +56,7 @@ public class ProjectSplittingEngineTests
     }
 
     [Fact]
-    public void PartitionProject_separates_global_namespace_into_core()
+    public void PartitionProject_separates_global_namespace_into_core_when_not_suppressed()
     {
         using var ws = new TempWorkspace();
         var globalFile = ws.WriteFile("Program.cs", "class Program { }"); // No namespace
@@ -66,7 +66,7 @@ public class ProjectSplittingEngineTests
         var loader = new CSharpDocumentLoader();
         var sut = new ProjectSplittingEngine(loader);
 
-        var result = sut.PartitionProject(project, [globalFile, nsFile], 100, 5);
+        var result = sut.PartitionProject(project, [globalFile, nsFile], 100, 5, suppressCorePartition: false);
 
         Assert.Equal(2, result.Count);
         
@@ -77,6 +77,51 @@ public class ProjectSplittingEngineTests
         var featurePartition = result.First(r => r.SubNamespaceName == "MyCompany.Features");
         Assert.Single(featurePartition.Paths);
         Assert.Equal(nsFile, featurePartition.Paths[0]);
+    }
+
+    [Fact]
+    public void PartitionProject_absorbs_core_into_smallest_namespace_partition()
+    {
+        using var ws = new TempWorkspace();
+        var globalFile = ws.WriteFile("Program.cs", "class Program { }");
+        var smallNsFile = ws.WriteFile("Small.cs", "namespace MyCompany.Small; class S { }");
+        var largeNsFile = ws.WriteFile("Large.cs", "namespace MyCompany.Large; class L { " + new string('x', 40 * 1024) + " }");
+        var project = new ProjectDefinition("App", Path.Combine(ws.Root, "App.csproj"));
+
+        var loader = new CSharpDocumentLoader();
+        var sut = new ProjectSplittingEngine(loader);
+
+        var result = sut.PartitionProject(project, [globalFile, smallNsFile, largeNsFile], 100, 5);
+
+        Assert.Equal(2, result.Count);
+        Assert.DoesNotContain(result, r => r.SubNamespaceName == "Core");
+
+        var smallPartition = result.First(r => r.SubNamespaceName == "MyCompany.Small");
+        Assert.Equal(2, smallPartition.Paths.Count);
+        Assert.Contains(globalFile, smallPartition.Paths);
+        Assert.Contains(smallNsFile, smallPartition.Paths);
+
+        var largePartition = result.First(r => r.SubNamespaceName == "MyCompany.Large");
+        Assert.Single(largePartition.Paths);
+        Assert.Equal(largeNsFile, largePartition.Paths[0]);
+    }
+
+    [Fact]
+    public void PartitionProject_absorbs_core_only_project_into_single_partition()
+    {
+        using var ws = new TempWorkspace();
+        var globalFile = ws.WriteFile("Program.cs", "class Program { }");
+        var project = new ProjectDefinition("App", Path.Combine(ws.Root, "App.csproj"));
+
+        var loader = new CSharpDocumentLoader();
+        var sut = new ProjectSplittingEngine(loader);
+
+        var result = sut.PartitionProject(project, [globalFile], 100, 5);
+
+        Assert.Single(result);
+        Assert.Equal(string.Empty, result[0].SubNamespaceName);
+        Assert.Single(result[0].Paths);
+        Assert.Equal(globalFile, result[0].Paths[0]);
     }
 
     [Fact]

@@ -52,8 +52,8 @@ Das Feature analysiert die C#-Namespace-Hierarchie als Baum und fusioniert klein
 - **Dateigrößen-Richtwert (`--max-file-size`):** Richtgröße in Kilobyte, die eine einzelne Markdown-Datei anstreben soll (Soft-Limit). Wird bei Bedarf überschritten, um die harte Obergrenze der Dateianzahl zu wahren.
 - **Saubere Trennung:** 
   - Nicht-C#-Dateien (z. B. `.json`, `.sql`, `.html`, `.css`) werden sauber in einen separaten **Asset-Feed** (`_Assets`) ausgelagert.
-  - C#-Dateien ohne Namespace (`Program.cs` etc.) landen in einem **Core-Feed** (`_Core`).
-- **Garantierte Explorer-Sortierung:** Alle generierten Feeds werden mit dem Hauptprojekt über einen Unterstrich `_` verbunden (z. B. `MyProj_Core_complete.md`, `MyProj_Auth_complete.md`, `MyProj_complete.md`). Dadurch werden alle Feeds des Hauptprojekts im Datei-Explorer **lückenlos untereinander** einsortiert und sauber von eventuellen Test-Projekten (`MyProj.Tests_complete.md`) getrennt.
+  - C#-Dateien ohne Namespace (`Program.cs` etc.) werden standardmäßig **nicht** als eigener Core-Feed exportiert, sondern in die kleinsten bestehenden Namespace-Feeds umverteilt (`SuppressCorePartition: true` in `appsettings.json`). Legacy-Verhalten: `--no-suppress-core` oder `"SuppressCorePartition": false`.
+- **Garantierte Explorer-Sortierung:** Alle generierten Feeds werden mit dem Hauptprojekt über einen Unterstrich `_` verbunden (z. B. `MyProj_Auth_complete.md`, `MyProj_complete.md`). Dadurch werden alle Feeds des Hauptprojekts im Datei-Explorer **lückenlos untereinander** einsortiert und sauber von eventuellen Test-Projekten (`MyProj.Tests_complete.md`) getrennt.
 - **Aktivierung:** Das Feature ist aktiv, sobald **sowohl** `--max-file-size` **als auch** `--max-file-count` größer als `0` sind (oder in `appsettings.json` konfiguriert).
 
 ---
@@ -91,6 +91,8 @@ Für ein einzelnes, portables Binary: im CLI-Projekt z. B. `dotnet publish -c 
 **Optional `--max-file-size <kb>`:** Aktiviert das adaptive Namespace-Splitting mit dem angegebenen Richtwert für die maximale Größe einer einzelnen Markdown-Datei (in KB). Standard: `0` (deaktiviert). Muss zusammen mit `--max-file-count` > 0 verwendet werden.
 
 **Optional `--max-file-count <anzahl>`:** Die harte Obergrenze für die Anzahl der generierten Markdown-Dateien pro realem C#-Projekt (z. B. maximal `8` Dateien). Standard: `0` (deaktiviert).
+
+**Optional `--no-suppress-core`:** Legacy-Modus — C#-Dateien ohne Namespace wieder als eigene Core-Partition (`MyProj_Core_complete.md`) exportieren. Standard (ohne Flag): Umverteilung in kleinste Namespace-Feeds; steuerbar auch über `SuppressCorePartition` in `appsettings.json`.
 
 **Platzhalter (`*`, `?`) im letzten Pfadsegment:** Unter Windows löst die Shell solche Muster nicht auf. SourceToAI expandiert sie vor der Verarbeitung zu konkreten Datei- und Verzeichnispfaden (wie `Directory.GetFiles` / `GetDirectories`). Liefert ein Muster keinen Treffer oder fehlt der Basisordner, bricht die CLI mit einer klaren Meldung ab. Rekursive Muster (z. B. `**\*.dll`) werden nicht unterstützt.
 
@@ -158,6 +160,7 @@ Die Datei muss **neben der ausführbaren Datei** liegen (wird mit ausgeliefert).
         "GacAssemblyRoot": null,
         "MaxFileSizeKb": 0,
         "MaxFileCount": 0,
+        "SuppressCorePartition": true,
         "IncludedExtensions": [
             ".cs", ".sql", ".json", ".xml", ".xaml", ".yml", ".md", ".mdc", ".js", ".ts", ".css",
             ".cshtml", ".html", ".http", ".razor", ".svg", ".txt", ".csproj"

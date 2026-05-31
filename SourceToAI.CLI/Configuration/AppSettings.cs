@@ -36,5 +36,10 @@ public class AppSettings
     /// Harte Obergrenze für die Anzahl der generierten Markdown-Dateien pro Projekt.
     /// </summary>
     public int MaxFileCount { get; set; } = 0;
+
+    /// <summary>
+    /// C#-Dateien ohne Namespace nicht als eigene Core-Partition exportieren, sondern in kleinste Namespace-Partitionen umverteilen.
+    /// </summary>
+    public bool SuppressCorePartition { get; set; } = true;
 }
 
