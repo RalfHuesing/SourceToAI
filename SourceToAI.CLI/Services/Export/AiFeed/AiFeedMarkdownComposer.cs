@@ -56,10 +56,9 @@ public sealed class AiFeedMarkdownComposer : IAiFeedMarkdownComposer
 
             var id = i + 1;
             var path = AiFeedManifestPath.NormalizeForManifestTable(seg.RelativePathFromProjectRoot);
-            var hash = AiFeedContentHash.ComputeMd5HexPrefix8(seg.TransformedText);
             var size = AiFeedExportedUtf8Size.OfExportedString(seg.TransformedText);
             var type = AiFeedManifestEntryTypeMapping.FromFileTypeCategory(seg.FileTypeCategory);
-            list.Add(new AiFeedManifestLine(id, type, hash, size, path));
+            list.Add(new AiFeedManifestLine(id, type, size, path));
         }
 
         return list;
@@ -88,12 +87,12 @@ public sealed class AiFeedMarkdownComposer : IAiFeedMarkdownComposer
     private static void AppendManifest(StringBuilder sb, IReadOnlyList<AiFeedManifestLine> manifestLines)
     {
         sb.AppendLine("## MANIFEST");
-        sb.AppendLine("| ID | Type | Hash | Size | Path |");
-        sb.AppendLine("|---:|:---|:---|---:|:---|");
+        sb.AppendLine("| ID | Type | Size | Path |");
+        sb.AppendLine("|---:|:---|---:|:---|");
         foreach (var line in manifestLines)
         {
             var typeLabel = line.Type == AiFeedManifestEntryType.Doc ? "Doc" : "Code";
-            sb.AppendLine($"| [{line.Id}](#{line.Id}) | {typeLabel} | {line.Hash} | {line.Size} | {line.Path} |");
+            sb.AppendLine($"| [{line.Id}] | {typeLabel} | {line.Size} | {line.Path} |");
         }
     }
 
@@ -103,7 +102,6 @@ public sealed class AiFeedMarkdownComposer : IAiFeedMarkdownComposer
         IReadOnlyList<AiFeedManifestLine> manifestLines)
     {
         sb.AppendLine("## CONTENT");
-        sb.AppendLine();
 
         if (segments.Count == 0)
             return;
@@ -113,7 +111,6 @@ public sealed class AiFeedMarkdownComposer : IAiFeedMarkdownComposer
             var seg = segments[i];
             var path = manifestLines[i].Path;
 
-            sb.AppendLine("---");
             sb.AppendLine($"### [{i + 1}] {path}");
 
             var required = MarkdownFenceUtility.CalculateRequiredBackticks(seg.TransformedText);
@@ -121,7 +118,6 @@ public sealed class AiFeedMarkdownComposer : IAiFeedMarkdownComposer
             sb.AppendLine($"{fence}{seg.FenceLanguage}");
             sb.AppendLine(seg.TransformedText);
             sb.AppendLine(fence);
-            sb.AppendLine();
         }
     }
 }

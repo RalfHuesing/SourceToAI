@@ -9,5 +9,4 @@ public record FileContent(
     string Content,
     string Type,
     string Language,
-    string Hash,
     long SizeBytes);

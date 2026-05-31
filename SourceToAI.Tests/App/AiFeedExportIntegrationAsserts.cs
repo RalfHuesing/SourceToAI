@@ -15,7 +15,7 @@ public static class AiFeedExportIntegrationAsserts
         RegexOptions.CultureInvariant);
 
     private static readonly Regex ManifestDataRow = new(
-        @"^\| \[\d+\]\(#\d+\) \|",
+        @"^\| \[\d+\] \|",
         RegexOptions.CultureInvariant | RegexOptions.Multiline);
 
     private static readonly Regex ContentSectionHeading = new(
@@ -72,7 +72,7 @@ public static class AiFeedExportIntegrationAsserts
     }
 
     /// <summary>
-    /// YAML-Frontmatter, MANIFEST/CONTENT, Link-Spalte <c>[n](#n)</c>, Zeilenanzahl Manifest = Anzahl CONTENT-Anker.
+    /// YAML-Frontmatter, MANIFEST/CONTENT, Manifest-ID <c>[n]</c>, Zeilenanzahl Manifest = Anzahl CONTENT-Anker.
     /// </summary>
     public static void AssertAiFeedStructuralInvariants(string markdown)
     {
@@ -82,14 +82,6 @@ public static class AiFeedExportIntegrationAsserts
 
         Assert.Contains("## MANIFEST", markdown, StringComparison.Ordinal);
         Assert.Contains("## CONTENT", markdown, StringComparison.Ordinal);
-
-        foreach (var line in markdown.Split('\n'))
-        {
-            if (line.StartsWith("| [", StringComparison.Ordinal))
-            {
-                Assert.Contains("](#", line, StringComparison.Ordinal);
-            }
-        }
 
         var manifestIdx = markdown.IndexOf("## MANIFEST", StringComparison.Ordinal);
         var contentIdx = markdown.IndexOf("## CONTENT", StringComparison.Ordinal);
