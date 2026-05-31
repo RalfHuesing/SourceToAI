@@ -131,4 +131,68 @@ public class ProjectSplittingEngineTests
         Assert.Equal("MyCompany.Features", result[0].SubNamespaceName);
         Assert.Equal(2, result[0].Paths.Count);
     }
+
+    [Fact]
+    public void PartitionProject_groups_razor_with_code_behind()
+    {
+        using var ws = new TempWorkspace();
+        var pagesDir = Path.Combine(ws.Root, "Pages");
+        Directory.CreateDirectory(pagesDir);
+        var razor = ws.WriteFile("Pages/Home.razor", "<h1>Home</h1>");
+        var codeBehind = ws.WriteFile("Pages/Home.razor.cs", "namespace MyApp.Pages; partial class Home { }");
+        var scopedCss = ws.WriteFile("Pages/Home.razor.css", ".home { }");
+        var project = new ProjectDefinition("App", Path.Combine(ws.Root, "App.csproj"));
+
+        var loader = new CSharpDocumentLoader();
+        var sut = new ProjectSplittingEngine(loader);
+
+        var result = sut.PartitionProject(project, [razor, codeBehind, scopedCss], 100, 5);
+
+        Assert.Single(result);
+        Assert.Equal("MyApp.Pages", result[0].SubNamespaceName);
+        Assert.Equal(3, result[0].Paths.Count);
+        Assert.Contains(Path.GetFullPath(razor), result[0].Paths, StringComparer.OrdinalIgnoreCase);
+        Assert.Contains(Path.GetFullPath(codeBehind), result[0].Paths, StringComparer.OrdinalIgnoreCase);
+        Assert.Contains(Path.GetFullPath(scopedCss), result[0].Paths, StringComparer.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void PartitionProject_collapses_core_under_maxFileCount()
+    {
+        using var ws = new TempWorkspace();
+        var globalFile = ws.WriteFile("Program.cs", "class Program { }");
+        var nsFile = ws.WriteFile("A.cs", "namespace N1; class A { }");
+        var project = new ProjectDefinition("App", Path.Combine(ws.Root, "App.csproj"));
+
+        var loader = new CSharpDocumentLoader();
+        var sut = new ProjectSplittingEngine(loader);
+
+        var result = sut.PartitionProject(project, [globalFile, nsFile], 100, 1);
+
+        Assert.Single(result);
+        Assert.Equal("N1", result[0].SubNamespaceName);
+        Assert.Equal(2, result[0].Paths.Count);
+        Assert.Contains(globalFile, result[0].Paths);
+        Assert.Contains(nsFile, result[0].Paths);
+        Assert.DoesNotContain(result, r => r.SubNamespaceName == "Core");
+    }
+
+    [Fact]
+    public void PartitionProject_keeps_assets_separate_under_pressure()
+    {
+        using var ws = new TempWorkspace();
+        var csFile = ws.WriteFile("A.cs", "namespace N1; class A { }");
+        var jsonFile = ws.WriteFile("data.json", "{}");
+        var project = new ProjectDefinition("App", Path.Combine(ws.Root, "App.csproj"));
+
+        var loader = new CSharpDocumentLoader();
+        var sut = new ProjectSplittingEngine(loader);
+
+        var result = sut.PartitionProject(project, [csFile, jsonFile], 100, 1);
+
+        Assert.Equal(2, result.Count);
+        Assert.Single(result, r => r.SubNamespaceName == "N1");
+        Assert.Single(result, r => r.SubNamespaceName == "_Assets");
+        Assert.Contains(jsonFile, result.First(r => r.SubNamespaceName == "_Assets").Paths);
+    }
 }
