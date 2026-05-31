@@ -27,7 +27,8 @@ public sealed class ProjectSplittingEngine(ICSharpDocumentLoader csharpDocumentL
         ProjectDefinition project,
         IReadOnlyList<string> absoluteFilePaths,
         int maxFileSizeKb,
-        int maxFileCount)
+        int maxFileCount,
+        bool suppressCorePartition = true)
     {
         if (maxFileSizeKb <= 0 || maxFileCount <= 0 || absoluteFilePaths.Count == 0)
         {
@@ -64,6 +65,8 @@ public sealed class ProjectSplittingEngine(ICSharpDocumentLoader csharpDocumentL
             dirNamespaceMap);
 
         var assetPaths = classification.AssetPaths;
+        var pathToSize = classification.EligibleNamespaceFiles
+            .ToDictionary(f => Path.GetFullPath(f.Path), f => f.Size, StringComparer.OrdinalIgnoreCase);
 
         // 1. Namespace-Baum aufbauen
         var rootNode = new ProjectSplittingNamespaceNode(string.Empty, string.Empty);
@@ -178,15 +181,16 @@ public sealed class ProjectSplittingEngine(ICSharpDocumentLoader csharpDocumentL
             }
         }
 
+        if (suppressCorePartition)
+        {
+            AbsorbCorePartition(activeBuckets, pathToSize, maxSizeBytes, rootNode);
+        }
+
         // 5. Partitionen erzeugen
         var partitions = new List<VirtualProjectPartition>();
         foreach (var bucket in activeBuckets.Values)
         {
-            string partitionName = bucket.Node.FullNamespace;
-            if (string.IsNullOrEmpty(partitionName))
-                partitionName = "Core";
-
-            partitions.Add(new VirtualProjectPartition(partitionName, bucket.FilePaths));
+            partitions.Add(new VirtualProjectPartition(bucket.Node.FullNamespace, bucket.FilePaths));
         }
 
         if (assetPaths.Count > 0)
@@ -250,5 +254,76 @@ public sealed class ProjectSplittingEngine(ICSharpDocumentLoader csharpDocumentL
         attachParent.Children[CoreChildSegmentKey] = coreNode;
         coreNode.Parent = attachParent;
         allNodes.Add(coreNode);
+    }
+
+    private static void AbsorbCorePartition(
+        Dictionary<ProjectSplittingNamespaceNode, ProjectSplittingBucket> activeBuckets,
+        IReadOnlyDictionary<string, long> pathToSize,
+        long maxSizeBytes,
+        ProjectSplittingNamespaceNode rootNode)
+    {
+        ProjectSplittingNamespaceNode? coreNode = null;
+        ProjectSplittingBucket? coreBucket = null;
+        foreach (var (node, bucket) in activeBuckets)
+        {
+            if (string.Equals(node.FullNamespace, "Core", StringComparison.Ordinal))
+            {
+                coreNode = node;
+                coreBucket = bucket;
+                break;
+            }
+        }
+
+        if (coreNode == null || coreBucket == null)
+            return;
+
+        var coreFiles = coreBucket.FilePaths.ToList();
+        activeBuckets.Remove(coreNode);
+
+        var otherNodes = activeBuckets.Keys.ToList();
+        if (otherNodes.Count == 0)
+        {
+            var mergedSize = SumFileSizes(coreFiles, pathToSize);
+            activeBuckets[rootNode] = new ProjectSplittingBucket(rootNode, coreFiles, mergedSize);
+            return;
+        }
+
+        foreach (var filePath in coreFiles)
+        {
+            var fileSize = pathToSize.TryGetValue(filePath, out var size) ? size : 0L;
+            var targetNode = SelectSmallestFittingBucketNode(activeBuckets, fileSize, maxSizeBytes);
+            var current = activeBuckets[targetNode];
+            var mergedPaths = current.FilePaths.ToList();
+            mergedPaths.Add(filePath);
+            activeBuckets[targetNode] = new ProjectSplittingBucket(
+                targetNode,
+                mergedPaths,
+                current.Size + fileSize);
+        }
+    }
+
+    private static ProjectSplittingNamespaceNode SelectSmallestFittingBucketNode(
+        Dictionary<ProjectSplittingNamespaceNode, ProjectSplittingBucket> activeBuckets,
+        long fileSize,
+        long maxSizeBytes)
+    {
+        var ordered = activeBuckets.Values
+            .OrderBy(b => b.Size)
+            .ToList();
+
+        var fitting = ordered.FirstOrDefault(b => b.Size + fileSize <= maxSizeBytes);
+        return (fitting ?? ordered[0]).Node;
+    }
+
+    private static long SumFileSizes(IReadOnlyList<string> paths, IReadOnlyDictionary<string, long> pathToSize)
+    {
+        long total = 0;
+        foreach (var path in paths)
+        {
+            if (pathToSize.TryGetValue(path, out var size))
+                total += size;
+        }
+
+        return total;
     }
 }

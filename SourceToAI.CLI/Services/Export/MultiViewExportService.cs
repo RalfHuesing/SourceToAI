@@ -61,7 +61,12 @@ public sealed class MultiViewExportService(
 
             if (isSplittingActive)
             {
-                var partitions = splittingEngine.PartitionProject(project, paths, appSettings.MaxFileSizeKb, appSettings.MaxFileCount);
+                var partitions = splittingEngine.PartitionProject(
+                    project,
+                    paths,
+                    appSettings.MaxFileSizeKb,
+                    appSettings.MaxFileCount,
+                    appSettings.SuppressCorePartition);
                 foreach (var partition in partitions)
                 {
                     var partitionName = partition.SubNamespaceName;

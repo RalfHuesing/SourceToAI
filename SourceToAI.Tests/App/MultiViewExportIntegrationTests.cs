@@ -367,9 +367,21 @@ public sealed class MultiViewExportIntegrationTests
 
         var mergedRoot = Path.Combine(export.Root, "Merged", "complete");
         
-        // Assert that the generated files are named with the sub-namespace suffix and the view key separated by underscores:
-        // {SolutionName}.{ProjectName}_{SubNamespace}_{view}.md
-        Assert.True(File.Exists(Path.Combine(mergedRoot, "SplitSol.Platform_Core_complete.md")), "Platform_Core file missing or incorrectly named");
-        Assert.True(File.Exists(Path.Combine(mergedRoot, "SplitSol.Platform_Features_complete.md")), "Platform_Features file missing or incorrectly named");
+        var coreMdPath = Path.Combine(mergedRoot, "SplitSol.Platform_Core_complete.md");
+        var featuresMdPath = Path.Combine(mergedRoot, "SplitSol.Platform_Features_complete.md");
+        Assert.True(File.Exists(coreMdPath), "Platform.Core namespace feed missing");
+        Assert.True(File.Exists(featuresMdPath), "Platform.Features feed missing");
+
+        var platformCompleteFiles = Directory.GetFiles(mergedRoot, "SplitSol.Platform_*_complete.md");
+        Assert.Equal(2, platformCompleteFiles.Length);
+
+        var coreMd = await File.ReadAllTextAsync(coreMdPath, TestContext.Current.CancellationToken);
+        var featuresMd = await File.ReadAllTextAsync(featuresMdPath, TestContext.Current.CancellationToken);
+        Assert.True(
+            coreMd.Contains("class Program", StringComparison.Ordinal)
+            || featuresMd.Contains("class Program", StringComparison.Ordinal),
+            "Program.cs ohne Namespace soll in kleinste Namespace-Partition absorbiert werden");
+        Assert.Contains("CoreService", coreMd, StringComparison.Ordinal);
+        Assert.Contains("FeatureService", featuresMd, StringComparison.Ordinal);
     }
 }

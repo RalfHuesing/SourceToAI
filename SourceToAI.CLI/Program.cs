@@ -35,6 +35,7 @@ static async Task<int> RunExportPipelineAsync(
     IReadOnlyList<string> excludePatternsFromCli,
     int maxFileSize,
     int maxFileCount,
+    bool noSuppressCore,
     CancellationToken cancellationToken)
 {
     cancellationToken.ThrowIfCancellationRequested();
@@ -51,6 +52,8 @@ static async Task<int> RunExportPipelineAsync(
         appSettings.MaxFileSizeKb = maxFileSize;
     if (maxFileCount > 0)
         appSettings.MaxFileCount = maxFileCount;
+    if (noSuppressCore)
+        appSettings.SuppressCorePartition = false;
 
     IReadOnlyList<GacAssemblyDiscovery.GacResolvedAssembly> fromGac;
     try

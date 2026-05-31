@@ -10,7 +10,7 @@ public sealed class SourceToAiCliTests
     {
         string? gotExport = null;
         IReadOnlyList<string>? gotSolutions = null;
-        var root = SourceToAiCli.CreateRootCommand((export, solutions, _, _, _, _, _) =>
+        var root = SourceToAiCli.CreateRootCommand((export, solutions, _, _, _, _, _, _) =>
         {
             gotExport = export;
             gotSolutions = solutions;
@@ -34,7 +34,7 @@ public sealed class SourceToAiCliTests
     {
         string? gotExport = null;
         IReadOnlyList<string>? gotSolutions = null;
-        var root = SourceToAiCli.CreateRootCommand((export, solutions, _, _, _, _, _) =>
+        var root = SourceToAiCli.CreateRootCommand((export, solutions, _, _, _, _, _, _) =>
         {
             gotExport = export;
             gotSolutions = solutions;
@@ -58,7 +58,7 @@ public sealed class SourceToAiCliTests
     {
         string? gotExport = null;
         IReadOnlyList<string>? gotSolutions = null;
-        var root = SourceToAiCli.CreateRootCommand((export, solutions, _, _, _, _, _) =>
+        var root = SourceToAiCli.CreateRootCommand((export, solutions, _, _, _, _, _, _) =>
         {
             gotExport = export;
             gotSolutions = solutions;
@@ -82,7 +82,7 @@ public sealed class SourceToAiCliTests
     {
         string? gotExport = null;
         IReadOnlyList<string>? gotSolutions = null;
-        var root = SourceToAiCli.CreateRootCommand((export, solutions, _, _, _, _, _) =>
+        var root = SourceToAiCli.CreateRootCommand((export, solutions, _, _, _, _, _, _) =>
         {
             gotExport = export;
             gotSolutions = solutions;
@@ -105,7 +105,7 @@ public sealed class SourceToAiCliTests
     public async Task Parse_MultipleExcludeArgs_PassedToHandler()
     {
         IReadOnlyList<string>? gotExcludes = null;
-        var root = SourceToAiCli.CreateRootCommand((_, _, _, excludes, _, _, _) =>
+        var root = SourceToAiCli.CreateRootCommand((_, _, _, excludes, _, _, _, _) =>
         {
             gotExcludes = excludes;
             return Task.FromResult(0);
@@ -134,7 +134,7 @@ public sealed class SourceToAiCliTests
     {
         string? gotExport = null;
         IReadOnlyList<string>? gotSolutions = null;
-        var root = SourceToAiCli.CreateRootCommand((export, solutions, _, _, _, _, _) =>
+        var root = SourceToAiCli.CreateRootCommand((export, solutions, _, _, _, _, _, _) =>
         {
             gotExport = export;
             gotSolutions = solutions;
@@ -156,7 +156,7 @@ public sealed class SourceToAiCliTests
     [Fact]
     public async Task Parse_PositionalAndNamed_ReturnsErrorExitCode()
     {
-        var root = SourceToAiCli.CreateRootCommand((_, _, _, _, _, _, _) => Task.FromResult(0));
+        var root = SourceToAiCli.CreateRootCommand((_, _, _, _, _, _, _, _) => Task.FromResult(0));
         var parseResult = root.Parse(["a", "b", "--export", "e", "--input", "i"]);
         Assert.Empty(parseResult.Errors);
 
@@ -171,7 +171,7 @@ public sealed class SourceToAiCliTests
     {
         string? gotExport = null;
         IReadOnlyList<string>? gotGac = null;
-        var root = SourceToAiCli.CreateRootCommand((export, _, gac, _, _, _, _) =>
+        var root = SourceToAiCli.CreateRootCommand((export, _, gac, _, _, _, _, _) =>
         {
             gotExport = export;
             gotGac = gac;
@@ -195,7 +195,7 @@ public sealed class SourceToAiCliTests
     {
         IReadOnlyList<string>? gotSolutions = null;
         IReadOnlyList<string>? gotGac = null;
-        var root = SourceToAiCli.CreateRootCommand((_, solutions, gac, _, _, _, _) =>
+        var root = SourceToAiCli.CreateRootCommand((_, solutions, gac, _, _, _, _, _) =>
         {
             gotSolutions = solutions;
             gotGac = gac;
@@ -220,7 +220,7 @@ public sealed class SourceToAiCliTests
     {
         IReadOnlyList<string>? gotSolutions = null;
         IReadOnlyList<string>? gotGac = null;
-        var root = SourceToAiCli.CreateRootCommand((_, solutions, gac, _, _, _, _) =>
+        var root = SourceToAiCli.CreateRootCommand((_, solutions, gac, _, _, _, _, _) =>
         {
             gotSolutions = solutions;
             gotGac = gac;
@@ -243,7 +243,7 @@ public sealed class SourceToAiCliTests
     [Fact]
     public void Parse_OptionMissingValue_ProducesParseError()
     {
-        var root = SourceToAiCli.CreateRootCommand((_, _, _, _, _, _, _) => Task.FromResult(0));
+        var root = SourceToAiCli.CreateRootCommand((_, _, _, _, _, _, _, _) => Task.FromResult(0));
         var parseResult = root.Parse(["--export", "e", "--input"]);
         Assert.NotEmpty(parseResult.Errors);
     }
@@ -253,10 +253,12 @@ public sealed class SourceToAiCliTests
     {
         int gotMaxSize = 0;
         int gotMaxCount = 0;
-        var root = SourceToAiCli.CreateRootCommand((_, _, _, _, size, count, _) =>
+        bool gotNoSuppress = true;
+        var root = SourceToAiCli.CreateRootCommand((_, _, _, _, size, count, noSuppress, _) =>
         {
             gotMaxSize = size;
             gotMaxCount = count;
+            gotNoSuppress = noSuppress;
             return Task.FromResult(0);
         });
 
@@ -274,5 +276,30 @@ public sealed class SourceToAiCliTests
         Assert.Equal(0, exitCode);
         Assert.Equal(450, gotMaxSize);
         Assert.Equal(8, gotMaxCount);
+        Assert.False(gotNoSuppress);
+    }
+
+    [Fact]
+    public async Task Parse_NoSuppressCore_PassedToHandler()
+    {
+        bool gotNoSuppress = false;
+        var root = SourceToAiCli.CreateRootCommand((_, _, _, _, _, _, noSuppress, _) =>
+        {
+            gotNoSuppress = noSuppress;
+            return Task.FromResult(0);
+        });
+
+        var parseResult = root.Parse([
+            "--export", "out",
+            "--input", "src",
+            "--no-suppress-core"
+        ]);
+        Assert.Empty(parseResult.Errors);
+
+        var exitCode = await parseResult.InvokeAsync(
+            parseResult.InvocationConfiguration,
+            TestContext.Current.CancellationToken);
+        Assert.Equal(0, exitCode);
+        Assert.True(gotNoSuppress);
     }
 }
