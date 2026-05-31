@@ -104,10 +104,18 @@ public sealed class ProjectSplittingEngine(ICSharpDocumentLoader csharpDocumentL
             AttachCoreNodeToTree(rootNode, allNodes, coreNode, activeBuckets);
         }
 
-        int GetTotalBucketCount() => activeBuckets.Count + (assetPaths.Count > 0 ? 1 : 0);
+        bool IsCoreBucket(ProjectSplittingNamespaceNode node) =>
+            string.Equals(node.FullNamespace, "Core", StringComparison.Ordinal);
+
+        int CountBucketsTowardExportLimit() =>
+            activeBuckets.Count(kv => !suppressCorePartition || !IsCoreBucket(kv.Key))
+            + (assetPaths.Count > 0 ? 1 : 0);
+
+        int CountNonCoreNamespaceBuckets() =>
+            activeBuckets.Count(kv => !IsCoreBucket(kv.Key));
 
         // 3. Kollaps-Schleife (Harte Grenze erzwingen)
-        while (GetTotalBucketCount() > maxFileCount && activeBuckets.Count > 1)
+        while (CountBucketsTowardExportLimit() > maxFileCount && CountNonCoreNamespaceBuckets() > 1)
         {
             var candidateParents = allNodes
                 .Where(n => ProjectSplittingCollapse.GetActiveBucketCountInSubtree(n, activeBuckets) >= 2)

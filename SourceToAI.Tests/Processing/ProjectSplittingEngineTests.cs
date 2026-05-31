@@ -1,6 +1,7 @@
 using SourceToAI.CLI.Models;
 using SourceToAI.CLI.Services.Processing;
 using SourceToAI.Tests.Support;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Xunit;
@@ -220,6 +221,30 @@ public class ProjectSplittingEngineTests
         Assert.Contains(globalFile, result[0].Paths);
         Assert.Contains(nsFile, result[0].Paths);
         Assert.DoesNotContain(result, r => r.SubNamespaceName == "Core");
+    }
+
+    [Fact]
+    public void PartitionProject_with_suppressed_core_uses_full_maxFileCount()
+    {
+        using var ws = new TempWorkspace();
+        var globalFile = ws.WriteFile("Program.cs", "class Program { }");
+        var paths = new List<string> { globalFile };
+        for (var i = 1; i <= 8; i++)
+        {
+            paths.Add(ws.WriteFile($"N{i}.cs", $"namespace N{i}; class C{i} {{ }}"));
+        }
+
+        var project = new ProjectDefinition("App", Path.Combine(ws.Root, "App.csproj"));
+        var loader = new CSharpDocumentLoader();
+        var sut = new ProjectSplittingEngine(loader);
+
+        var result = sut.PartitionProject(project, paths, 500, 8);
+
+        Assert.Equal(8, result.Count);
+        Assert.DoesNotContain(result, r => r.SubNamespaceName == "Core");
+        Assert.True(
+            result.Any(r => r.Paths.Contains(globalFile)),
+            "Program.cs soll in einer Namespace-Partition landen");
     }
 
     [Fact]
