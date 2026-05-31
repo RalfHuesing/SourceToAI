@@ -6,6 +6,5 @@
 public record FileManifestEntry(
     int Id,
     string Type,
-    string Hash,
     long Size,
     string RelativePath);

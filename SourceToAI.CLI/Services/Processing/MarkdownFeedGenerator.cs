@@ -75,10 +75,9 @@ public class MarkdownFeedGenerator(ICSharpDocumentLoader csharpDocumentLoader) :
                 var relativePath = Path.GetRelativePath(project.RootDirectory, fullPath);
 
                 var (type, language) = FileTypeService.GetFileTypeAndLanguage(extension);
-                var hash = HashUtility.ComputeShortHash(content);
 
-                fileContents.Add(new FileContent(idCounter, relativePath, content, type, language, hash, size));
-                manifests.Add(new FileManifestEntry(idCounter, type, hash, size, relativePath));
+                fileContents.Add(new FileContent(idCounter, relativePath, content, type, language, size));
+                manifests.Add(new FileManifestEntry(idCounter, type, size, relativePath));
 
                 idCounter++;
             }
@@ -105,27 +104,21 @@ public class MarkdownFeedGenerator(ICSharpDocumentLoader csharpDocumentLoader) :
             sb.AppendLine("## INSTRUCTION");
             sb.AppendLine($"SYSTEM-KONTEXT: Dies ist ein Snapshot eines Software-Projekts. Das Format ist Markdown mit Fencing. Dies ist Projekt: '{project.ProjectName}'. Analysiere den Code im Kontext der Architektur.");
             sb.AppendLine();
-            sb.AppendLine("---");
-            sb.AppendLine();
 
             // Manifest Tabelle
             sb.AppendLine("## MANIFEST");
-            sb.AppendLine("| ID | Type | Hash | Size | Path |");
-            sb.AppendLine("|---:|:---|:---|---:|:---|");
+            sb.AppendLine("| ID | Type | Size | Path |");
+            sb.AppendLine("|---:|:---|---:|:---|");
             foreach (var m in manifests)
             {
-                sb.AppendLine($"| [{m.Id}](#{m.Id}) | {m.Type} | {m.Hash} | {m.Size} | {m.RelativePath} |");
+                sb.AppendLine($"| [{m.Id}] | {m.Type} | {m.Size} | {m.RelativePath} |");
             }
             sb.AppendLine();
-            sb.AppendLine("---");
-            sb.AppendLine();
             sb.AppendLine("## CONTENT");
-            sb.AppendLine();
 
             // Dateiinhalte mit Dynamic Fencing anfügen
             foreach (var file in fileContents)
             {
-                sb.AppendLine("---");
                 sb.AppendLine($"### [{file.FileId}] {file.RelativePath}");
 
                 // Dynamic Fencing: Bestimme, wie viele Backticks wir brauchen (mindestens 4, mehr wenn im Code schon welche sind)
@@ -135,7 +128,6 @@ public class MarkdownFeedGenerator(ICSharpDocumentLoader csharpDocumentLoader) :
                 sb.AppendLine($"{fence}{file.Language}");
                 sb.AppendLine(file.Content);
                 sb.AppendLine(fence);
-                sb.AppendLine();
             }
 
             return ExtractionResult<string>.Success(

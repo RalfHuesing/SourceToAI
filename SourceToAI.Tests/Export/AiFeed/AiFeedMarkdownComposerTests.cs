@@ -30,8 +30,8 @@ public class AiFeedMarkdownComposerTests
         Assert.Contains("## MANIFEST", md);
         var manifestBodyLines = md.Split('\n').Where(l => l.StartsWith("| [", StringComparison.Ordinal)).ToArray();
         Assert.Equal(2, manifestBodyLines.Length);
-        Assert.Contains("| [1](#1) | Code |", md);
-        Assert.Contains("| [2](#2) | Doc |", md);
+        Assert.Contains("| [1] | Code |", md);
+        Assert.Contains("| [2] | Doc |", md);
 
         Assert.Equal(2, Regex.Matches(md, @"^### \[\d+\] ", RegexOptions.Multiline).Count);
         Assert.Contains("### [1] src\\A.cs", md);
@@ -65,7 +65,7 @@ public class AiFeedMarkdownComposerTests
 
         Assert.Contains("file_count: 0", md);
         Assert.Contains("## MANIFEST", md);
-        Assert.Contains("|---:|:---|:---|---:|:---|", md);
+        Assert.Contains("|---:|:---|---:|:---|", md);
         Assert.False(Regex.IsMatch(md, @"^\| \[\d+\]", RegexOptions.Multiline));
         Assert.Contains("## CONTENT", md);
         Assert.False(Regex.IsMatch(md, @"^### \[\d+\] ", RegexOptions.Multiline));
@@ -87,24 +87,12 @@ public class AiFeedMarkdownComposerTests
     }
 
     [Fact]
-    public void Compose_hashes_match_AiFeedContentHash_for_segment_text()
-    {
-        const string body = "hello";
-        var expectedHash = AiFeedContentHash.ComputeMd5HexPrefix8(body);
-        var segments = new[] { new AiFeedContentSegment("f.cs", "Code", "csharp", body) };
-
-        var md = Composer.Compose("S", "P", FixedSession, FixedGenerated, segments);
-
-        Assert.Contains($"| [1](#1) | Code | {expectedHash} |", md);
-    }
-
-    [Fact]
     public void Compose_manifest_size_column_matches_utf8_byte_count_of_exported_body()
     {
         const string body = "€"; // 3 UTF-8-Bytes
         var segments = new[] { new AiFeedContentSegment("x.cs", "Code", "csharp", body) };
         var md = Composer.Compose("S", "P", FixedSession, FixedGenerated, segments);
-        Assert.Contains("| [1](#1) | Code |", md);
+        Assert.Contains("| [1] | Code |", md);
         Assert.Contains(" 3 |", md);
     }
 
@@ -123,11 +111,29 @@ public class AiFeedMarkdownComposerTests
         Assert.Contains("file_count: 2", md);
         var manifestBodyLines = md.Split('\n').Where(l => l.StartsWith("| [", StringComparison.Ordinal)).ToArray();
         Assert.Equal(2, manifestBodyLines.Length);
-        Assert.Contains("| [1](#1) | Code |", md);
-        Assert.Contains("| [2](#2) | Code |", md);
-        Assert.DoesNotContain("| [3](#3) |", md);
+        Assert.Contains("| [1] | Code |", md);
+        Assert.Contains("| [2] | Code |", md);
+        Assert.DoesNotContain("| [3] |", md);
         Assert.Contains("### [1] src\\Keep.cs", md);
         Assert.Contains("### [2] src\\Also.cs", md);
         Assert.DoesNotContain("Dead.md", md);
+    }
+
+    [Fact]
+    public void Compose_content_blocks_have_no_horizontal_rules_or_trailing_blank_lines()
+    {
+        var segments = new[]
+        {
+            new AiFeedContentSegment("a.cs", "Code", "csharp", "// a"),
+            new AiFeedContentSegment("b.cs", "Code", "csharp", "// b"),
+        };
+
+        var md = Composer.Compose("S", "P", FixedSession, FixedGenerated, segments);
+        var contentIdx = md.IndexOf("## CONTENT", StringComparison.Ordinal);
+        Assert.True(contentIdx >= 0);
+        var contentSlice = md[contentIdx..];
+
+        Assert.DoesNotMatch(new Regex(@"^---\s*$", RegexOptions.Multiline), contentSlice);
+        Assert.DoesNotMatch(new Regex(@"^```\s*\r?\n\r?\n### ", RegexOptions.Multiline), contentSlice);
     }
 }

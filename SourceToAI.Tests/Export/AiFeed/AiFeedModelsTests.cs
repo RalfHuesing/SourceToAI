@@ -5,25 +5,6 @@ namespace SourceToAI.Tests.Export.AiFeed;
 public class AiFeedModelsTests
 {
     [Fact]
-    public void AiFeedContentHash_known_utf8_string_matches_first_eight_md5_hex_chars()
-    {
-        // MD5("hello") = 5d41402abc4b2a76b9719d911017c592
-        Assert.Equal("5D41402A", AiFeedContentHash.ComputeMd5HexPrefix8("hello"));
-    }
-
-    [Fact]
-    public void AiFeedContentHash_empty_string_matches_md5_of_empty_utf8()
-    {
-        Assert.Equal("D41D8CD9", AiFeedContentHash.ComputeMd5HexPrefix8(string.Empty));
-    }
-
-    [Fact]
-    public void AiFeedContentHash_empty_span_matches_md5_of_empty()
-    {
-        Assert.Equal("D41D8CD9", AiFeedContentHash.ComputeMd5HexPrefix8(ReadOnlySpan<byte>.Empty));
-    }
-
-    [Fact]
     public void AiFeedFrontmatter_GetFileCount_null_is_zero()
     {
         Assert.Equal(0, AiFeedFrontmatter.GetFileCount(null));
@@ -39,7 +20,7 @@ public class AiFeedModelsTests
     public void AiFeedFrontmatter_GetFileCount_three_entries_is_three()
     {
         var list = Enumerable.Range(0, 3)
-            .Select(i => new AiFeedManifestLine(i + 1, AiFeedManifestEntryType.Code, "00000000", 0, "x"))
+            .Select(i => new AiFeedManifestLine(i + 1, AiFeedManifestEntryType.Code, 0, "x"))
             .ToList();
 
         Assert.Equal(3, AiFeedFrontmatter.GetFileCount(list));
@@ -50,9 +31,9 @@ public class AiFeedModelsTests
     {
         var lines = new[]
         {
-            new AiFeedManifestLine(1, AiFeedManifestEntryType.Code, "AAAAAAAA", 1, "a.cs"),
-            new AiFeedManifestLine(2, AiFeedManifestEntryType.Doc, "BBBBBBBB", 2, "b.md"),
-            new AiFeedManifestLine(3, AiFeedManifestEntryType.Code, "CCCCCCCC", 3, "c.cs"),
+            new AiFeedManifestLine(1, AiFeedManifestEntryType.Code, 1, "a.cs"),
+            new AiFeedManifestLine(2, AiFeedManifestEntryType.Doc, 2, "b.md"),
+            new AiFeedManifestLine(3, AiFeedManifestEntryType.Code, 3, "c.cs"),
         };
 
         var session = Guid.Parse("11111111-1111-1111-1111-111111111111");

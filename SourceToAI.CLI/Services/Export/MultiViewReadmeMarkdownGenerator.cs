@@ -108,7 +108,7 @@ public sealed class MultiViewReadmeMarkdownGenerator : IMultiViewReadmeMarkdownG
         sb.AppendLine("## Aufbau einer Datei pro Projekt (KI-Kontext)");
         sb.AppendLine();
         sb.AppendLine(
-            "Jede `.md` direkt unter einem **View-Ordner** (`./complete/`, `./signatures-only/`, `./public-only/`, `./dto-only/`) beschreibt **genau ein** exportiertes Projekt — inklusive YAML-Frontmatter, **MANIFEST**-Tabelle (IDs, Typ, Hash, Größe, Pfade relativ zum jeweiligen Projektroot) und **CONTENT**-Abschnitten mit denselben IDs. Prompts können Manifest-Zeilen und eingebettete Dateien konsistent referenzieren.");
+            "Jede `.md` direkt unter einem **View-Ordner** (`./complete/`, `./signatures-only/`, `./public-only/`, `./dto-only/`) beschreibt **genau ein** exportiertes Projekt — inklusive YAML-Frontmatter, **MANIFEST**-Tabelle (IDs, Typ, Größe, Pfade relativ zum jeweiligen Projektroot) und **CONTENT**-Abschnitten mit denselben IDs. Prompts können Manifest-Zeilen und eingebettete Dateien konsistent referenzieren.");
         sb.AppendLine();
         sb.AppendLine("## Dateien und Ordner (Prompt-Use-Cases)");
         sb.AppendLine();

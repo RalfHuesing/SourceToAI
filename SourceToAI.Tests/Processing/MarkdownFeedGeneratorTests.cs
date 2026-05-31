@@ -28,7 +28,7 @@ public class MarkdownFeedGeneratorTests
         Assert.Contains("feed_type: source_export", md);
         Assert.Contains("file_count: 1", md);
         Assert.Contains("project: \"Sol (MyApp)\"", md);
-        Assert.Contains("| [1](#1) |", md);
+        Assert.Contains("| [1] |", md);
         Assert.Contains("Program.cs", md);
         Assert.Contains("## CONTENT", md);
         Assert.Contains("````csharp", md); // mindestens 4 Backticks

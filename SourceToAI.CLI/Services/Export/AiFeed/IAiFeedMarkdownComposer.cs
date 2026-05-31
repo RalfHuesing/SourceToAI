@@ -7,7 +7,7 @@ public interface IAiFeedMarkdownComposer
 {
     /// <summary>
     /// Erzeugt ein Dokument aus Anzeigenamen, Session/Zeitstempel und den (bereits gefilterten) Segmenten.
-    /// Manifestzeilen werden aus den Segmenten abgeleitet (Hash/Size/Type/Pfad).
+    /// Manifestzeilen werden aus den Segmenten abgeleitet (Size/Type/Pfad).
     /// </summary>
     string Compose(
         string solutionDisplayName,
