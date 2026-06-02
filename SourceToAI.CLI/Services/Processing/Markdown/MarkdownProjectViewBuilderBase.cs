@@ -1,6 +1,7 @@
 using SourceToAI.CLI.Models;
 using SourceToAI.CLI.Services;
 using SourceToAI.CLI.Services.Export.AiFeed;
+using SourceToAI.CLI.Services.Processing;
 
 namespace SourceToAI.CLI.Services.Processing.Markdown;
 
@@ -37,10 +38,7 @@ public class MarkdownProjectViewBuilderBase(
     {
         try
         {
-            var sortedPaths = absoluteFilePathsInDisplayOrder
-                .OrderByDescending(p => Path.GetExtension(p).Equals(".md", StringComparison.OrdinalIgnoreCase))
-                .ThenBy(p => p)
-                .ToList();
+            var sortedPaths = FeedFileDisplayOrder.SortByPath(absoluteFilePathsInDisplayOrder);
 
             var parseResult = csharpDocumentLoader.LoadParsedDocuments(project, sortedPaths);
             if (!parseResult.IsSuccess)
