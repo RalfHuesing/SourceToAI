@@ -99,12 +99,19 @@ internal static class ProjectSplittingFileClassifier
             else
             {
                 var dir = NormalizeDirectory(fullPath);
-                if (dir != null
-                    && dirNamespaceMap.ContainsKey(dir)
-                    && anchorsByDir.TryGetValue(dir, out var anchors)
-                    && IsStemCompanion(Path.GetFileName(fullPath), anchors))
+                if (dir != null && dirNamespaceMap.TryGetValue(dir, out var mappedNs))
                 {
-                    eligible.Add(new NamespaceEligibleFile(fullPath, dirNamespaceMap[dir], GetFileSizeBytes(fullPath)));
+                    bool isMarkdownDoc = string.Equals(ext, ".md", StringComparison.OrdinalIgnoreCase)
+                                         || string.Equals(ext, ".mdc", StringComparison.OrdinalIgnoreCase);
+
+                    if (isMarkdownDoc || (anchorsByDir.TryGetValue(dir, out var anchors) && IsStemCompanion(Path.GetFileName(fullPath), anchors)))
+                    {
+                        eligible.Add(new NamespaceEligibleFile(fullPath, mappedNs, GetFileSizeBytes(fullPath)));
+                    }
+                    else
+                    {
+                        assetPaths.Add(fullPath);
+                    }
                 }
                 else
                 {
