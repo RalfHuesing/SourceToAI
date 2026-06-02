@@ -50,7 +50,7 @@ public class MarkdownFeedGeneratorTests
     }
 
     [Fact]
-    public void GenerateFeed_orders_markdown_before_other_files()
+    public void GenerateFeed_orders_files_by_path_not_extension()
     {
         using var ws = new TempWorkspace();
         var csPath = ws.WriteFile("src/A.cs", "x");
@@ -67,8 +67,29 @@ public class MarkdownFeedGeneratorTests
         var firstFileIdx = afterContent.IndexOf("### [1]", StringComparison.Ordinal);
         var secondFileIdx = afterContent.IndexOf("### [2]", StringComparison.Ordinal);
         Assert.True(firstFileIdx >= 0 && secondFileIdx > firstFileIdx);
-        Assert.Contains("B.md", afterContent[firstFileIdx..secondFileIdx]);
-        Assert.Contains("A.cs", afterContent[secondFileIdx..]);
+        Assert.Contains("A.cs", afterContent[firstFileIdx..secondFileIdx]);
+        Assert.Contains("B.md", afterContent[secondFileIdx..]);
+    }
+
+    [Fact]
+    public void GenerateFeed_nested_readme_stays_near_sibling_code_in_manifest()
+    {
+        using var ws = new TempWorkspace();
+        var adminCs = ws.WriteFile("Handlers/Admin/AdminOperationResult.cs", "// admin");
+        var adminReadme = ws.WriteFile("Handlers/Admin/README.md", "# admin");
+        var aiReadme = ws.WriteFile("Handlers/Admin/Ai/README.md", "# ai");
+        var project = new ProjectDefinition("P", Path.Combine(ws.Root, "Handlers", "P.csproj"));
+
+        var result = _sut.GenerateFeed("S", project, [aiReadme, adminReadme, adminCs]);
+
+        Assert.True(result.IsSuccess, result.ErrorMessage);
+        var md = result.Value!;
+        var adminCsPos = md.IndexOf("AdminOperationResult.cs", StringComparison.Ordinal);
+        var adminReadmePos = md.IndexOf($"{Path.Combine("Admin", "README.md")}", StringComparison.Ordinal);
+        var aiReadmePos = md.IndexOf($"{Path.Combine("Admin", "Ai", "README.md")}", StringComparison.Ordinal);
+        Assert.True(adminCsPos >= 0 && adminReadmePos >= 0 && aiReadmePos >= 0);
+        Assert.True(adminCsPos < aiReadmePos);
+        Assert.True(aiReadmePos < adminReadmePos);
     }
 
     [Fact]

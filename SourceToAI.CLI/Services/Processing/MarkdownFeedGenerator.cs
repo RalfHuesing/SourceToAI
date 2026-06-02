@@ -21,10 +21,7 @@ public class MarkdownFeedGenerator(ICSharpDocumentLoader csharpDocumentLoader) :
             var fileContents = new List<FileContent>();
             var manifests = new List<FileManifestEntry>();
 
-            var sortedPaths = filePaths
-                .OrderByDescending(p => Path.GetExtension(p).Equals(".md", StringComparison.OrdinalIgnoreCase))
-                .ThenBy(p => p)
-                .ToList();
+            var sortedPaths = FeedFileDisplayOrder.SortByPath(filePaths);
 
             var parseResult = csharpDocumentLoader.LoadParsedDocuments(project, sortedPaths);
             if (!parseResult.IsSuccess)

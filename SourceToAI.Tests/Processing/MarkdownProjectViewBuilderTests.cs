@@ -38,7 +38,7 @@ public class MarkdownProjectViewBuilderTests
     }
 
     [Fact]
-    public void Complete_build_orders_markdown_before_cs_and_includes_both_as_segments()
+    public void Complete_build_orders_segments_by_path_and_includes_md_and_cs()
     {
         using var sp = CreateServiceProvider();
         var sut = sp.GetServices<IMarkdownProjectViewBuilder>().Single(b => b.ViewKey == "complete");
@@ -53,15 +53,15 @@ public class MarkdownProjectViewBuilderTests
         Assert.True(result.IsSuccess, result.ErrorMessage);
         var segs = result.Value!;
         Assert.Equal(2, segs.Count);
-        Assert.EndsWith("B.md", segs[0].RelativePathFromProjectRoot, StringComparison.OrdinalIgnoreCase);
-        Assert.Equal("Doc", segs[0].FileTypeCategory);
-        Assert.Equal("markdown", segs[0].FenceLanguage);
-        Assert.Contains("# doc", segs[0].TransformedText, StringComparison.Ordinal);
+        Assert.EndsWith("A.cs", segs[0].RelativePathFromProjectRoot, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("Code", segs[0].FileTypeCategory);
+        Assert.Equal("csharp", segs[0].FenceLanguage);
+        Assert.Contains("// code", segs[0].TransformedText, StringComparison.Ordinal);
 
-        Assert.EndsWith("A.cs", segs[1].RelativePathFromProjectRoot, StringComparison.OrdinalIgnoreCase);
-        Assert.Equal("Code", segs[1].FileTypeCategory);
-        Assert.Equal("csharp", segs[1].FenceLanguage);
-        Assert.Contains("// code", segs[1].TransformedText, StringComparison.Ordinal);
+        Assert.EndsWith("B.md", segs[1].RelativePathFromProjectRoot, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("Doc", segs[1].FileTypeCategory);
+        Assert.Equal("markdown", segs[1].FenceLanguage);
+        Assert.Contains("# doc", segs[1].TransformedText, StringComparison.Ordinal);
     }
 
     [Theory]
