@@ -28,15 +28,11 @@ internal static class ProjectSplittingFileClassifier
     private readonly struct ClassificationState(
         IReadOnlyDictionary<string, ParsedCSharpDocument> parsedByPath,
         IReadOnlyDictionary<string, string> dirNamespaceMap,
-        Dictionary<string, HashSet<string>> anchorsByDir,
-        List<NamespaceEligibleFile> eligible,
-        List<string> assetPaths)
+        Dictionary<string, HashSet<string>> anchorsByDir)
     {
         public IReadOnlyDictionary<string, ParsedCSharpDocument> ParsedByPath { get; } = parsedByPath;
         public IReadOnlyDictionary<string, string> DirNamespaceMap { get; } = dirNamespaceMap;
         public Dictionary<string, HashSet<string>> AnchorsByDir { get; } = anchorsByDir;
-        public List<NamespaceEligibleFile> Eligible { get; } = eligible;
-        public List<string> AssetPaths { get; } = assetPaths;
     }
 
     internal static Dictionary<string, string> BuildDirectoryNamespaceMap(
@@ -62,8 +58,8 @@ internal static class ProjectSplittingFileClassifier
         var eligible = new List<NamespaceEligibleFile>();
         var assetPaths = new List<string>();
 
-        var state = new ClassificationState(parsedByPath, dirNamespaceMap, anchorsByDir, eligible, assetPaths);
-        CategorizePaths(absoluteFilePaths, state);
+        var state = new ClassificationState(parsedByPath, dirNamespaceMap, anchorsByDir);
+        CategorizePaths(absoluteFilePaths, state, eligible, assetPaths);
 
         return new ClassificationResult(csPaths, eligible, assetPaths);
     }
@@ -109,7 +105,9 @@ internal static class ProjectSplittingFileClassifier
 
     private static void CategorizePath(
         string path,
-        ClassificationState state)
+        ClassificationState state,
+        List<NamespaceEligibleFile> eligible,
+        List<string> assetPaths)
     {
         var fullPath = Path.GetFullPath(path);
         var ext = Path.GetExtension(fullPath);
@@ -119,7 +117,7 @@ internal static class ProjectSplittingFileClassifier
             if (state.ParsedByPath.TryGetValue(fullPath, out var parsedDoc))
             {
                 var ns = NamespaceExtractor.GetNamespace(parsedDoc.Root);
-                state.Eligible.Add(new NamespaceEligibleFile(fullPath, ns, parsedDoc.SizeBytes));
+                eligible.Add(new NamespaceEligibleFile(fullPath, ns, parsedDoc.SizeBytes));
             }
             return;
         }
@@ -128,17 +126,19 @@ internal static class ProjectSplittingFileClassifier
         {
             var dir = NormalizeDirectory(fullPath);
             var ns = dir != null && state.DirNamespaceMap.TryGetValue(dir, out var mappedNs) ? mappedNs : string.Empty;
-            state.Eligible.Add(new NamespaceEligibleFile(fullPath, ns, GetFileSizeBytes(fullPath)));
+            eligible.Add(new NamespaceEligibleFile(fullPath, ns, GetFileSizeBytes(fullPath)));
             return;
         }
 
-        CategorizeOtherPath(fullPath, ext, state);
+        CategorizeOtherPath(fullPath, ext, state, eligible, assetPaths);
     }
 
     private static void CategorizeOtherPath(
         string fullPath,
         string ext,
-        ClassificationState state)
+        ClassificationState state,
+        List<NamespaceEligibleFile> eligible,
+        List<string> assetPaths)
     {
         var dir = NormalizeDirectory(fullPath);
         if (dir != null && state.DirNamespaceMap.TryGetValue(dir, out var mappedNs))
@@ -148,21 +148,23 @@ internal static class ProjectSplittingFileClassifier
 
             if (isMarkdownDoc || (state.AnchorsByDir.TryGetValue(dir, out var anchors) && IsStemCompanion(Path.GetFileName(fullPath), anchors)))
             {
-                state.Eligible.Add(new NamespaceEligibleFile(fullPath, mappedNs, GetFileSizeBytes(fullPath)));
+                eligible.Add(new NamespaceEligibleFile(fullPath, mappedNs, GetFileSizeBytes(fullPath)));
                 return;
             }
         }
 
-        state.AssetPaths.Add(fullPath);
+        assetPaths.Add(fullPath);
     }
 
     private static void CategorizePaths(
         IReadOnlyList<string> absoluteFilePaths,
-        ClassificationState state)
+        ClassificationState state,
+        List<NamespaceEligibleFile> eligible,
+        List<string> assetPaths)
     {
         foreach (var path in absoluteFilePaths)
         {
-            CategorizePath(path, state);
+            CategorizePath(path, state, eligible, assetPaths);
         }
     }
 
