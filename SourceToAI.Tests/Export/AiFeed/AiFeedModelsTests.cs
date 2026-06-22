@@ -38,7 +38,7 @@ public class AiFeedModelsTests
 
         var session = Guid.Parse("11111111-1111-1111-1111-111111111111");
         var generated = DateTimeOffset.Parse("2026-05-12T10:00:00Z");
-        var fm = AiFeedFrontmatter.Create("MySolution", "MyProject", session, generated, lines);
+        var fm = AiFeedFrontmatter.Create(new AiFeedSessionInfo("MySolution", session, generated), "MyProject", lines);
 
         Assert.Equal(3, fm.FileCount);
         Assert.Equal("MySolution (MyProject)", fm.Project);

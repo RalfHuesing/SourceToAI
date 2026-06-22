@@ -4,7 +4,7 @@ using SourceToAI.Tests.Support;
 
 namespace SourceToAI.Tests.Export;
 
-public class DependencyGraphMarkdownGeneratorTests
+public class CsprojDependencyGraphMarkdownGeneratorTests
 {
     private readonly CsprojDependencyGraphMarkdownGenerator _sut = new();
 
@@ -65,9 +65,9 @@ public class DependencyGraphMarkdownGeneratorTests
             "Main/Main.csproj",
             """
             <Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-              <ItemGroup>
-                <ProjectReference Include="..\Other\Other.csproj" />
-              </ItemGroup>
+               <ItemGroup>
+                 <ProjectReference Include="..\Other\Other.csproj" />
+               </ItemGroup>
             </Project>
             """);
 
@@ -94,11 +94,11 @@ public class DependencyGraphMarkdownGeneratorTests
             "Pkg/Pkg.csproj",
             """
             <Project Sdk="Microsoft.NET.Sdk">
-              <ItemGroup>
-                <PackageReference Include="ChildVersioned">
-                  <Version>3.1.4</Version>
-                </PackageReference>
-              </ItemGroup>
+               <ItemGroup>
+                 <PackageReference Include="ChildVersioned">
+                   <Version>3.1.4</Version>
+                 </PackageReference>
+               </ItemGroup>
             </Project>
             """);
 

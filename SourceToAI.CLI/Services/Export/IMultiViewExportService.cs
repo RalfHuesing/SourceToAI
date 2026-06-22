@@ -24,13 +24,5 @@ public interface IMultiViewExportService
     /// <param name="solutionDocumentationAbsolutePaths">Optionale Lösungsdokumentation.</param>
     /// <param name="unmappedDirectories">Ordner unter der Solution-Wurzel ohne <c>.csproj</c> — nur <c>complete</c>-View (wie virtuelles „.Docs“).</param>
     /// <exception cref="SourceToAI.CLI.App.Exceptions.SourceToAiExportException">Bei Build-, Compose- oder I/O-Fehlern.</exception>
-    void WriteMergedSolutionViews(
-        string outputRoot,
-        string solutionDisplayName,
-        string solutionRootPath,
-        Guid sessionId,
-        DateTimeOffset generated,
-        IReadOnlyList<(ProjectDefinition Project, IReadOnlyList<string> AbsoluteFilePaths)> projectsWithFiles,
-        IReadOnlyList<string>? solutionDocumentationAbsolutePaths,
-        IReadOnlyList<(string DirectoryName, IReadOnlyList<string> AbsoluteFilePaths)> unmappedDirectories);
+    void WriteMergedSolutionViews(SolutionViewExportArgs args);
 }

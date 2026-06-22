@@ -55,7 +55,7 @@ static async Task<int> RunExportPipelineAsync(
     if (noSuppressCore)
         appSettings.SuppressCorePartition = false;
 
-    IReadOnlyList<GacAssemblyDiscovery.GacResolvedAssembly> fromGac;
+    IReadOnlyList<GacResolvedAssembly> fromGac;
     try
     {
         fromGac = gacPatterns.Count > 0
@@ -93,7 +93,7 @@ static async Task<int> RunExportPipelineAsync(
 
     if (expandedPaths.Count == 0)
     {
-        await Console.Error.WriteLineAsync($"[FEHLER] {SourceToAiCli.Usage.ErrorNoInputOrGac}");
+        await Console.Error.WriteLineAsync($"[FEHLER] {SourceToAiCli.ErrorNoInputOrGac}");
         return 1;
     }
 

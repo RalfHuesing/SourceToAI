@@ -1,9 +1,9 @@
-﻿namespace SourceToAI.CLI.Models;
+namespace SourceToAI.CLI.Models;
 
 /// <summary>
 /// Kapselt das Ergebnis einer Operation, um Exceptions für den normalen Kontrollfluss zu vermeiden.
 /// </summary>
-public class ExtractionResult<T>
+public sealed class ExtractionResult<T>
 {
     public bool IsSuccess { get; }
     public T? Value { get; }

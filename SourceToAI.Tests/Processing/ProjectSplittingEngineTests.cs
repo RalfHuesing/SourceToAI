@@ -21,7 +21,7 @@ public class ProjectSplittingEngineTests
         var loader = new CSharpDocumentLoader();
         var sut = new ProjectSplittingEngine(loader);
 
-        var result = sut.PartitionProject(project, [p1, p2], 0, 0);
+        var result = sut.PartitionProject(project, [p1, p2], new ProjectSplittingOptions(0, 0));
 
         Assert.Single(result);
         Assert.Equal(string.Empty, result[0].SubNamespaceName);
@@ -41,7 +41,7 @@ public class ProjectSplittingEngineTests
         var sut = new ProjectSplittingEngine(loader);
 
         // Active splitting
-        var result = sut.PartitionProject(project, [csFile, jsonFile, sqlFile], 100, 5);
+        var result = sut.PartitionProject(project, [csFile, jsonFile, sqlFile], new ProjectSplittingOptions(100, 5));
 
         // Should have 2 partitions: one for "N1" (C#) and one for "_Assets" (non-C#)
         Assert.Equal(2, result.Count);
@@ -67,7 +67,7 @@ public class ProjectSplittingEngineTests
         var loader = new CSharpDocumentLoader();
         var sut = new ProjectSplittingEngine(loader);
 
-        var result = sut.PartitionProject(project, [globalFile, nsFile], 100, 5, suppressCorePartition: false);
+        var result = sut.PartitionProject(project, [globalFile, nsFile], new ProjectSplittingOptions(100, 5, SuppressCorePartition: false));
 
         Assert.Equal(2, result.Count);
         
@@ -92,7 +92,7 @@ public class ProjectSplittingEngineTests
         var loader = new CSharpDocumentLoader();
         var sut = new ProjectSplittingEngine(loader);
 
-        var result = sut.PartitionProject(project, [globalFile, smallNsFile, largeNsFile], 100, 5);
+        var result = sut.PartitionProject(project, [globalFile, smallNsFile, largeNsFile], new ProjectSplittingOptions(100, 5));
 
         Assert.Equal(2, result.Count);
         Assert.DoesNotContain(result, r => r.SubNamespaceName == "Core");
@@ -117,7 +117,7 @@ public class ProjectSplittingEngineTests
         var loader = new CSharpDocumentLoader();
         var sut = new ProjectSplittingEngine(loader);
 
-        var result = sut.PartitionProject(project, [globalFile], 100, 5);
+        var result = sut.PartitionProject(project, [globalFile], new ProjectSplittingOptions(100, 5));
 
         Assert.Single(result);
         Assert.Equal(string.Empty, result[0].SubNamespaceName);
@@ -139,7 +139,7 @@ public class ProjectSplittingEngineTests
         var sut = new ProjectSplittingEngine(loader);
 
         // We have 3 namespaces, but we only want at most 2 files, soft limit 50 KB
-        var result = sut.PartitionProject(project, [f1, f2, f3], 50, 2);
+        var result = sut.PartitionProject(project, [f1, f2, f3], new ProjectSplittingOptions(50, 2));
 
         // Must enforce hard limit: result count <= 2
         Assert.True(result.Count <= 2, $"Expected at most 2 partitions, but got {result.Count}");
@@ -169,7 +169,7 @@ public class ProjectSplittingEngineTests
 
         // We allow up to 5 files (no hard pressure to merge), but the size is small (e.g. 500 KB limit),
         // so sibling optimization should merge MyCompany.Features.Bookings and MyCompany.Features.Billing into MyCompany.Features.
-        var result = sut.PartitionProject(project, [f1, f2], 500, 5);
+        var result = sut.PartitionProject(project, [f1, f2], new ProjectSplittingOptions(500, 5));
 
         // They are siblings under MyCompany.Features and combined size is way below 500 KB.
         // Sibling optimization should merge them into MyCompany.Features.
@@ -192,7 +192,7 @@ public class ProjectSplittingEngineTests
         var loader = new CSharpDocumentLoader();
         var sut = new ProjectSplittingEngine(loader);
 
-        var result = sut.PartitionProject(project, [razor, codeBehind, scopedCss], 100, 5);
+        var result = sut.PartitionProject(project, [razor, codeBehind, scopedCss], new ProjectSplittingOptions(100, 5));
 
         Assert.Single(result);
         Assert.Equal("MyApp.Pages", result[0].SubNamespaceName);
@@ -213,7 +213,7 @@ public class ProjectSplittingEngineTests
         var loader = new CSharpDocumentLoader();
         var sut = new ProjectSplittingEngine(loader);
 
-        var result = sut.PartitionProject(project, [globalFile, nsFile], 100, 1);
+        var result = sut.PartitionProject(project, [globalFile, nsFile], new ProjectSplittingOptions(100, 1));
 
         Assert.Single(result);
         Assert.Equal("N1", result[0].SubNamespaceName);
@@ -238,7 +238,7 @@ public class ProjectSplittingEngineTests
         var loader = new CSharpDocumentLoader();
         var sut = new ProjectSplittingEngine(loader);
 
-        var result = sut.PartitionProject(project, paths, 500, 8);
+        var result = sut.PartitionProject(project, paths, new ProjectSplittingOptions(500, 8));
 
         Assert.Equal(8, result.Count);
         Assert.DoesNotContain(result, r => r.SubNamespaceName == "Core");
@@ -258,7 +258,7 @@ public class ProjectSplittingEngineTests
         var loader = new CSharpDocumentLoader();
         var sut = new ProjectSplittingEngine(loader);
 
-        var result = sut.PartitionProject(project, [csFile, jsonFile], 100, 1);
+        var result = sut.PartitionProject(project, [csFile, jsonFile], new ProjectSplittingOptions(100, 1));
 
         Assert.Equal(2, result.Count);
         Assert.Single(result, r => r.SubNamespaceName == "N1");

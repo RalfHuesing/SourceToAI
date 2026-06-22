@@ -38,49 +38,58 @@ public sealed class CsprojDependencyGraphMarkdownGenerator : IDependencyGraphMar
                     $"Konnte `{project.ProjectFilePath}` nicht lesen: {ex.Message}");
             }
 
-            var csprojDir = Path.GetFullPath(project.RootDirectory);
-            var packages = ReadPackageReferences(doc);
-            var projectRefs = ReadProjectReferences(doc, csprojDir, solutionRootFull);
-
-            sb.AppendLine($"## {project.ProjectName}");
-            sb.AppendLine();
-            sb.AppendLine(
-                $"Projektdatei: `{EscapeMarkdownCell(Path.GetRelativePath(solutionRootFull, Path.GetFullPath(project.ProjectFilePath)))}`");
-            sb.AppendLine();
-
-            sb.AppendLine("### NuGet (`PackageReference`)");
-            sb.AppendLine();
-            if (packages.Count == 0)
-            {
-                sb.AppendLine("*Keine PackageReference-Einträge.*");
-            }
-            else
-            {
-                sb.AppendLine("| Paket | Version |");
-                sb.AppendLine("| --- | --- |");
-                foreach (var row in packages.OrderBy(p => p.Id, StringComparer.OrdinalIgnoreCase))
-                    sb.AppendLine($"| {EscapeMarkdownCell(row.Id)} | {EscapeMarkdownCell(row.Version)} |");
-            }
-
-            sb.AppendLine();
-            sb.AppendLine("### Projekte (`ProjectReference`)");
-            sb.AppendLine();
-            if (projectRefs.Count == 0)
-            {
-                sb.AppendLine("*Keine ProjectReference-Einträge.*");
-            }
-            else
-            {
-                sb.AppendLine("| Referenz (relativ zur Solution) |");
-                sb.AppendLine("| --- |");
-                foreach (var path in projectRefs.OrderBy(p => p, StringComparer.OrdinalIgnoreCase))
-                    sb.AppendLine($"| {EscapeMarkdownCell(path)} |");
-            }
-
-            sb.AppendLine();
+            AppendProjectDependencyInfo(sb, project, solutionRootFull, doc);
         }
 
         return ExtractionResult<string>.Success(sb.ToString());
+    }
+
+    private static void AppendProjectDependencyInfo(
+        StringBuilder sb,
+        ProjectDefinition project,
+        string solutionRootFull,
+        XDocument doc)
+    {
+        var csprojDir = Path.GetFullPath(project.RootDirectory);
+        var packages = ReadPackageReferences(doc);
+        var projectRefs = ReadProjectReferences(doc, csprojDir, solutionRootFull);
+
+        sb.AppendLine($"## {project.ProjectName}");
+        sb.AppendLine();
+        sb.AppendLine(
+            $"Projektdatei: `{EscapeMarkdownCell(Path.GetRelativePath(solutionRootFull, Path.GetFullPath(project.ProjectFilePath)))}`");
+        sb.AppendLine();
+
+        sb.AppendLine("### NuGet (`PackageReference`)");
+        sb.AppendLine();
+        if (packages.Count == 0)
+        {
+            sb.AppendLine("*Keine PackageReference-Einträge.*");
+        }
+        else
+        {
+            sb.AppendLine("| Paket | Version |");
+            sb.AppendLine("| --- | --- |");
+            foreach (var row in packages.OrderBy(p => p.Id, StringComparer.OrdinalIgnoreCase))
+                sb.AppendLine($"| {EscapeMarkdownCell(row.Id)} | {EscapeMarkdownCell(row.Version)} |");
+        }
+
+        sb.AppendLine();
+        sb.AppendLine("### Projekte (`ProjectReference`)");
+        sb.AppendLine();
+        if (projectRefs.Count == 0)
+        {
+            sb.AppendLine("*Keine ProjectReference-Einträge.*");
+        }
+        else
+        {
+            sb.AppendLine("| Referenz (relativ zur Solution) |");
+            sb.AppendLine("| --- |");
+            foreach (var path in projectRefs.OrderBy(p => p, StringComparer.OrdinalIgnoreCase))
+                sb.AppendLine($"| {EscapeMarkdownCell(path)} |");
+        }
+
+        sb.AppendLine();
     }
 
     private static List<(string Id, string Version)> ReadPackageReferences(XDocument doc)

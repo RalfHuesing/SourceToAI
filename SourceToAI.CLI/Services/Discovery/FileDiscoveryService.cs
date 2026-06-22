@@ -1,17 +1,35 @@
-﻿using System.Linq;
+using System.Linq;
 using SourceToAI.CLI.Configuration;
 using SourceToAI.CLI.Models;
 using SourceToAI.CLI.Services;
 
 namespace SourceToAI.CLI.Services.Discovery;
 
-public class FileDiscoveryService(IDirectoryEnumerator directoryEnumerator) : IFileDiscoveryService
+public sealed class FileDiscoveryService(IDirectoryEnumerator directoryEnumerator) : IFileDiscoveryService
 {
     /// <summary>
     /// Direkt unter der Solution-Wurzel — gleiche Sonderfälle wie <see cref="FindSolutionDocs"/> (kein rekursiver „Unmapped“-Export dieser Bäume).
     /// </summary>
     private static readonly HashSet<string> UnmappedSkippedTopLevelDirectoryNames =
         new(StringComparer.OrdinalIgnoreCase) { ".cursor", ".github", "Docs" };
+
+    private readonly struct ScanContext(
+        string scanRoot,
+        ProjectPathExcludeSpec? scanPathExclude,
+        ProjectPathExcludeSpec? solutionPathExclude,
+        HashSet<string> includedExtensions,
+        HashSet<string> excludedDirectories,
+        List<string> foundFiles,
+        List<string> warnings)
+    {
+        public string ScanRoot { get; } = scanRoot;
+        public ProjectPathExcludeSpec? ScanPathExclude { get; } = scanPathExclude;
+        public ProjectPathExcludeSpec? SolutionPathExclude { get; } = solutionPathExclude;
+        public HashSet<string> IncludedExtensions { get; } = includedExtensions;
+        public HashSet<string> ExcludedDirectories { get; } = excludedDirectories;
+        public List<string> FoundFiles { get; } = foundFiles;
+        public List<string> Warnings { get; } = warnings;
+    }
 
     public ExtractionResult<List<string>> FindSolutionDocs(string rootPath, AppSettings settings)
     {
@@ -92,15 +110,18 @@ public class FileDiscoveryService(IDirectoryEnumerator directoryEnumerator) : IF
             var solutionPathExclude = ProjectPathExcludeFilter.TryCreate(
                 settings.ExcludedPathPatterns,
                 solutionRoot);
-            ScanDirectory(
-                project.RootDirectory,
+
+            var context = new ScanContext(
                 project.RootDirectory,
                 projectPathExclude,
                 solutionPathExclude,
-                foundFiles,
                 included,
                 excluded,
+                foundFiles,
                 warnings);
+
+            ScanDirectory(project.RootDirectory, context);
+
             return ExtractionResult<List<string>>.Success(
                 foundFiles,
                 warnings.Count > 0 ? warnings : null);
@@ -109,6 +130,47 @@ public class FileDiscoveryService(IDirectoryEnumerator directoryEnumerator) : IF
         {
             return ExtractionResult<List<string>>.Failure($"Fehler beim Scannen von {project.ProjectName}: {ex.Message}");
         }
+    }
+
+    private static (HashSet<string> ProjectRoots, HashSet<string> Included, HashSet<string> Excluded, ProjectPathExcludeSpec? SolutionFilter)
+        PrepareUnmappedScanSets(string rootFull, IReadOnlyList<ProjectDefinition> projects, AppSettings settings)
+    {
+        var projectRoots = new HashSet<string>(
+            projects
+                .Where(p => !string.IsNullOrEmpty(p.RootDirectory))
+                .Select(p => Path.GetFullPath(p.RootDirectory)),
+            StringComparer.OrdinalIgnoreCase);
+
+        var included = new HashSet<string>(settings.IncludedExtensions, StringComparer.OrdinalIgnoreCase);
+        var excluded = new HashSet<string>(settings.ExcludedDirectories, StringComparer.OrdinalIgnoreCase);
+        var solutionPathExclude = ProjectPathExcludeFilter.TryCreate(settings.ExcludedPathPatterns, rootFull);
+
+        return (projectRoots, included, excluded, solutionPathExclude);
+    }
+
+    private IOrderedEnumerable<(string Path, string Name)> GetUnmappedDirectories(
+        string rootFull,
+        HashSet<string> projectRoots,
+        HashSet<string> excluded,
+        ProjectPathExcludeSpec? solutionPathExclude)
+    {
+        string[] directSubDirs;
+        try
+        {
+            directSubDirs = directoryEnumerator.EnumerateDirectories(rootFull).ToArray();
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException($"Unmapped-Verzeichnisse unter \"{rootFull}\" nicht lesbar: {ex.Message}", ex);
+        }
+
+        return directSubDirs
+            .Select(d => (Path: Path.GetFullPath(d), Name: new DirectoryInfo(d).Name))
+            .Where(x => !excluded.Contains(x.Name)
+                        && !UnmappedSkippedTopLevelDirectoryNames.Contains(x.Name)
+                        && !projectRoots.Contains(x.Path)
+                        && !ProjectPathExcludeFilter.IsDirectoryExcluded(solutionPathExclude, x.Path))
+            .OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase);
     }
 
     public ExtractionResult<List<(string DirectoryName, List<string> AbsolutePaths)>> FindUnmappedDirectories(
@@ -127,62 +189,38 @@ public class FileDiscoveryService(IDirectoryEnumerator directoryEnumerator) : IF
                     $"Solution-Wurzel \"{rootPath}\" existiert nicht.");
             }
 
-            var projectRoots = new HashSet<string>(
-                projects
-                    .Where(p => !string.IsNullOrEmpty(p.RootDirectory))
-                    .Select(p => Path.GetFullPath(p.RootDirectory)),
-                StringComparer.OrdinalIgnoreCase);
+            var (projectRoots, included, excluded, solutionPathExclude) = PrepareUnmappedScanSets(rootFull, projects, settings);
 
-            var included = new HashSet<string>(settings.IncludedExtensions, StringComparer.OrdinalIgnoreCase);
-            var excluded = new HashSet<string>(settings.ExcludedDirectories, StringComparer.OrdinalIgnoreCase);
-            var solutionPathExclude = ProjectPathExcludeFilter.TryCreate(settings.ExcludedPathPatterns, rootFull);
-
-            string[] directSubDirs;
+            IEnumerable<(string Path, string Name)> unmappedDirs;
             try
             {
-                directSubDirs = directoryEnumerator.EnumerateDirectories(rootFull).ToArray();
+                unmappedDirs = GetUnmappedDirectories(rootFull, projectRoots, excluded, solutionPathExclude);
             }
             catch (Exception ex)
             {
-                return ExtractionResult<List<(string DirectoryName, List<string> AbsolutePaths)>>.Failure(
-                    $"Unmapped-Verzeichnisse unter \"{rootFull}\" nicht lesbar: {ex.Message}");
+                return ExtractionResult<List<(string DirectoryName, List<string> AbsolutePaths)>>.Failure(ex.Message);
             }
 
             var results = new List<(string DirectoryName, List<string> AbsolutePaths)>();
-
-            foreach (var dir in directSubDirs.OrderBy(d => d, StringComparer.OrdinalIgnoreCase))
+            foreach (var (dirFull, dirName) in unmappedDirs)
             {
-                var dirFull = Path.GetFullPath(dir);
-                var dirName = new DirectoryInfo(dir).Name;
-
-                if (excluded.Contains(dirName))
-                    continue;
-
-                if (UnmappedSkippedTopLevelDirectoryNames.Contains(dirName))
-                    continue;
-
-                if (projectRoots.Contains(dirFull))
-                    continue;
-
-                if (ProjectPathExcludeFilter.IsDirectoryExcluded(solutionPathExclude, dirFull))
-                    continue;
-
                 var unmappedPathExclude = ProjectPathExcludeFilter.TryCreate(settings.ExcludedPathPatterns, dirFull);
                 var foundFiles = new List<string>();
-                ScanDirectory(
-                    dirFull,
+                var context = new ScanContext(
                     dirFull,
                     unmappedPathExclude,
                     solutionPathExclude,
-                    foundFiles,
                     included,
                     excluded,
+                    foundFiles,
                     mergedWarnings);
 
-                if (foundFiles.Count == 0)
-                    continue;
+                ScanDirectory(dirFull, context);
 
-                results.Add((dirName, foundFiles));
+                if (foundFiles.Count > 0)
+                {
+                    results.Add((dirName, foundFiles));
+                }
             }
 
             return ExtractionResult<List<(string DirectoryName, List<string> AbsolutePaths)>>.Success(
@@ -196,15 +234,7 @@ public class FileDiscoveryService(IDirectoryEnumerator directoryEnumerator) : IF
         }
     }
 
-    private void ScanDirectory(
-        string scanRoot,
-        string currentDir,
-        ProjectPathExcludeSpec? scanPathExclude,
-        ProjectPathExcludeSpec? solutionPathExclude,
-        List<string> foundFiles,
-        HashSet<string> includedExtensions,
-        HashSet<string> excludedDirectories,
-        List<string> warnings)
+    private void ScanDirectory(string currentDir, ScanContext context)
     {
         string[] files;
         try
@@ -213,19 +243,19 @@ public class FileDiscoveryService(IDirectoryEnumerator directoryEnumerator) : IF
         }
         catch (Exception ex) when (SkippableLocalFileIoExceptions.Matches(ex))
         {
-            warnings.Add($"Dateien in \"{currentDir}\" nicht lesbar ({ex.GetType().Name}): {ex.Message}");
+            context.Warnings.Add($"Dateien in \"{currentDir}\" nicht lesbar ({ex.GetType().Name}): {ex.Message}");
             return;
         }
 
         foreach (var file in files)
         {
-            if (!includedExtensions.Contains(Path.GetExtension(file)))
+            if (!context.IncludedExtensions.Contains(Path.GetExtension(file)))
                 continue;
 
-            if (ProjectPathExcludeFilter.IsPathExcludedByAny(scanPathExclude, solutionPathExclude, file, isDirectory: false))
+            if (ProjectPathExcludeFilter.IsPathExcludedByAny(context.ScanPathExclude, context.SolutionPathExclude, file, isDirectory: false))
                 continue;
 
-            foundFiles.Add(file);
+            context.FoundFiles.Add(file);
         }
 
         string[] subDirs;
@@ -235,7 +265,7 @@ public class FileDiscoveryService(IDirectoryEnumerator directoryEnumerator) : IF
         }
         catch (Exception ex) when (SkippableLocalFileIoExceptions.Matches(ex))
         {
-            warnings.Add($"Unterverzeichnisse von \"{currentDir}\" nicht lesbar ({ex.GetType().Name}): {ex.Message}");
+            context.Warnings.Add($"Unterverzeichnisse von \"{currentDir}\" nicht lesbar ({ex.GetType().Name}): {ex.Message}");
             return;
         }
 
@@ -243,13 +273,13 @@ public class FileDiscoveryService(IDirectoryEnumerator directoryEnumerator) : IF
         {
             var dirName = new DirectoryInfo(dir).Name;
 
-            if (excludedDirectories.Contains(dirName))
+            if (context.ExcludedDirectories.Contains(dirName))
                 continue;
 
-            if (ProjectPathExcludeFilter.IsPathExcludedByAny(scanPathExclude, solutionPathExclude, dir, isDirectory: true))
+            if (ProjectPathExcludeFilter.IsPathExcludedByAny(context.ScanPathExclude, context.SolutionPathExclude, dir, isDirectory: true))
                 continue;
 
-            ScanDirectory(scanRoot, dir, scanPathExclude, solutionPathExclude, foundFiles, includedExtensions, excludedDirectories, warnings);
+            ScanDirectory(dir, context);
         }
     }
 }

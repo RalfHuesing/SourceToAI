@@ -1,8 +1,8 @@
-﻿using SourceToAI.CLI.Models;
+using SourceToAI.CLI.Models;
 
 namespace SourceToAI.CLI.Services.Discovery;
 
-public class SolutionDiscoveryService : ISolutionDiscoveryService
+public sealed class SolutionDiscoveryService : ISolutionDiscoveryService
 {
     public ExtractionResult<string> GetSolutionName(string rootPath)
     {

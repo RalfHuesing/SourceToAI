@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 
 namespace SourceToAI.CLI.App;
 
-public class ConsoleOrchestrator(
+public sealed class ConsoleOrchestrator(
     ISolutionDiscoveryService solutionDiscovery,
     IFileDiscoveryService fileDiscovery,
     IAssemblyDecompilerService assemblyDecompiler,
@@ -34,7 +34,7 @@ public class ConsoleOrchestrator(
         return result.Value!;
     }
 
-    private class ExportState { public bool Initialized; }
+    private sealed class ExportState { public bool Initialized; }
 
     /// <summary>
     /// Baut eine mehrzeilige Beschreibung für fehlgeschlagene Assembly-Verarbeitung (insb. <see cref="AggregateException"/>).
@@ -192,99 +192,141 @@ public class ConsoleOrchestrator(
         }
     }
 
+    private sealed record ResolvedSource(string EffectiveRoot, string SolutionName, List<ProjectDefinition> Projects, string OutputDir);
+
     private async Task RunSingleSourceAsync(
         string rootPath,
         string exportPath,
         ExportState state,
         List<AssemblySourceFailure> assemblyFailures)
     {
-        string effectiveRoot;
-        string solutionName;
-        List<ProjectDefinition> projects;
-        string outputDir;
-
-        if (IsNetAssemblyFile(rootPath))
-        {
-            var assemblyPath = Path.GetFullPath(rootPath);
-            var assemblyBaseName = Path.GetFileNameWithoutExtension(assemblyPath);
-
-            if (!state.Initialized)
-            {
-                PrepareGlobalExportRootDirectory(exportPath);
-                state.Initialized = true;
-                TryWriteGlobalExportReadme(exportPath);
-            }
-
-            var plannedSolutionExportRoot = Path.GetFullPath(MultiViewExportPaths.GetSolutionExportRoot(exportPath, assemblyBaseName));
-
-            var decompileDir = Path.Combine(plannedSolutionExportRoot, "decompile");
-            try
-            {
-                // RunAsync/CLI reichen das Abbruchtoken noch nicht durch — sobald verfügbar hier an den Decompiler durchreichen.
-                effectiveRoot = assemblyDecompiler.DecompileToProjectDirectory(
-                    assemblyPath,
-                    decompileDir,
-                    CancellationToken.None);
-
-                solutionName = UnwrapOrThrowValidation(solutionDiscovery.GetSolutionName(effectiveRoot));
-                if (!string.Equals(solutionName, assemblyBaseName, StringComparison.OrdinalIgnoreCase))
-                {
-                    throw new SourceToAiValidationException(
-                        $"Ermittelter Solution-Name \"{solutionName}\" weicht vom Assembly-Basisnamen \"{assemblyBaseName}\" ab (Export-Pfad-Invariante).");
-                }
-
-                var exportRootFromName = Path.GetFullPath(MultiViewExportPaths.GetSolutionExportRoot(exportPath, solutionName));
-                if (!string.Equals(exportRootFromName, plannedSolutionExportRoot, StringComparison.OrdinalIgnoreCase))
-                {
-                    throw new SourceToAiValidationException(
-                        $"Export-Wurzel \"{exportRootFromName}\" entspricht nicht der erwarteten Assembly-Export-Wurzel \"{plannedSolutionExportRoot}\".");
-                }
-
-                Console.WriteLine($"[INFO] Solution erkannt: {solutionName}");
-                projects = UnwrapOrThrowValidation(solutionDiscovery.FindProjects(effectiveRoot));
-                Console.WriteLine($"[INFO] {projects.Count} Projekte gefunden.\n");
-                outputDir = plannedSolutionExportRoot;
-            }
-            catch (Exception ex) when (ex is not OperationCanceledException)
-            {
-                var detail = BuildAssemblyProcessingFailureDetail(ex);
-                assemblyFailures.Add(new AssemblySourceFailure(assemblyPath, detail));
-                Console.WriteLine($"[WARN] Assembly-Quelle uebersprungen ({assemblyPath}): {ex.Message}");
-                return;
-            }
-        }
-        else
-        {
-            effectiveRoot = rootPath;
-            solutionName = UnwrapOrThrowValidation(solutionDiscovery.GetSolutionName(effectiveRoot));
-            Console.WriteLine($"[INFO] Solution erkannt: {solutionName}");
-
-            projects = UnwrapOrThrowValidation(solutionDiscovery.FindProjects(effectiveRoot));
-            Console.WriteLine($"[INFO] {projects.Count} Projekte gefunden.\n");
-
-            if (!state.Initialized)
-            {
-                PrepareGlobalExportRootDirectory(exportPath);
-                state.Initialized = true;
-                TryWriteGlobalExportReadme(exportPath);
-            }
-
-            outputDir = MultiViewExportPaths.GetSolutionExportRoot(exportPath, solutionName);
-        }
-
-        var repositoryFolderName = GetRepositoryFolderNameForReadme(rootPath, effectiveRoot);
+        var resolved = TryResolveSource(rootPath, exportPath, state, assemblyFailures);
+        if (resolved == null)
+            return;
 
         var generatedAt = DateTimeOffset.UtcNow;
         var exportSessionId = Guid.NewGuid();
+
+        TryWriteSolutionMetadataFiles(resolved, rootPath, generatedAt);
+
+        var solutionDocPaths = FindSolutionDocs(resolved.EffectiveRoot);
+        var projectsWithFiles = ScanProjectsForFiles(resolved.Projects, resolved.EffectiveRoot);
+        var unmappedForExport = FindUnmappedForExport(resolved.EffectiveRoot, resolved.Projects, out var unmappedExportCount);
+
+        var exportArgs = new SolutionViewExportArgs(
+            exportPath,
+            resolved.SolutionName,
+            resolved.EffectiveRoot,
+            exportSessionId,
+            generatedAt,
+            projectsWithFiles,
+            solutionDocPaths,
+            unmappedForExport);
+
+        multiViewExportService.WriteMergedSolutionViews(exportArgs);
+
+        PrintExportSummary(projectsWithFiles.Count, unmappedExportCount, resolved, exportPath);
+
+        await ExecutePostExportTasksAsync(resolved.SolutionName, resolved.OutputDir);
+    }
+
+    private ResolvedSource? TryResolveSource(
+        string rootPath,
+        string exportPath,
+        ExportState state,
+        List<AssemblySourceFailure> assemblyFailures)
+    {
+        if (IsNetAssemblyFile(rootPath))
+        {
+            return TryResolveAssemblySource(rootPath, exportPath, state, assemblyFailures);
+        }
+
+        var effectiveRoot = rootPath;
+        var solutionName = UnwrapOrThrowValidation(solutionDiscovery.GetSolutionName(effectiveRoot));
+        Console.WriteLine($"[INFO] Solution erkannt: {solutionName}");
+
+        var projects = UnwrapOrThrowValidation(solutionDiscovery.FindProjects(effectiveRoot));
+        Console.WriteLine($"[INFO] {projects.Count} Projekte gefunden.\n");
+
+        EnsureExportDirectoryInitialized(exportPath, state);
+
+        var outputDir = MultiViewExportPaths.GetSolutionExportRoot(exportPath, solutionName);
+        return new ResolvedSource(effectiveRoot, solutionName, projects, outputDir);
+    }
+
+    private ResolvedSource? TryResolveAssemblySource(
+        string rootPath,
+        string exportPath,
+        ExportState state,
+        List<AssemblySourceFailure> assemblyFailures)
+    {
+        var assemblyPath = Path.GetFullPath(rootPath);
+        var assemblyBaseName = Path.GetFileNameWithoutExtension(assemblyPath);
+
+        EnsureExportDirectoryInitialized(exportPath, state);
+
+        var plannedSolutionExportRoot = Path.GetFullPath(MultiViewExportPaths.GetSolutionExportRoot(exportPath, assemblyBaseName));
+        var decompileDir = Path.Combine(plannedSolutionExportRoot, "decompile");
         try
         {
-            Directory.CreateDirectory(outputDir);
+            var effectiveRoot = assemblyDecompiler.DecompileToProjectDirectory(
+                assemblyPath,
+                decompileDir,
+                CancellationToken.None);
+
+            var solutionName = UnwrapOrThrowValidation(solutionDiscovery.GetSolutionName(effectiveRoot));
+            if (!string.Equals(solutionName, assemblyBaseName, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new SourceToAiValidationException(
+                    $"Ermittelter Solution-Name \"{solutionName}\" weicht vom Assembly-Basisnamen \"{assemblyBaseName}\" ab (Export-Pfad-Invariante).");
+            }
+
+            var exportRootFromName = Path.GetFullPath(MultiViewExportPaths.GetSolutionExportRoot(exportPath, solutionName));
+            if (!string.Equals(exportRootFromName, plannedSolutionExportRoot, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new SourceToAiValidationException(
+                    $"Export-Wurzel \"{exportRootFromName}\" entspricht nicht der erwarteten Assembly-Export-Wurzel \"{plannedSolutionExportRoot}\".");
+            }
+
+            Console.WriteLine($"[INFO] Solution erkannt: {solutionName}");
+            var projects = UnwrapOrThrowValidation(solutionDiscovery.FindProjects(effectiveRoot));
+            Console.WriteLine($"[INFO] {projects.Count} Projekte gefunden.\n");
+            return new ResolvedSource(effectiveRoot, solutionName, projects, plannedSolutionExportRoot);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            var detail = BuildAssemblyProcessingFailureDetail(ex);
+            assemblyFailures.Add(new AssemblySourceFailure(assemblyPath, detail));
+            Console.WriteLine($"[WARN] Assembly-Quelle uebersprungen ({assemblyPath}): {ex.Message}");
+            return null;
+        }
+    }
+
+    private void EnsureExportDirectoryInitialized(string exportPath, ExportState state)
+    {
+        if (!state.Initialized)
+        {
+            PrepareGlobalExportRootDirectory(exportPath);
+            state.Initialized = true;
+            TryWriteGlobalExportReadme(exportPath);
+        }
+    }
+
+    private void TryWriteSolutionMetadataFiles(
+        ResolvedSource resolved,
+        string rootPath,
+        DateTimeOffset generatedAt)
+    {
+        var repositoryFolderName = GetRepositoryFolderNameForReadme(rootPath, resolved.EffectiveRoot);
+        try
+        {
+            Directory.CreateDirectory(resolved.OutputDir);
             var readme = readmeMarkdownGenerator.GenerateIsolatedSolutionReadme(
-                solutionName,
+                resolved.SolutionName,
                 repositoryFolderName,
                 generatedAt);
-            File.WriteAllText(Path.Combine(outputDir, "readme.md"), readme);
-            Console.WriteLine($"[INFO] readme.md (Loesung) -> {outputDir}");
+            File.WriteAllText(Path.Combine(resolved.OutputDir, "readme.md"), readme);
+            Console.WriteLine($"[INFO] readme.md (Loesung) -> {resolved.OutputDir}");
         }
         catch (Exception ex)
         {
@@ -293,11 +335,11 @@ public class ConsoleOrchestrator(
 
         try
         {
-            var depGraphResult = dependencyGraphMarkdownGenerator.Generate(effectiveRoot, projects);
+            var depGraphResult = dependencyGraphMarkdownGenerator.Generate(resolved.EffectiveRoot, resolved.Projects);
             if (depGraphResult.IsSuccess)
             {
-                File.WriteAllText(Path.Combine(outputDir, "dependency-graph.md"), depGraphResult.Value!);
-                Console.WriteLine($"[INFO] dependency-graph.md -> {outputDir}");
+                File.WriteAllText(Path.Combine(resolved.OutputDir, "dependency-graph.md"), depGraphResult.Value!);
+                Console.WriteLine($"[INFO] dependency-graph.md -> {resolved.OutputDir}");
             }
             else
             {
@@ -308,20 +350,26 @@ public class ConsoleOrchestrator(
         {
             Console.WriteLine($"[WARN] dependency-graph.md konnte nicht geschrieben werden: {ex.Message}");
         }
+    }
 
-        IReadOnlyList<string>? solutionDocPaths = null;
+    private IReadOnlyList<string>? FindSolutionDocs(string effectiveRoot)
+    {
         var docsResult = fileDiscovery.FindSolutionDocs(effectiveRoot, settings);
         if (docsResult.IsSuccess && docsResult.Value!.Count > 0)
         {
-            solutionDocPaths = docsResult.Value;
             Console.WriteLine(
-                $"[INFO] Solution-Dokumentation: {solutionDocPaths.Count} Datei(en) -> eigene Datei unter complete/ (Projekt \".Docs\").\n");
-        }
-        else
-        {
-            Console.WriteLine("   -> Keine Solution-Docs gefunden (Root-README, Docs/, .cursor, .github ...).\n");
+                $"[INFO] Solution-Dokumentation: {docsResult.Value.Count} Datei(en) -> eigene Datei unter complete/ (Projekt \".Docs\").\n");
+            return docsResult.Value;
         }
 
+        Console.WriteLine("   -> Keine Solution-Docs gefunden (Root-README, Docs/, .cursor, .github ...).\n");
+        return null;
+    }
+
+    private List<(ProjectDefinition Project, IReadOnlyList<string> AbsoluteFilePaths)> ScanProjectsForFiles(
+        List<ProjectDefinition> projects,
+        string effectiveRoot)
+    {
         var projectsWithFiles = new List<(ProjectDefinition Project, IReadOnlyList<string> AbsoluteFilePaths)>();
         foreach (var project in projects)
         {
@@ -335,9 +383,7 @@ public class ConsoleOrchestrator(
             if (filesResult.Warnings is { Count: > 0 } scanWarnings)
             {
                 foreach (var line in scanWarnings)
-                {
                     Console.WriteLine($"   -> [WARN] {project.ProjectName}: {line}");
-                }
             }
 
             if (filesResult.Value!.Count == 0)
@@ -349,62 +395,57 @@ public class ConsoleOrchestrator(
             projectsWithFiles.Add((project, filesResult.Value));
             Console.WriteLine($"   -> Multi-View-Quellen: {project.ProjectName} ({filesResult.Value.Count} Dateien)");
         }
+        return projectsWithFiles;
+    }
 
+    private IReadOnlyList<(string DirectoryName, IReadOnlyList<string> AbsoluteFilePaths)> FindUnmappedForExport(
+        string effectiveRoot,
+        List<ProjectDefinition> projects,
+        out int unmappedExportCount)
+    {
         var unmappedResult = fileDiscovery.FindUnmappedDirectories(effectiveRoot, projects, settings);
-        IReadOnlyList<(string DirectoryName, IReadOnlyList<string> AbsoluteFilePaths)> unmappedForExport;
-        var unmappedExportCount = 0;
+        unmappedExportCount = 0;
 
         if (!unmappedResult.IsSuccess)
         {
             Console.WriteLine($"   -> [WARN] Unmapped-Verzeichnisse: {unmappedResult.ErrorMessage}");
-            unmappedForExport = [];
+            return [];
         }
-        else
+
+        var raw = unmappedResult.Value!;
+        unmappedExportCount = raw.Count;
+
+        if (unmappedResult.Warnings is { Count: > 0 } unmappedWarnings)
         {
-            var raw = unmappedResult.Value!;
-            unmappedExportCount = raw.Count;
-            unmappedForExport = raw
-                .OrderBy(x => x.DirectoryName, StringComparer.OrdinalIgnoreCase)
-                .Select(x => (x.DirectoryName, (IReadOnlyList<string>)x.AbsolutePaths))
-                .ToList();
-
-            foreach (var (name, paths) in unmappedForExport)
-            {
-                Console.WriteLine($"[INFO] Unmapped Directory found: {name} ({paths.Count} Dateien)");
-            }
-
-            if (unmappedResult.Warnings is { Count: > 0 } unmappedWarnings)
-            {
-                foreach (var line in unmappedWarnings)
-                {
-                    Console.WriteLine($"   -> [WARN] Unmapped-Verzeichnis-Scan: {line}");
-                }
-            }
+            foreach (var line in unmappedWarnings)
+                Console.WriteLine($"   -> [WARN] Unmapped-Verzeichnis-Scan: {line}");
         }
 
-        Console.WriteLine();
-        multiViewExportService.WriteMergedSolutionViews(
-            exportPath,
-            solutionName,
-            effectiveRoot,
-            exportSessionId,
-            generatedAt,
-            projectsWithFiles,
-            solutionDocPaths,
-            unmappedForExport);
+        return raw
+            .OrderBy(x => x.DirectoryName, StringComparer.OrdinalIgnoreCase)
+            .Select(x => (x.DirectoryName, (IReadOnlyList<string>)x.AbsolutePaths))
+            .ToList();
+    }
 
-        var successCount = projectsWithFiles.Count;
+    private static void PrintExportSummary(
+        int successCount,
+        int unmappedExportCount,
+        ResolvedSource resolved,
+        string exportPath)
+    {
         Console.WriteLine("[INFO] Multi-View-Export (complete, signatures-only, public-only, dto-only) abgeschlossen.");
-
         Console.WriteLine("\n==================================================");
         var unmappedSummary = unmappedExportCount > 0
             ? $" Zusaetzlich {unmappedExportCount} nicht zugeordnete(s) Verzeichnis(se) mit Dateien."
             : string.Empty;
-        Console.WriteLine($"- Fertig! {successCount} von {projects.Count} Projekten mit exportierbaren Dateien.{unmappedSummary}");
-        Console.WriteLine($"- Ausgabe (Loesung): {outputDir}");
+        Console.WriteLine($"- Fertig! {successCount} von {resolved.Projects.Count} Projekten mit exportierbaren Dateien.{unmappedSummary}");
+        Console.WriteLine($"- Ausgabe (Loesung): {resolved.OutputDir}");
         Console.WriteLine($"- Ausgabe (Global): {exportPath}");
         Console.WriteLine("==================================================");
+    }
 
+    private async Task ExecutePostExportTasksAsync(string solutionName, string outputDir)
+    {
         if (postExportTasks.Any())
         {
             Console.WriteLine("\n- Fuehre Post-Export Tasks aus...");

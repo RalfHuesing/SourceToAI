@@ -8,13 +8,11 @@ namespace SourceToAI.CLI.Services.Export.AiFeed;
 public sealed class AiFeedMarkdownComposer : IAiFeedMarkdownComposer
 {
     public string Compose(
-        string solutionDisplayName,
+        AiFeedSessionInfo sessionInfo,
         string projectDisplayName,
-        Guid sessionId,
-        DateTimeOffset generated,
         IReadOnlyList<AiFeedContentSegment> segments)
     {
-        ArgumentNullException.ThrowIfNull(solutionDisplayName);
+        ArgumentNullException.ThrowIfNull(sessionInfo);
         ArgumentNullException.ThrowIfNull(projectDisplayName);
         ArgumentNullException.ThrowIfNull(segments);
 
@@ -23,13 +21,11 @@ public sealed class AiFeedMarkdownComposer : IAiFeedMarkdownComposer
             AiFeedTransformedContentKind.OriginalAsTransformed);
         var manifestLines = BuildManifestLines(segments);
         var frontmatter = AiFeedFrontmatter.Create(
-            solutionDisplayName,
+            sessionInfo,
             projectDisplayName,
-            sessionId,
-            generated,
             manifestLines);
 
-        var displayTitle = AiFeedFrontmatter.FormatProjectField(solutionDisplayName, projectDisplayName);
+        var displayTitle = AiFeedFrontmatter.FormatProjectField(sessionInfo.SolutionDisplayName, projectDisplayName);
         var sb = new StringBuilder();
 
         AppendYamlFrontmatter(sb, frontmatter);

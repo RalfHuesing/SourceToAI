@@ -19,7 +19,7 @@ public class AiFeedMarkdownComposerTests
             new AiFeedContentSegment("docs/B.md", "Doc", "markdown", "# Beta"),
         };
 
-        var md = Composer.Compose("Sol", "Proj", FixedSession, FixedGenerated, segments);
+        var md = Composer.Compose(new AiFeedSessionInfo("Sol", FixedSession, FixedGenerated), "Proj", segments);
 
         Assert.Contains("feed_type: source_export", md);
         Assert.Contains("project: \"Sol (Proj)\"", md);
@@ -47,7 +47,7 @@ public class AiFeedMarkdownComposerTests
             new AiFeedContentSegment("x.cs", "Code", "csharp", tricky),
         };
 
-        var md = Composer.Compose("S", "P", FixedSession, FixedGenerated, segments);
+        var md = Composer.Compose(new AiFeedSessionInfo("S", FixedSession, FixedGenerated), "P", segments);
 
         var fenceOpen = Regex.Match(md, @"^(`{4,})csharp", RegexOptions.Multiline);
         Assert.True(fenceOpen.Success);
@@ -61,7 +61,7 @@ public class AiFeedMarkdownComposerTests
     [Fact]
     public void Compose_zero_segments_valid_markdown_no_content_subsections()
     {
-        var md = Composer.Compose("Sol", "Proj", FixedSession, FixedGenerated, Array.Empty<AiFeedContentSegment>());
+        var md = Composer.Compose(new AiFeedSessionInfo("Sol", FixedSession, FixedGenerated), "Proj", Array.Empty<AiFeedContentSegment>());
 
         Assert.Contains("file_count: 0", md);
         Assert.Contains("## MANIFEST", md);
@@ -74,7 +74,7 @@ public class AiFeedMarkdownComposerTests
     [Fact]
     public void Compose_project_field_with_special_characters_is_yaml_escaped_in_frontmatter()
     {
-        var md = Composer.Compose("S: \"x\"", "P\nline2", FixedSession, FixedGenerated, Array.Empty<AiFeedContentSegment>());
+        var md = Composer.Compose(new AiFeedSessionInfo("S: \"x\"", FixedSession, FixedGenerated), "P\nline2", Array.Empty<AiFeedContentSegment>());
 
         Assert.Contains("project: \"S: \\\"x\\\" (P\\nline2)\"", md);
     }
@@ -82,7 +82,7 @@ public class AiFeedMarkdownComposerTests
     [Fact]
     public void Compose_instruction_contains_project_display_name_quoted()
     {
-        var md = Composer.Compose("Sol", "MyProj", FixedSession, FixedGenerated, Array.Empty<AiFeedContentSegment>());
+        var md = Composer.Compose(new AiFeedSessionInfo("Sol", FixedSession, FixedGenerated), "MyProj", Array.Empty<AiFeedContentSegment>());
         Assert.Contains("Dies ist Projekt: 'MyProj'.", md);
     }
 
@@ -91,7 +91,7 @@ public class AiFeedMarkdownComposerTests
     {
         const string body = "€"; // 3 UTF-8-Bytes
         var segments = new[] { new AiFeedContentSegment("x.cs", "Code", "csharp", body) };
-        var md = Composer.Compose("S", "P", FixedSession, FixedGenerated, segments);
+        var md = Composer.Compose(new AiFeedSessionInfo("S", FixedSession, FixedGenerated), "P", segments);
         Assert.Contains("| [1] | Code |", md);
         Assert.Contains(" 3 |", md);
     }
@@ -106,7 +106,7 @@ public class AiFeedMarkdownComposerTests
             new AiFeedContentSegment("src/Also.cs", "Code", "csharp", "public class Also { }"),
         };
 
-        var md = Composer.Compose("Sol", "Proj", FixedSession, FixedGenerated, segments);
+        var md = Composer.Compose(new AiFeedSessionInfo("Sol", FixedSession, FixedGenerated), "Proj", segments);
 
         Assert.Contains("file_count: 2", md);
         var manifestBodyLines = md.Split('\n').Where(l => l.StartsWith("| [", StringComparison.Ordinal)).ToArray();
@@ -128,7 +128,7 @@ public class AiFeedMarkdownComposerTests
             new AiFeedContentSegment("b.cs", "Code", "csharp", "// b"),
         };
 
-        var md = Composer.Compose("S", "P", FixedSession, FixedGenerated, segments);
+        var md = Composer.Compose(new AiFeedSessionInfo("S", FixedSession, FixedGenerated), "P", segments);
         var contentIdx = md.IndexOf("## CONTENT", StringComparison.Ordinal);
         Assert.True(contentIdx >= 0);
         var contentSlice = md[contentIdx..];

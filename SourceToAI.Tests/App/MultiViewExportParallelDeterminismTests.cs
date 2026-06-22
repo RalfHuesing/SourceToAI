@@ -63,15 +63,16 @@ public sealed class MultiViewExportParallelDeterminismTests
         {
             using var export = new TempWorkspace();
             var outputRoot = export.Root;
-            exportService.WriteMergedSolutionViews(
+            var exportArgs = new SolutionViewExportArgs(
                 outputRoot,
                 solutionDisplayName,
                 solution.Root,
                 sessionId,
                 generated,
                 shuffled,
-                solutionDocumentationAbsolutePaths: null,
-                unmappedDirectories: []);
+                null,
+                []);
+            exportService.WriteMergedSolutionViews(exportArgs);
 
             foreach (var name in orderedNames)
             {
