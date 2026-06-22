@@ -16,6 +16,11 @@ public sealed class VirtualProjectPartition(string subNamespaceName, IReadOnlyLi
     public IReadOnlyList<string> Paths { get; } = paths;
 }
 
+public sealed record ProjectSplittingOptions(
+    int MaxFileSizeKb,
+    int MaxFileCount,
+    bool SuppressCorePartition = true);
+
 /// <summary>
 /// Engine zum adaptiven Splitting von C#-Projekten basierend auf Namespaces und Dateigrößen-Limits.
 /// </summary>
@@ -23,19 +28,37 @@ public sealed class ProjectSplittingEngine(ICSharpDocumentLoader csharpDocumentL
 {
     private const string CoreChildSegmentKey = "_Core";
 
-    public IReadOnlyList<VirtualProjectPartition> PartitionProject(
+    private readonly struct TreeContext(
+        ProjectSplittingNamespaceNode rootNode,
+        List<ProjectSplittingNamespaceNode> allNodes)
+    {
+        public ProjectSplittingNamespaceNode RootNode { get; } = rootNode;
+        public List<ProjectSplittingNamespaceNode> AllNodes { get; } = allNodes;
+    }
+
+    private readonly struct CollapseContext(
+        List<ProjectSplittingNamespaceNode> allNodes,
+        Dictionary<ProjectSplittingNamespaceNode, ProjectSplittingBucket> activeBuckets,
+        int maxFileCount,
+        bool suppressCorePartition,
+        int assetPathsCount)
+    {
+        public List<ProjectSplittingNamespaceNode> AllNodes { get; } = allNodes;
+        public Dictionary<ProjectSplittingNamespaceNode, ProjectSplittingBucket> ActiveBuckets { get; } = activeBuckets;
+        public int MaxFileCount { get; } = maxFileCount;
+        public bool SuppressCorePartition { get; } = suppressCorePartition;
+        public int AssetPathsCount { get; } = assetPathsCount;
+    }
+
+    private ClassificationResult? TryClassifyFiles(
         ProjectDefinition project,
         IReadOnlyList<string> absoluteFilePaths,
-        int maxFileSizeKb,
-        int maxFileCount,
-        bool suppressCorePartition = true)
+        ProjectSplittingOptions options)
     {
-        if (maxFileSizeKb <= 0 || maxFileCount <= 0 || absoluteFilePaths.Count == 0)
+        if (options.MaxFileSizeKb <= 0 || options.MaxFileCount <= 0 || absoluteFilePaths.Count == 0)
         {
-            return [new VirtualProjectPartition(string.Empty, absoluteFilePaths)];
+            return null;
         }
-
-        long maxSizeBytes = maxFileSizeKb * 1024L;
 
         var preliminaryCsPaths = absoluteFilePaths
             .Where(p => string.Equals(Path.GetExtension(p), ".cs", StringComparison.OrdinalIgnoreCase))
@@ -44,13 +67,13 @@ public sealed class ProjectSplittingEngine(ICSharpDocumentLoader csharpDocumentL
 
         if (preliminaryCsPaths.Count == 0)
         {
-            return [new VirtualProjectPartition(string.Empty, absoluteFilePaths)];
+            return null;
         }
 
         var parseResult = csharpDocumentLoader.LoadParsedDocuments(project, preliminaryCsPaths);
         if (!parseResult.IsSuccess || parseResult.Value == null || parseResult.Value.Count == 0)
         {
-            return [new VirtualProjectPartition(string.Empty, absoluteFilePaths)];
+            return null;
         }
 
         var parsedByPath = parseResult.Value.ToDictionary(
@@ -59,33 +82,17 @@ public sealed class ProjectSplittingEngine(ICSharpDocumentLoader csharpDocumentL
             StringComparer.OrdinalIgnoreCase);
 
         var dirNamespaceMap = ProjectSplittingFileClassifier.BuildDirectoryNamespaceMap(parseResult.Value);
-        var classification = ProjectSplittingFileClassifier.Classify(
+        return ProjectSplittingFileClassifier.Classify(
             absoluteFilePaths,
             parsedByPath,
             dirNamespaceMap);
+    }
 
-        var assetPaths = classification.AssetPaths;
-        var pathToSize = classification.EligibleNamespaceFiles
-            .ToDictionary(f => Path.GetFullPath(f.Path), f => f.Size, StringComparer.OrdinalIgnoreCase);
-
-        // 1. Namespace-Baum aufbauen
-        var rootNode = new ProjectSplittingNamespaceNode(string.Empty, string.Empty);
-        var allNodes = new List<ProjectSplittingNamespaceNode>();
-        var coreNode = new ProjectSplittingNamespaceNode("Core", "Core");
-
-        foreach (var file in classification.EligibleNamespaceFiles)
-        {
-            if (string.IsNullOrEmpty(file.Namespace))
-            {
-                coreNode.DirectFiles.Add(file.Path);
-                coreNode.DirectSize += file.Size;
-                continue;
-            }
-
-            AddFileToNamespaceTree(rootNode, allNodes, file.Path, file.Namespace, file.Size);
-        }
-
-        // 2. Buckets initialisieren
+    private Dictionary<ProjectSplittingNamespaceNode, ProjectSplittingBucket> InitializeBuckets(
+        List<ProjectSplittingNamespaceNode> allNodes,
+        ProjectSplittingNamespaceNode coreNode,
+        ProjectSplittingNamespaceNode rootNode)
+    {
         var activeBuckets = new Dictionary<ProjectSplittingNamespaceNode, ProjectSplittingBucket>();
         foreach (var node in allNodes)
         {
@@ -104,63 +111,150 @@ public sealed class ProjectSplittingEngine(ICSharpDocumentLoader csharpDocumentL
             AttachCoreNodeToTree(rootNode, allNodes, coreNode, activeBuckets);
         }
 
-        bool IsCoreBucket(ProjectSplittingNamespaceNode node) =>
-            string.Equals(node.FullNamespace, "Core", StringComparison.Ordinal);
+        return activeBuckets;
+    }
 
-        int CountBucketsTowardExportLimit() =>
-            activeBuckets.Count(kv => !suppressCorePartition || !IsCoreBucket(kv.Key))
-            + (assetPaths.Count > 0 ? 1 : 0);
+    private static List<VirtualProjectPartition> BuildPartitions(
+        Dictionary<ProjectSplittingNamespaceNode, ProjectSplittingBucket> activeBuckets,
+        IReadOnlyList<string> assetPaths)
+    {
+        var partitions = new List<VirtualProjectPartition>();
+        foreach (var bucket in activeBuckets.Values)
+        {
+            partitions.Add(new VirtualProjectPartition(bucket.Node.FullNamespace, bucket.FilePaths));
+        }
 
-        int CountNonCoreNamespaceBuckets() =>
-            activeBuckets.Count(kv => !IsCoreBucket(kv.Key));
+        if (assetPaths.Count > 0)
+        {
+            partitions.Add(new VirtualProjectPartition("_Assets", assetPaths));
+        }
+
+        return partitions;
+    }
+
+    public IReadOnlyList<VirtualProjectPartition> PartitionProject(
+        ProjectDefinition project,
+        IReadOnlyList<string> absoluteFilePaths,
+        ProjectSplittingOptions options)
+    {
+        var classification = TryClassifyFiles(project, absoluteFilePaths, options);
+        if (classification == null)
+        {
+            return [new VirtualProjectPartition(string.Empty, absoluteFilePaths)];
+        }
+
+        long maxSizeBytes = options.MaxFileSizeKb * 1024L;
+        var assetPaths = classification.AssetPaths;
+        var pathToSize = classification.EligibleNamespaceFiles
+            .ToDictionary(f => Path.GetFullPath(f.Path), f => f.Size, StringComparer.OrdinalIgnoreCase);
+
+        // 1. Namespace-Baum aufbauen
+        var rootNode = new ProjectSplittingNamespaceNode(string.Empty, string.Empty);
+        var allNodes = new List<ProjectSplittingNamespaceNode>();
+        var treeContext = new TreeContext(rootNode, allNodes);
+        var coreNode = new ProjectSplittingNamespaceNode("Core", "Core");
+
+        foreach (var file in classification.EligibleNamespaceFiles)
+        {
+            if (string.IsNullOrEmpty(file.Namespace))
+            {
+                coreNode.DirectFiles.Add(file.Path);
+                coreNode.DirectSize += file.Size;
+                continue;
+            }
+
+            AddFileToNamespaceTree(treeContext, file.Path, file.Namespace, file.Size);
+        }
+
+        // 2. Buckets initialisieren
+        var activeBuckets = InitializeBuckets(allNodes, coreNode, rootNode);
 
         // 3. Kollaps-Schleife (Harte Grenze erzwingen)
-        while (CountBucketsTowardExportLimit() > maxFileCount && CountNonCoreNamespaceBuckets() > 1)
+        var collapseCtx = new CollapseContext(allNodes, activeBuckets, options.MaxFileCount, options.SuppressCorePartition, assetPaths.Count);
+        CollapseBuckets(collapseCtx);
+
+        // 4. Geschwister-Optimierung (Zusammenfassung kleiner Buckets unter maxFileSize)
+        OptimizeSiblings(allNodes, activeBuckets, maxSizeBytes);
+
+        if (options.SuppressCorePartition)
         {
-            var candidateParents = allNodes
-                .Where(n => ProjectSplittingCollapse.GetActiveBucketCountInSubtree(n, activeBuckets) >= 2)
+            AbsorbCorePartition(activeBuckets, pathToSize, maxSizeBytes, rootNode);
+        }
+
+        // 5. Partitionen erzeugen
+        return BuildPartitions(activeBuckets, assetPaths);
+    }
+
+    private static void CollapseBuckets(CollapseContext ctx)
+    {
+        while (CountBucketsTowardExportLimit(ctx) > ctx.MaxFileCount && CountNonCoreNamespaceBuckets(ctx) > 1)
+        {
+            var candidateParents = ctx.AllNodes
+                .Where(n => ProjectSplittingCollapse.GetActiveBucketCountInSubtree(n, ctx.ActiveBuckets) >= 2)
                 .ToList();
 
             if (candidateParents.Count == 0)
             {
-                candidateParents = allNodes
-                    .Where(n => ProjectSplittingCollapse.GetActiveBucketCountInSubtree(n, activeBuckets) >= 1
-                        && activeBuckets.ContainsKey(n))
+                candidateParents = ctx.AllNodes
+                    .Where(n => ProjectSplittingCollapse.GetActiveBucketCountInSubtree(n, ctx.ActiveBuckets) >= 1
+                        && ctx.ActiveBuckets.ContainsKey(n))
                     .ToList();
             }
 
             if (candidateParents.Count == 0)
                 break;
 
-            ProjectSplittingNamespaceNode? bestParent = null;
-            int maxDepth = -1;
-            long minSubtreeSize = long.MaxValue;
-
-            foreach (var parent in candidateParents)
-            {
-                int depth = parent.FullNamespace.Split('.').Length;
-                long subtreeSize = ProjectSplittingCollapse.GetSubtreeBucketSize(parent, activeBuckets);
-
-                if (depth > maxDepth)
-                {
-                    maxDepth = depth;
-                    minSubtreeSize = subtreeSize;
-                    bestParent = parent;
-                }
-                else if (depth == maxDepth && subtreeSize < minSubtreeSize)
-                {
-                    minSubtreeSize = subtreeSize;
-                    bestParent = parent;
-                }
-            }
-
+            ProjectSplittingNamespaceNode? bestParent = GetBestParentNode(candidateParents, ctx.ActiveBuckets);
             if (bestParent == null)
                 break;
 
-            ProjectSplittingCollapse.CollapseTwoSmallestChildren(bestParent, activeBuckets);
+            ProjectSplittingCollapse.CollapseTwoSmallestChildren(bestParent, ctx.ActiveBuckets);
         }
+    }
 
-        // 4. Geschwister-Optimierung (Zusammenfassung kleiner Buckets unter maxFileSize)
+    private static ProjectSplittingNamespaceNode? GetBestParentNode(
+        List<ProjectSplittingNamespaceNode> candidateParents,
+        Dictionary<ProjectSplittingNamespaceNode, ProjectSplittingBucket> activeBuckets)
+    {
+        ProjectSplittingNamespaceNode? bestParent = null;
+        int maxDepth = -1;
+        long minSubtreeSize = long.MaxValue;
+
+        foreach (var parent in candidateParents)
+        {
+            int depth = parent.FullNamespace.Split('.').Length;
+            long subtreeSize = ProjectSplittingCollapse.GetSubtreeBucketSize(parent, activeBuckets);
+
+            if (depth > maxDepth)
+            {
+                maxDepth = depth;
+                minSubtreeSize = subtreeSize;
+                bestParent = parent;
+            }
+            else if (depth == maxDepth && subtreeSize < minSubtreeSize)
+            {
+                minSubtreeSize = subtreeSize;
+                bestParent = parent;
+            }
+        }
+        return bestParent;
+    }
+
+    private static bool IsCoreBucket(ProjectSplittingNamespaceNode node) =>
+        string.Equals(node.FullNamespace, "Core", StringComparison.Ordinal);
+
+    private static int CountBucketsTowardExportLimit(CollapseContext ctx) =>
+        ctx.ActiveBuckets.Count(kv => !ctx.SuppressCorePartition || !IsCoreBucket(kv.Key))
+        + (ctx.AssetPathsCount > 0 ? 1 : 0);
+
+    private static int CountNonCoreNamespaceBuckets(CollapseContext ctx) =>
+        ctx.ActiveBuckets.Count(kv => !IsCoreBucket(kv.Key));
+
+    private static void OptimizeSiblings(
+        List<ProjectSplittingNamespaceNode> allNodes,
+        Dictionary<ProjectSplittingNamespaceNode, ProjectSplittingBucket> activeBuckets,
+        long maxSizeBytes)
+    {
         bool optimized = true;
         while (optimized)
         {
@@ -188,36 +282,16 @@ public sealed class ProjectSplittingEngine(ICSharpDocumentLoader csharpDocumentL
                 }
             }
         }
-
-        if (suppressCorePartition)
-        {
-            AbsorbCorePartition(activeBuckets, pathToSize, maxSizeBytes, rootNode);
-        }
-
-        // 5. Partitionen erzeugen
-        var partitions = new List<VirtualProjectPartition>();
-        foreach (var bucket in activeBuckets.Values)
-        {
-            partitions.Add(new VirtualProjectPartition(bucket.Node.FullNamespace, bucket.FilePaths));
-        }
-
-        if (assetPaths.Count > 0)
-        {
-            partitions.Add(new VirtualProjectPartition("_Assets", assetPaths));
-        }
-
-        return partitions;
     }
 
     private static void AddFileToNamespaceTree(
-        ProjectSplittingNamespaceNode rootNode,
-        List<ProjectSplittingNamespaceNode> allNodes,
+        TreeContext context,
         string path,
         string ns,
         long size)
     {
         var segments = ns.Split('.', StringSplitOptions.RemoveEmptyEntries);
-        var current = rootNode;
+        var current = context.RootNode;
         var currentNs = new StringBuilder();
 
         for (int i = 0; i < segments.Length; i++)
@@ -233,7 +307,7 @@ public sealed class ProjectSplittingEngine(ICSharpDocumentLoader csharpDocumentL
             {
                 child = new ProjectSplittingNamespaceNode(segment, fullNs) { Parent = current };
                 current.Children[segment] = child;
-                allNodes.Add(child);
+                context.AllNodes.Add(child);
             }
 
             current = child;

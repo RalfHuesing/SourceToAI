@@ -1,6 +1,6 @@
 namespace SourceToAI.CLI.Configuration;
 
-public class AppSettings
+public sealed class AppSettings
 {
     /// <summary>
     /// Fallback-Werte entsprechen <c>appsettings.json</c>, damit der Scan ohne JSON-Datei sinnvoll arbeitet.

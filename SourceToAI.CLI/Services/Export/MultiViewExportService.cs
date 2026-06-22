@@ -7,6 +7,7 @@ using SourceToAI.CLI.Models;
 using SourceToAI.CLI.Services.Export.AiFeed;
 using SourceToAI.CLI.Services.Processing;
 using SourceToAI.CLI.Services.Processing.Markdown;
+
 namespace SourceToAI.CLI.Services.Export;
 
 public sealed class MultiViewExportService(
@@ -16,43 +17,53 @@ public sealed class MultiViewExportService(
     ProjectSplittingEngine splittingEngine,
     AppSettings appSettings) : IMultiViewExportService
 {
-    /// <summary>
-    /// Obergrenze paralleler View-Builds (Roslyn/Rewrite + Compose) pro Exportlauf — siehe Task 03 / Projektrichtlinien.
-    /// </summary>
     private const int MaxConcurrentViewBuilds = 5;
 
     private static readonly string[] ViewKeyOrder = ["complete", "signatures-only", "public-only", "dto-only"];
 
-    public void WriteMergedSolutionViews(
-        string outputRoot,
-        string solutionDisplayName,
-        string solutionRootPath,
-        Guid sessionId,
-        DateTimeOffset generated,
-        IReadOnlyList<(ProjectDefinition Project, IReadOnlyList<string> AbsoluteFilePaths)> projectsWithFiles,
-        IReadOnlyList<string>? solutionDocumentationAbsolutePaths,
-        IReadOnlyList<(string DirectoryName, IReadOnlyList<string> AbsoluteFilePaths)> unmappedDirectories)
+    private record ExportUnit(ProjectDefinition Project, IReadOnlyList<string> Paths, bool DocsOnlyInCompleteView);
+
+    private record ExportUnitsResult(
+        List<ExportUnit> ExportUnits,
+        Dictionary<string, (string RealProj, string SubNamespace)> VirtualProjectSplitInfo);
+
+    private record OutputWriteParams(
+        string OutputRoot,
+        string SolutionDisplayName,
+        Dictionary<string, (string RealProj, string SubNamespace)> VirtualProjectSplitInfo);
+
+    public void WriteMergedSolutionViews(SolutionViewExportArgs args)
     {
         csharpDocumentLoader.Clear();
 
         var buildersByKey = viewBuilders.ToDictionary(b => b.ViewKey, StringComparer.Ordinal);
-        var usedStemsPerView = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
-        foreach (var vk in ViewKeyOrder)
-            usedStemsPerView[vk] = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        var orderedProjects = projectsWithFiles
-            .OrderBy(p => p.Project.ProjectName, StringComparer.OrdinalIgnoreCase)
-            .ToList();
+        var unitsResult = BuildExportUnits(args.SolutionRootPath, args.ProjectsWithFiles, args.SolutionDocumentationAbsolutePaths, args.UnmappedDirectories);
+        var workSlots = BuildWorkSlots(unitsResult.ExportUnits, buildersByKey);
+        var composedBodies = BuildComposedBodiesParallel(workSlots, args.SolutionDisplayName, args.SessionId, args.Generated);
 
-        var exportUnits = new List<(ProjectDefinition Project, IReadOnlyList<string> Paths, bool DocsOnlyInCompleteView)>();
-        if (solutionDocumentationAbsolutePaths is { Count: > 0 })
+        var wp = new OutputWriteParams(args.OutputRoot, args.SolutionDisplayName, unitsResult.VirtualProjectSplitInfo);
+        WriteOutputFiles(wp, workSlots, composedBodies);
+    }
+
+    private ExportUnitsResult BuildExportUnits(
+        string solutionRootPath,
+        IReadOnlyList<(ProjectDefinition Project, IReadOnlyList<string> AbsoluteFilePaths)> projectsWithFiles,
+        IReadOnlyList<string>? solutionDocs,
+        IReadOnlyList<(string DirectoryName, IReadOnlyList<string> AbsoluteFilePaths)> unmappedDirs)
+    {
+        var exportUnits = new List<ExportUnit>();
+        var virtualProjectSplitInfo = new Dictionary<string, (string RealProj, string SubNamespace)>(StringComparer.OrdinalIgnoreCase);
+
+        if (solutionDocs is { Count: > 0 })
         {
             var docProject = new ProjectDefinition(".Docs", Path.Combine(solutionRootPath, "virtual.csproj"));
-            exportUnits.Add((docProject, solutionDocumentationAbsolutePaths, true));
+            exportUnits.Add(new ExportUnit(docProject, solutionDocs, true));
         }
 
         var isSplittingActive = appSettings.MaxFileSizeKb > 0 && appSettings.MaxFileCount > 0;
-        var virtualProjectSplitInfo = new Dictionary<string, (string RealProj, string SubNamespace)>(StringComparer.OrdinalIgnoreCase);
+        var orderedProjects = projectsWithFiles
+            .OrderBy(p => p.Project.ProjectName, StringComparer.OrdinalIgnoreCase);
 
         foreach (var (project, paths) in orderedProjects)
         {
@@ -64,64 +75,63 @@ public sealed class MultiViewExportService(
                 var partitions = splittingEngine.PartitionProject(
                     project,
                     paths,
-                    appSettings.MaxFileSizeKb,
-                    appSettings.MaxFileCount,
-                    appSettings.SuppressCorePartition);
+                    new ProjectSplittingOptions(appSettings.MaxFileSizeKb, appSettings.MaxFileCount, appSettings.SuppressCorePartition));
                 foreach (var partition in partitions)
                 {
                     var partitionName = partition.SubNamespaceName;
-                    string virtualProjName;
-
-                    if (string.IsNullOrEmpty(partitionName))
-                    {
-                        virtualProjName = project.ProjectName;
-                    }
-                    else
-                    {
-                        var prefix = project.ProjectName + ".";
-                        if (partitionName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
-                        {
-                            var sub = partitionName.Substring(prefix.Length);
-                            virtualProjName = string.IsNullOrEmpty(sub) ? project.ProjectName : $"{project.ProjectName}.{sub}";
-                        }
-                        else if (string.Equals(partitionName, project.ProjectName, StringComparison.OrdinalIgnoreCase))
-                        {
-                            virtualProjName = project.ProjectName;
-                        }
-                        else
-                        {
-                            virtualProjName = $"{project.ProjectName}.{partitionName}";
-                        }
-                    }
-
+                    var virtualProjName = GetVirtualProjectName(project.ProjectName, partitionName);
                     var virtualCsproj = Path.Combine(project.RootDirectory, $"{virtualProjName}.virtual.csproj");
                     var virtualProject = new ProjectDefinition(virtualProjName, virtualCsproj);
                     virtualProjectSplitInfo[virtualProjName] = (project.ProjectName, partitionName);
 
-                    exportUnits.Add((virtualProject, partition.Paths, false));
+                    exportUnits.Add(new ExportUnit(virtualProject, partition.Paths, false));
                 }
             }
             else
             {
-                exportUnits.Add((project, paths, false));
+                exportUnits.Add(new ExportUnit(project, paths, false));
             }
         }
 
-        foreach (var (directoryName, paths) in unmappedDirectories
+        foreach (var (directoryName, paths) in unmappedDirs
                      .Where(u => u.AbsoluteFilePaths.Count > 0)
                      .OrderBy(u => u.DirectoryName, StringComparer.OrdinalIgnoreCase))
         {
             var virtualCsproj = Path.Combine(solutionRootPath, directoryName, "virtual.csproj");
             var virtualProject = new ProjectDefinition(directoryName, virtualCsproj);
-            exportUnits.Add((virtualProject, paths, true));
+            exportUnits.Add(new ExportUnit(virtualProject, paths, true));
         }
 
+        return new ExportUnitsResult(exportUnits, virtualProjectSplitInfo);
+    }
+
+    private static string GetVirtualProjectName(string projectName, string partitionName)
+    {
+        if (string.IsNullOrEmpty(partitionName))
+            return projectName;
+
+        var prefix = projectName + ".";
+        if (partitionName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+        {
+            var sub = partitionName.Substring(prefix.Length);
+            return string.IsNullOrEmpty(sub) ? projectName : $"{projectName}.{sub}";
+        }
+        if (string.Equals(partitionName, projectName, StringComparison.OrdinalIgnoreCase))
+            return projectName;
+
+        return $"{projectName}.{partitionName}";
+    }
+
+    private static List<ViewWorkSlot> BuildWorkSlots(
+        IReadOnlyList<ExportUnit> exportUnits,
+        Dictionary<string, IMarkdownProjectViewBuilder> buildersByKey)
+    {
         var workSlots = new List<ViewWorkSlot>();
-        foreach (var (project, paths, docsOnlyInCompleteView) in exportUnits)
+        foreach (var unit in exportUnits)
         {
             foreach (var viewKey in ViewKeyOrder)
             {
-                if (docsOnlyInCompleteView && !viewKey.Equals("complete", StringComparison.Ordinal))
+                if (unit.DocsOnlyInCompleteView && !viewKey.Equals("complete", StringComparison.Ordinal))
                     continue;
 
                 if (!buildersByKey.TryGetValue(viewKey, out var builder))
@@ -130,12 +140,22 @@ public sealed class MultiViewExportService(
                         $"Kein Markdown-View-Builder fuer \"{viewKey}\" registriert.");
                 }
 
-                workSlots.Add(new ViewWorkSlot(viewKey, builder, project, paths));
+                workSlots.Add(new ViewWorkSlot(viewKey, builder, unit.Project, unit.Paths));
             }
         }
+        return workSlots;
+    }
 
+    private string?[] BuildComposedBodiesParallel(
+        IReadOnlyList<ViewWorkSlot> workSlots,
+        string solutionDisplayName,
+        Guid sessionId,
+        DateTimeOffset generated)
+    {
         var parallelErrors = new ConcurrentQueue<Exception>();
         var composedBodies = new string?[workSlots.Count];
+        var sessionInfo = new AiFeedSessionInfo(solutionDisplayName, sessionId, generated);
+
         RunBoundedParallel(
             MaxConcurrentViewBuilds,
             workSlots.Count,
@@ -154,8 +174,7 @@ public sealed class MultiViewExportService(
                 {
                     foreach (var line in buildWarnings)
                     {
-                        Console.WriteLine(
-                            $"   -> [WARN] {slot.Project.ProjectName} ({slot.ViewKey}): {line}");
+                        Console.WriteLine($"   -> [WARN] {slot.Project.ProjectName} ({slot.ViewKey}): {line}");
                     }
                 }
 
@@ -166,10 +185,8 @@ public sealed class MultiViewExportService(
                 }
 
                 var body = markdownComposer.Compose(
-                    solutionDisplayName,
+                    sessionInfo,
                     slot.Project.ProjectName,
-                    sessionId,
-                    generated,
                     part.Value!);
                 composedBodies[i] = body;
             },
@@ -182,6 +199,18 @@ public sealed class MultiViewExportService(
                 new AggregateException(parallelErrors.ToArray()));
         }
 
+        return composedBodies;
+    }
+
+    private void WriteOutputFiles(
+        OutputWriteParams wp,
+        IReadOnlyList<ViewWorkSlot> workSlots,
+        string?[] composedBodies)
+    {
+        var usedStemsPerView = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
+        foreach (var vk in ViewKeyOrder)
+            usedStemsPerView[vk] = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
         for (var i = 0; i < workSlots.Count; i++)
         {
             var body = composedBodies[i];
@@ -191,42 +220,52 @@ public sealed class MultiViewExportService(
             var slot = workSlots[i];
             var viewFolder = MultiViewExportPaths.GetViewFolderNameForViewKey(slot.ViewKey);
             var usedStems = usedStemsPerView[slot.ViewKey];
-
-            string stemName;
-            if (virtualProjectSplitInfo.TryGetValue(slot.Project.ProjectName, out var splitInfo))
-            {
-                string subNamespaceSuffix = string.Empty;
-                if (!string.IsNullOrEmpty(splitInfo.SubNamespace))
-                {
-                    var prefix = splitInfo.RealProj + ".";
-                    if (splitInfo.SubNamespace.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
-                    {
-                        subNamespaceSuffix = splitInfo.SubNamespace.Substring(prefix.Length);
-                    }
-                    else if (string.Equals(splitInfo.SubNamespace, splitInfo.RealProj, StringComparison.OrdinalIgnoreCase))
-                    {
-                        subNamespaceSuffix = string.Empty;
-                    }
-                    else
-                    {
-                        subNamespaceSuffix = splitInfo.SubNamespace;
-                    }
-                }
-
-                var projectDisplayName = string.IsNullOrEmpty(subNamespaceSuffix)
-                    ? splitInfo.RealProj
-                    : $"{splitInfo.RealProj}_{subNamespaceSuffix}";
-
-                stemName = MultiViewExportPaths.BuildSanitizedExportFileStem(solutionDisplayName, projectDisplayName, slot.ViewKey);
-            }
-            else
-            {
-                stemName = MultiViewExportPaths.BuildSanitizedExportFileStem(solutionDisplayName, slot.Project.ProjectName, slot.ViewKey);
-            }
-
+            var stemName = GetStemName(wp.SolutionDisplayName, slot.Project.ProjectName, slot.ViewKey, wp.VirtualProjectSplitInfo);
             var stem = MultiViewExportPaths.AllocateUniqueFileStem(stemName, usedStems);
-            WriteProjectViewFiles(outputRoot, solutionDisplayName, viewFolder, stem, body);
+
+            var isolatedRoot = MultiViewExportPaths.GetSolutionExportRoot(wp.OutputRoot, wp.SolutionDisplayName);
+            var mergedRoot = Path.Combine(wp.OutputRoot, MultiViewExportPaths.MergedFolderName);
+            var isolatedOutPath = MultiViewExportPaths.GetViewOutputPath(isolatedRoot, viewFolder, stem);
+            var mergedOutPath = MultiViewExportPaths.GetViewOutputPath(mergedRoot, viewFolder, stem);
+
+            WriteProjectViewFiles(isolatedOutPath, mergedOutPath, body);
         }
+    }
+
+    private static string GetStemName(
+        string solutionDisplayName,
+        string projectName,
+        string viewKey,
+        Dictionary<string, (string RealProj, string SubNamespace)> virtualProjectSplitInfo)
+    {
+        if (virtualProjectSplitInfo.TryGetValue(projectName, out var splitInfo))
+        {
+            string subNamespaceSuffix = string.Empty;
+            if (!string.IsNullOrEmpty(splitInfo.SubNamespace))
+            {
+                var prefix = splitInfo.RealProj + ".";
+                if (splitInfo.SubNamespace.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                {
+                    subNamespaceSuffix = splitInfo.SubNamespace.Substring(prefix.Length);
+                }
+                else if (string.Equals(splitInfo.SubNamespace, splitInfo.RealProj, StringComparison.OrdinalIgnoreCase))
+                {
+                    subNamespaceSuffix = string.Empty;
+                }
+                else
+                {
+                    subNamespaceSuffix = splitInfo.SubNamespace;
+                }
+            }
+
+            var projectDisplayName = string.IsNullOrEmpty(subNamespaceSuffix)
+                ? splitInfo.RealProj
+                : $"{splitInfo.RealProj}_{subNamespaceSuffix}";
+
+            return MultiViewExportPaths.BuildSanitizedExportFileStem(solutionDisplayName, projectDisplayName, viewKey);
+        }
+
+        return MultiViewExportPaths.BuildSanitizedExportFileStem(solutionDisplayName, projectName, viewKey);
     }
 
     private static void RunBoundedParallel(int maxConcurrency, int workCount, Action<int> work, ConcurrentQueue<Exception> errors)
@@ -258,16 +297,10 @@ public sealed class MultiViewExportService(
         ProjectDefinition Project,
         IReadOnlyList<string> Paths);
 
-    private static void WriteProjectViewFiles(string outputRoot, string solutionDisplayName, string viewFolder, string uniqueStem, string body)
+    private static void WriteProjectViewFiles(string isolatedPath, string mergedPath, string body)
     {
-        var isolatedRoot = MultiViewExportPaths.GetSolutionExportRoot(outputRoot, solutionDisplayName);
-        var mergedRoot = Path.Combine(outputRoot, MultiViewExportPaths.MergedFolderName);
-
-        var isolatedOutPath = MultiViewExportPaths.GetViewOutputPath(isolatedRoot, viewFolder, uniqueStem);
-        var mergedOutPath = MultiViewExportPaths.GetViewOutputPath(mergedRoot, viewFolder, uniqueStem);
-
-        WriteTextEnsuringDirectory(isolatedOutPath, body);
-        WriteTextEnsuringDirectory(mergedOutPath, body);
+        WriteTextEnsuringDirectory(isolatedPath, body);
+        WriteTextEnsuringDirectory(mergedPath, body);
     }
 
     private static void WriteTextEnsuringDirectory(string path, string content)

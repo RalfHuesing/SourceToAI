@@ -57,49 +57,14 @@ public class MarkdownProjectViewBuilderBase(
 
             foreach (var path in sortedPaths)
             {
-                var fullPath = Path.GetFullPath(path);
-                var relativePath = Path.GetRelativePath(project.RootDirectory, fullPath);
-                var extension = Path.GetExtension(fullPath);
+                var fileResult = ProcessFile(path, project, parsedCSharpByFullPath, mergedWarnings);
+                if (!fileResult.IsSuccess)
+                    return ExtractionResult<IReadOnlyList<AiFeedContentSegment>>.Failure(fileResult.ErrorMessage!);
 
-                if (parsedCSharpByFullPath.TryGetValue(fullPath, out var parsed))
+                if (fileResult.Value is { } segment)
                 {
-                    var ctx = passOriginalSourceTextForCSharp
-                        ? new ViewGeneratorContext(relativePath, parsed.SourceText)
-                        : new ViewGeneratorContext(relativePath);
-
-                    var gen = _viewGenerator.Generate(parsed.Root, ctx);
-                    if (!gen.IsSuccess)
-                    {
-                        return ExtractionResult<IReadOnlyList<AiFeedContentSegment>>.Failure(
-                            gen.ErrorMessage ?? $"View {_viewGenerator.ViewKey} für {relativePath} fehlgeschlagen.");
-                    }
-
-                    segments.Add(new AiFeedContentSegment(
-                        relativePath,
-                        "Code",
-                        "csharp",
-                        gen.Value!.OutputText,
-                        gen.Value.HasExportableSurface));
-                    continue;
+                    segments.Add(segment);
                 }
-
-                if (!includeNonCSharpFiles)
-                    continue;
-
-                string content;
-                try
-                {
-                    content = File.ReadAllText(fullPath);
-                }
-                catch (Exception ex) when (SkippableLocalFileIoExceptions.Matches(ex))
-                {
-                    mergedWarnings.Add(
-                        $"\"{fullPath}\" uebersprungen ({ex.GetType().Name}): {ex.Message}");
-                    continue;
-                }
-
-                var (typeCategory, language) = FileTypeService.GetFileTypeAndLanguage(extension);
-                segments.Add(new AiFeedContentSegment(relativePath, typeCategory, language, content));
             }
 
             var kind = passOriginalSourceTextForCSharp
@@ -115,5 +80,56 @@ public class MarkdownProjectViewBuilderBase(
             return ExtractionResult<IReadOnlyList<AiFeedContentSegment>>.Failure(
                 $"Markdown-View {_viewGenerator.ViewKey} für {project.ProjectName}: {ex.Message}");
         }
+    }
+
+    private ExtractionResult<AiFeedContentSegment?> ProcessFile(
+        string path,
+        ProjectDefinition project,
+        Dictionary<string, ParsedCSharpDocument> parsedCSharpByFullPath,
+        List<string> mergedWarnings)
+    {
+        var fullPath = Path.GetFullPath(path);
+        var relativePath = Path.GetRelativePath(project.RootDirectory, fullPath);
+        var extension = Path.GetExtension(fullPath);
+
+        if (parsedCSharpByFullPath.TryGetValue(fullPath, out var parsed))
+        {
+            var ctx = passOriginalSourceTextForCSharp
+                ? new ViewGeneratorContext(relativePath, parsed.SourceText)
+                : new ViewGeneratorContext(relativePath);
+
+            var gen = _viewGenerator.Generate(parsed.Root, ctx);
+            if (!gen.IsSuccess)
+            {
+                return ExtractionResult<AiFeedContentSegment?>.Failure(
+                    gen.ErrorMessage ?? $"View {_viewGenerator.ViewKey} für {relativePath} fehlgeschlagen.");
+            }
+
+            var segment = new AiFeedContentSegment(
+                relativePath,
+                "Code",
+                "csharp",
+                gen.Value!.OutputText,
+                gen.Value.HasExportableSurface);
+            return ExtractionResult<AiFeedContentSegment?>.Success(segment);
+        }
+
+        if (!includeNonCSharpFiles)
+            return ExtractionResult<AiFeedContentSegment?>.Success(null);
+
+        string content;
+        try
+        {
+            content = File.ReadAllText(fullPath);
+        }
+        catch (Exception ex) when (SkippableLocalFileIoExceptions.Matches(ex))
+        {
+            mergedWarnings.Add($"\"{fullPath}\" uebersprungen ({ex.GetType().Name}): {ex.Message}");
+            return ExtractionResult<AiFeedContentSegment?>.Success(null);
+        }
+
+        var (typeCategory, language) = FileTypeService.GetFileTypeAndLanguage(extension);
+        var nonCsSegment = new AiFeedContentSegment(relativePath, typeCategory, language, content);
+        return ExtractionResult<AiFeedContentSegment?>.Success(nonCsSegment);
     }
 }

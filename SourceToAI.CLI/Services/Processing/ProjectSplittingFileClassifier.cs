@@ -6,6 +6,13 @@ using System.Linq;
 
 namespace SourceToAI.CLI.Services.Processing;
 
+internal sealed record NamespaceEligibleFile(string Path, string Namespace, long Size);
+
+internal sealed record ClassificationResult(
+    IReadOnlyList<string> CsPaths,
+    List<NamespaceEligibleFile> EligibleNamespaceFiles,
+    List<string> AssetPaths);
+
 /// <summary>
 /// Ordnet Projektdateien Namespace-Partitionen oder dem Asset-Bucket zu (UI, Stamm-Begleiter, Rest).
 /// </summary>
@@ -18,12 +25,19 @@ internal static class ProjectSplittingFileClassifier
         ".cshtml"
     };
 
-    internal sealed record NamespaceEligibleFile(string Path, string Namespace, long Size);
-
-    internal sealed record ClassificationResult(
-        IReadOnlyList<string> CsPaths,
-        List<NamespaceEligibleFile> EligibleNamespaceFiles,
-        List<string> AssetPaths);
+    private readonly struct ClassificationState(
+        IReadOnlyDictionary<string, ParsedCSharpDocument> parsedByPath,
+        IReadOnlyDictionary<string, string> dirNamespaceMap,
+        Dictionary<string, HashSet<string>> anchorsByDir,
+        List<NamespaceEligibleFile> eligible,
+        List<string> assetPaths)
+    {
+        public IReadOnlyDictionary<string, ParsedCSharpDocument> ParsedByPath { get; } = parsedByPath;
+        public IReadOnlyDictionary<string, string> DirNamespaceMap { get; } = dirNamespaceMap;
+        public Dictionary<string, HashSet<string>> AnchorsByDir { get; } = anchorsByDir;
+        public List<NamespaceEligibleFile> Eligible { get; } = eligible;
+        public List<string> AssetPaths { get; } = assetPaths;
+    }
 
     internal static Dictionary<string, string> BuildDirectoryNamespaceMap(
         IReadOnlyList<ParsedCSharpDocument> parsedDocuments)
@@ -40,87 +54,116 @@ internal static class ProjectSplittingFileClassifier
         IReadOnlyDictionary<string, ParsedCSharpDocument> parsedByPath,
         IReadOnlyDictionary<string, string> dirNamespaceMap)
     {
-        var csPaths = new List<string>();
+        var csPaths = absoluteFilePaths
+            .Where(p => string.Equals(Path.GetExtension(p), ".cs", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        var anchorsByDir = BuildAnchorsByDir(absoluteFilePaths, dirNamespaceMap);
         var eligible = new List<NamespaceEligibleFile>();
         var assetPaths = new List<string>();
-        var anchorsByDir = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var path in absoluteFilePaths)
-        {
-            var ext = Path.GetExtension(path);
-            if (string.Equals(ext, ".cs", StringComparison.OrdinalIgnoreCase))
-                csPaths.Add(path);
-        }
-
-        foreach (var path in absoluteFilePaths)
-        {
-            var fullPath = Path.GetFullPath(path);
-            var dir = NormalizeDirectory(fullPath);
-            if (dir == null || !dirNamespaceMap.ContainsKey(dir))
-                continue;
-
-            var ext = Path.GetExtension(fullPath);
-            if (string.Equals(ext, ".cs", StringComparison.OrdinalIgnoreCase) || UiExtensions.Contains(ext))
-            {
-                if (!anchorsByDir.TryGetValue(dir, out var anchors))
-                {
-                    anchors = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                    anchorsByDir[dir] = anchors;
-                }
-
-                var anchor = string.Equals(ext, ".cs", StringComparison.OrdinalIgnoreCase)
-                    ? Path.GetFileNameWithoutExtension(fullPath)
-                    : Path.GetFileName(fullPath);
-                if (!string.IsNullOrEmpty(anchor))
-                    anchors.Add(anchor);
-            }
-        }
-
-        foreach (var path in absoluteFilePaths)
-        {
-            var fullPath = Path.GetFullPath(path);
-            var ext = Path.GetExtension(fullPath);
-            var isCs = string.Equals(ext, ".cs", StringComparison.OrdinalIgnoreCase);
-
-            if (isCs)
-            {
-                if (!parsedByPath.TryGetValue(fullPath, out var parsedDoc))
-                    continue;
-
-                var ns = NamespaceExtractor.GetNamespace(parsedDoc.Root);
-                eligible.Add(new NamespaceEligibleFile(fullPath, ns, parsedDoc.SizeBytes));
-            }
-            else if (UiExtensions.Contains(ext))
-            {
-                var dir = NormalizeDirectory(fullPath);
-                var ns = dir != null && dirNamespaceMap.TryGetValue(dir, out var mappedNs) ? mappedNs : string.Empty;
-                eligible.Add(new NamespaceEligibleFile(fullPath, ns, GetFileSizeBytes(fullPath)));
-            }
-            else
-            {
-                var dir = NormalizeDirectory(fullPath);
-                if (dir != null && dirNamespaceMap.TryGetValue(dir, out var mappedNs))
-                {
-                    bool isMarkdownDoc = string.Equals(ext, ".md", StringComparison.OrdinalIgnoreCase)
-                                         || string.Equals(ext, ".mdc", StringComparison.OrdinalIgnoreCase);
-
-                    if (isMarkdownDoc || (anchorsByDir.TryGetValue(dir, out var anchors) && IsStemCompanion(Path.GetFileName(fullPath), anchors)))
-                    {
-                        eligible.Add(new NamespaceEligibleFile(fullPath, mappedNs, GetFileSizeBytes(fullPath)));
-                    }
-                    else
-                    {
-                        assetPaths.Add(fullPath);
-                    }
-                }
-                else
-                {
-                    assetPaths.Add(fullPath);
-                }
-            }
-        }
+        var state = new ClassificationState(parsedByPath, dirNamespaceMap, anchorsByDir, eligible, assetPaths);
+        CategorizePaths(absoluteFilePaths, state);
 
         return new ClassificationResult(csPaths, eligible, assetPaths);
+    }
+
+    private static void AddAnchorIfEligible(
+        string path,
+        IReadOnlyDictionary<string, string> dirNamespaceMap,
+        Dictionary<string, HashSet<string>> anchorsByDir)
+    {
+        var fullPath = Path.GetFullPath(path);
+        var dir = NormalizeDirectory(fullPath);
+        if (dir == null || !dirNamespaceMap.ContainsKey(dir))
+            return;
+
+        var ext = Path.GetExtension(fullPath);
+        if (string.Equals(ext, ".cs", StringComparison.OrdinalIgnoreCase) || UiExtensions.Contains(ext))
+        {
+            if (!anchorsByDir.TryGetValue(dir, out var anchors))
+            {
+                anchors = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                anchorsByDir[dir] = anchors;
+            }
+
+            var anchor = string.Equals(ext, ".cs", StringComparison.OrdinalIgnoreCase)
+                ? Path.GetFileNameWithoutExtension(fullPath)
+                : Path.GetFileName(fullPath);
+            if (!string.IsNullOrEmpty(anchor))
+                anchors.Add(anchor);
+        }
+    }
+
+    private static Dictionary<string, HashSet<string>> BuildAnchorsByDir(
+        IReadOnlyList<string> absoluteFilePaths,
+        IReadOnlyDictionary<string, string> dirNamespaceMap)
+    {
+        var anchorsByDir = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
+        foreach (var path in absoluteFilePaths)
+        {
+            AddAnchorIfEligible(path, dirNamespaceMap, anchorsByDir);
+        }
+        return anchorsByDir;
+    }
+
+    private static void CategorizePath(
+        string path,
+        ClassificationState state)
+    {
+        var fullPath = Path.GetFullPath(path);
+        var ext = Path.GetExtension(fullPath);
+
+        if (string.Equals(ext, ".cs", StringComparison.OrdinalIgnoreCase))
+        {
+            if (state.ParsedByPath.TryGetValue(fullPath, out var parsedDoc))
+            {
+                var ns = NamespaceExtractor.GetNamespace(parsedDoc.Root);
+                state.Eligible.Add(new NamespaceEligibleFile(fullPath, ns, parsedDoc.SizeBytes));
+            }
+            return;
+        }
+
+        if (UiExtensions.Contains(ext))
+        {
+            var dir = NormalizeDirectory(fullPath);
+            var ns = dir != null && state.DirNamespaceMap.TryGetValue(dir, out var mappedNs) ? mappedNs : string.Empty;
+            state.Eligible.Add(new NamespaceEligibleFile(fullPath, ns, GetFileSizeBytes(fullPath)));
+            return;
+        }
+
+        CategorizeOtherPath(fullPath, ext, state);
+    }
+
+    private static void CategorizeOtherPath(
+        string fullPath,
+        string ext,
+        ClassificationState state)
+    {
+        var dir = NormalizeDirectory(fullPath);
+        if (dir != null && state.DirNamespaceMap.TryGetValue(dir, out var mappedNs))
+        {
+            bool isMarkdownDoc = string.Equals(ext, ".md", StringComparison.OrdinalIgnoreCase)
+                                 || string.Equals(ext, ".mdc", StringComparison.OrdinalIgnoreCase);
+
+            if (isMarkdownDoc || (state.AnchorsByDir.TryGetValue(dir, out var anchors) && IsStemCompanion(Path.GetFileName(fullPath), anchors)))
+            {
+                state.Eligible.Add(new NamespaceEligibleFile(fullPath, mappedNs, GetFileSizeBytes(fullPath)));
+                return;
+            }
+        }
+
+        state.AssetPaths.Add(fullPath);
+    }
+
+    private static void CategorizePaths(
+        IReadOnlyList<string> absoluteFilePaths,
+        ClassificationState state)
+    {
+        foreach (var path in absoluteFilePaths)
+        {
+            CategorizePath(path, state);
+        }
     }
 
     private static bool IsStemCompanion(string fileName, HashSet<string> anchors)

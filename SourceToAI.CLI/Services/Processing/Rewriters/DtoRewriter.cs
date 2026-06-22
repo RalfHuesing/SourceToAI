@@ -148,74 +148,45 @@ public sealed class DtoRewriter : CSharpSyntaxRewriter
     {
         foreach (var m in members)
         {
-            switch (m)
-            {
-                case FieldDeclarationSyntax:
-                case EnumDeclarationSyntax:
-                    if (Visit(m) is MemberDeclarationSyntax f)
-                        yield return f;
-                    break;
-
-                case PropertyDeclarationSyntax p when IsAutoStyleProperty(p):
-                    if (Visit(p) is MemberDeclarationSyntax pr)
-                        yield return pr;
-                    break;
-
-                case ConstructorDeclarationSyntax c
-                    when !c.Modifiers.Any(SyntaxKind.StaticKeyword) && IsAllowedEmptyInstanceCtor(c):
-                    if (Visit(c) is MemberDeclarationSyntax ctor)
-                        yield return ctor;
-                    break;
-
-                case ClassDeclarationSyntax cls:
-                    if (VisitClassDeclaration(cls) is MemberDeclarationSyntax cOut)
-                        yield return cOut;
-                    break;
-
-                case StructDeclarationSyntax st:
-                    if (VisitStructDeclaration(st) is MemberDeclarationSyntax sOut)
-                        yield return sOut;
-                    break;
-
-                case RecordDeclarationSyntax rec:
-                    if (VisitRecordDeclaration(rec) is MemberDeclarationSyntax rOut)
-                        yield return rOut;
-                    break;
-            }
+            if (GetFilteredMember(m) is { } filtered)
+                yield return filtered;
         }
+    }
+
+    private MemberDeclarationSyntax? GetFilteredMember(MemberDeclarationSyntax m)
+    {
+        return m switch
+        {
+            FieldDeclarationSyntax or EnumDeclarationSyntax => Visit(m) as MemberDeclarationSyntax,
+            PropertyDeclarationSyntax p when IsAutoStyleProperty(p) => Visit(p) as MemberDeclarationSyntax,
+            ConstructorDeclarationSyntax c when !c.Modifiers.Any(SyntaxKind.StaticKeyword) && IsAllowedEmptyInstanceCtor(c) => Visit(c) as MemberDeclarationSyntax,
+            ClassDeclarationSyntax cls => VisitClassDeclaration(cls) as MemberDeclarationSyntax,
+            StructDeclarationSyntax st => VisitStructDeclaration(st) as MemberDeclarationSyntax,
+            RecordDeclarationSyntax rec => VisitRecordDeclaration(rec) as MemberDeclarationSyntax,
+            _ => null
+        };
     }
 
     private static bool HasPrimaryConstructorParameters(TypeDeclarationSyntax node) =>
         node.ParameterList is not null && node.ParameterList.Parameters.Count > 0;
 
-    private static bool HasBlockingDirectMember(TypeDeclarationSyntax node)
+    private static bool HasBlockingDirectMember(TypeDeclarationSyntax node) =>
+        node.Members.Any(IsBlockingMember);
+
+    private static bool IsBlockingMember(MemberDeclarationSyntax m)
     {
-        foreach (var m in node.Members)
+        return m switch
         {
-            switch (m)
-            {
-                case MethodDeclarationSyntax:
-                case OperatorDeclarationSyntax:
-                case ConversionOperatorDeclarationSyntax:
-                case DestructorDeclarationSyntax:
-                case IndexerDeclarationSyntax:
-                case EventDeclarationSyntax:
-                case EventFieldDeclarationSyntax:
-                    return true;
+            MethodDeclarationSyntax or OperatorDeclarationSyntax or ConversionOperatorDeclarationSyntax 
+                or DestructorDeclarationSyntax or IndexerDeclarationSyntax or EventDeclarationSyntax 
+                or EventFieldDeclarationSyntax => true,
 
-                case PropertyDeclarationSyntax p when !IsAutoStyleProperty(p):
-                    return true;
+            PropertyDeclarationSyntax p when !IsAutoStyleProperty(p) => true,
 
-                case ConstructorDeclarationSyntax c:
-                    if (c.Modifiers.Any(SyntaxKind.StaticKeyword))
-                        return true;
-                    if (!IsAllowedEmptyInstanceCtor(c))
-                        return true;
-                    break;
-            }
-        }
+            ConstructorDeclarationSyntax c => c.Modifiers.Any(SyntaxKind.StaticKeyword) || !IsAllowedEmptyInstanceCtor(c),
 
-        return false;
+            _ => false
+        };
     }
 
     private static bool IsAllowedEmptyInstanceCtor(ConstructorDeclarationSyntax c)

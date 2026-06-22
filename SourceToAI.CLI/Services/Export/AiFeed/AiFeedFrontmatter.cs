@@ -27,16 +27,14 @@ public sealed record AiFeedFrontmatter(
     /// <paramref name="FileCount"/> entspricht der Anzahl der Einträge in <paramref name="manifestLines"/>.
     /// </summary>
     public static AiFeedFrontmatter Create(
-        string solutionDisplayName,
+        AiFeedSessionInfo sessionInfo,
         string projectDisplayName,
-        Guid sessionId,
-        DateTimeOffset generated,
         IReadOnlyList<AiFeedManifestLine>? manifestLines) =>
         new(
             DefaultFeedType,
-            FormatProjectField(solutionDisplayName, projectDisplayName),
-            sessionId,
-            generated,
+            FormatProjectField(sessionInfo.SolutionDisplayName, projectDisplayName),
+            sessionInfo.SessionId,
+            sessionInfo.Generated,
             GetFileCount(manifestLines));
 
     /// <summary>

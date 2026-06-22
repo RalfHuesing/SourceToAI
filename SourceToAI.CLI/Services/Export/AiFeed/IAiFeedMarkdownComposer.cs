@@ -10,9 +10,7 @@ public interface IAiFeedMarkdownComposer
     /// Manifestzeilen werden aus den Segmenten abgeleitet (Size/Type/Pfad).
     /// </summary>
     string Compose(
-        string solutionDisplayName,
+        AiFeedSessionInfo sessionInfo,
         string projectDisplayName,
-        Guid sessionId,
-        DateTimeOffset generated,
         IReadOnlyList<AiFeedContentSegment> segments);
 }

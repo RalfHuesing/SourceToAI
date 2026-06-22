@@ -157,22 +157,6 @@ public static class MultiViewExportPaths
         ArgumentException.ThrowIfNullOrEmpty(uniqueFileStemWithoutExtension);
         return Path.Combine(outputRoot, viewFolderName, uniqueFileStemWithoutExtension + ".md");
     }
-
-    /// <summary>
-    /// Wie <see cref="GetViewOutputPath(string, string, string)"/>, wobei der Stamm aus
-    /// <see cref="BuildSanitizedExportFileStem"/> gebildet wird — ohne Kollisionsprüfung.
-    /// </summary>
-    public static string GetViewOutputPath(
-        string outputRoot,
-        string viewFolderName,
-        string solutionDisplayName,
-        string projectDisplayName,
-        string viewKey) =>
-        GetViewOutputPath(
-            outputRoot,
-            viewFolderName,
-            BuildSanitizedExportFileStem(solutionDisplayName, projectDisplayName, viewKey));
-
     private static string EnsureNotReservedWindowsStem(string stem) =>
         ReservedWindowsBaseNames.Contains(stem) ? stem + "_" : stem;
 }

@@ -8,6 +8,7 @@ using SourceToAI.Tests.Support;
 
 namespace SourceToAI.Tests.Processing;
 
+// @covers MarkdownProjectViewBuilderBase
 public class MarkdownProjectViewBuilderTests
 {
     private static ServiceProvider CreateServiceProvider()

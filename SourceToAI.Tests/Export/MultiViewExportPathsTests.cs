@@ -77,17 +77,7 @@ public sealed class MultiViewExportPathsTests
                 "complete"));
     }
 
-    [Fact]
-    public void GetViewOutputPath_five_arg_overload_matches_stem_builder()
-    {
-        var root = @"C:\out\Sol";
-        var expected = MultiViewExportPaths.GetViewOutputPath(
-            root,
-            "public-only",
-            MultiViewExportPaths.BuildSanitizedExportFileStem("S<>", "P|", "public-only"));
-        var actual = MultiViewExportPaths.GetViewOutputPath(root, "public-only", "S<>", "P|", "public-only");
-        Assert.Equal(expected, actual);
-    }
+
 
     [Fact]
     public void Two_projects_whose_names_collide_after_sanitization_get_distinct_stems()

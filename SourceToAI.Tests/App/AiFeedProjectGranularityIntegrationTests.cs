@@ -74,7 +74,7 @@ public sealed class AiFeedProjectGranularityIntegrationTests
             {
                 public void Visible() { }
 
-                private void {{MultiViewExportIntegrationTests.PrivateFixtureMethodName}}() { }
+                private void {{MultiViewExportServiceIntegrationTests.PrivateFixtureMethodName}}() { }
             }
             """,
             TestContext.Current.CancellationToken);
@@ -152,8 +152,8 @@ public sealed class AiFeedProjectGranularityIntegrationTests
         AiFeedExportIntegrationAsserts.AssertAiFeedStructuralInvariants(publicA);
         AiFeedExportIntegrationAsserts.AssertAiFeedStructuralInvariants(publicB);
 
-        Assert.Contains(MultiViewExportIntegrationTests.PrivateFixtureMethodName, completeA, StringComparison.Ordinal);
-        Assert.DoesNotContain(MultiViewExportIntegrationTests.PrivateFixtureMethodName, publicA, StringComparison.Ordinal);
+        Assert.Contains(MultiViewExportServiceIntegrationTests.PrivateFixtureMethodName, completeA, StringComparison.Ordinal);
+        Assert.DoesNotContain(MultiViewExportServiceIntegrationTests.PrivateFixtureMethodName, publicA, StringComparison.Ordinal);
         Assert.Contains("Visible", publicA, StringComparison.Ordinal);
 
         var sigA = await File.ReadAllTextAsync(
