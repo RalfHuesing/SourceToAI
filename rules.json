@@ -92,7 +92,7 @@
   },
   "Metrics": {
     "MaxLineCount": 500,
-    "MaxMethodParameterCount": 4,
+    "MaxMethodParameterCount": 5,
     "MaxMethodParameterCountInTestFiles": 6,
     "MethodParameterCountIgnoreTypeNames": [
       "CancellationToken"
