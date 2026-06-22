@@ -28,7 +28,39 @@ public sealed class AiNetLinterTests
 
         var reportPath = Path.Combine(tempDir, "ainetlinter-report.md");
 
-        // 3. Start linter process
+        // 3. First run: Synchronize Cursor Rules
+        var syncStartInfo = new ProcessStartInfo
+        {
+            FileName = linterExe,
+            Arguments = $"-c \"{rulesPath}\" -p \"{slnPath}\" --sync-cursor-rules",
+            WorkingDirectory = solutionDir,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            StandardOutputEncoding = Encoding.UTF8,
+            StandardErrorEncoding = Encoding.UTF8
+        };
+
+        using (var syncProcess = new Process())
+        {
+            syncProcess.StartInfo = syncStartInfo;
+            syncProcess.Start();
+            bool syncExited = syncProcess.WaitForExit(TimeSpan.FromMinutes(1));
+            if (!syncExited)
+            {
+                syncProcess.Kill();
+                throw new TimeoutException("AiNetLinter --sync-cursor-rules process timed out.");
+            }
+            if (syncProcess.ExitCode != 0)
+            {
+                var err = syncProcess.StandardError.ReadToEnd();
+                var outStr = syncProcess.StandardOutput.ReadToEnd();
+                Assert.Fail($"AiNetLinter --sync-cursor-rules failed with exit code {syncProcess.ExitCode}.\nError: {err}\nOutput: {outStr}");
+            }
+        }
+
+        // 4. Second run: Start linter process
         var startInfo = new ProcessStartInfo
         {
             FileName = linterExe,
@@ -79,10 +111,10 @@ public sealed class AiNetLinterTests
         var reportContent = outputBuilder.ToString();
         var errorContent = errorBuilder.ToString();
 
-        // 4. Dump the report to Temp
+        // 5. Dump the report to Temp
         File.WriteAllText(reportPath, reportContent, Encoding.UTF8);
 
-        // 5. Assert exit code
+        // 6. Assert exit code
         if (process.ExitCode != 0)
         {
             var message = $"""
