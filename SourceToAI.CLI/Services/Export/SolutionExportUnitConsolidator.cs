@@ -171,7 +171,8 @@ public sealed class SolutionExportUnitConsolidator
         string solutionRootPath,
         Dictionary<string, (string RealProj, string SubNamespace)> virtualProjectSplitInfo)
     {
-        string combinedName = BuildCombinedName(u1.Project.ProjectName, u2.Project.ProjectName);
+        string solutionName = Path.GetFileName(solutionRootPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+        string combinedName = BuildCombinedName(u1.Project.ProjectName, u2.Project.ProjectName, solutionName);
         var combinedPaths = u1.Paths.Concat(u2.Paths)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
@@ -185,10 +186,74 @@ public sealed class SolutionExportUnitConsolidator
         return new ExportUnit(mergedProject, combinedPaths, docsOnly);
     }
 
-    private static string BuildCombinedName(string name1, string name2)
+    private static string BuildCombinedName(string name1, string name2, string solutionName)
     {
-        var clean1 = name1.StartsWith('_') ? name1.TrimStart('_') : name1;
-        var clean2 = name2.StartsWith('_') ? name2.TrimStart('_') : name2;
-        return $"{clean1}_{clean2}";
+        string s1 = StripSolutionPrefix(name1, solutionName);
+        string s2 = StripSolutionPrefix(name2, solutionName);
+
+        string combinedShort = FormatCombinedShortName(s1, s2);
+        if (combinedShort.Length > 40)
+        {
+            combinedShort = TruncateOrGroupNames(s1, s2);
+        }
+
+        return string.IsNullOrEmpty(solutionName) ? combinedShort : $"{solutionName}.{combinedShort}";
+    }
+
+    private static string StripSolutionPrefix(string name, string solutionName)
+    {
+        var clean = name.StartsWith('_') ? name.TrimStart('_') : name;
+        if (!string.IsNullOrEmpty(solutionName))
+        {
+            var prefixDot = solutionName + ".";
+            if (clean.StartsWith(prefixDot, StringComparison.OrdinalIgnoreCase))
+                return clean.Substring(prefixDot.Length);
+
+            var prefixUnderscore = solutionName + "_";
+            if (clean.StartsWith(prefixUnderscore, StringComparison.OrdinalIgnoreCase))
+                return clean.Substring(prefixUnderscore.Length);
+
+            if (string.Equals(clean, solutionName, StringComparison.OrdinalIgnoreCase))
+                return "Core";
+        }
+        return clean;
+    }
+
+    private static string FormatCombinedShortName(string s1, string s2)
+    {
+        int dot1 = s1.IndexOf('.');
+        int dot2 = s2.IndexOf('.');
+        if (dot1 > 0 && dot2 > 0)
+        {
+            string p1 = s1.Substring(0, dot1);
+            string p2 = s2.Substring(0, dot2);
+            if (string.Equals(p1, p2, StringComparison.OrdinalIgnoreCase))
+            {
+                string rest1 = s1.Substring(dot1 + 1);
+                string rest2 = s2.Substring(dot2 + 1);
+                return $"{p1}_{rest1}_{rest2}";
+            }
+        }
+        return $"{s1}_{s2}";
+    }
+
+    private static string TruncateOrGroupNames(string s1, string s2)
+    {
+        int dot1 = s1.IndexOf('.');
+        int dot2 = s2.IndexOf('.');
+        if (dot1 > 0 && dot2 > 0)
+        {
+            string p1 = s1.Substring(0, dot1);
+            string p2 = s2.Substring(0, dot2);
+            if (string.Equals(p1, p2, StringComparison.OrdinalIgnoreCase))
+            {
+                return $"{p1}_Grouped";
+            }
+        }
+
+        string head1 = dot1 > 0 ? s1.Substring(0, dot1) : s1;
+        string head2 = dot2 > 0 ? s2.Substring(0, dot2) : s2;
+        string candidate = $"{head1}_{head2}";
+        return candidate.Length > 30 ? "Modules_Grouped" : candidate;
     }
 }
