@@ -4,7 +4,7 @@ globs: *.cs
 alwaysApply: true
 ---
 # C#-Codequalität (AiNetLinter)
-Auto-generiert durch AiNetLinter 1.0.56 aus `C:\Daten\Entwicklung\Ralf\SourceToAI\rules.json`. Neuen Produktionscode direkt konform schreiben.
+Auto-generiert durch AiNetLinter 1.0.69 aus `C:\Daten\Entwicklung\Ralf\SourceToAI\rules.json`. Neuen Produktionscode direkt konform schreiben.
 
 ## Kurz-Stil
 - `sealed` für konkrete Klassen.
@@ -32,6 +32,15 @@ Auto-generiert durch AiNetLinter 1.0.56 aus `C:\Daten\Entwicklung\Ralf\SourceToA
 | `MaxPartialClassFiles` | **2** | 0 = deaktiviert; Logik in eigenständige Klassen auslagern (z. B. XyzChecker). |
 | `MaxPublicMembersPerType` | **15** | 0 = deaktiviert; Typ aufteilen oder Member kapseln. |
 | `MaxLinqChainLength` | **0** | 0 = deaktiviert; lange LINQ-Ketten in Teilschritte aufteilen. |
+| `CSS_MaxCssLineCount` | **300** | CSS-Datei splitten oder in Scoped CSS ueberfuehren. |
+| `CSS_MaxCssSelectorComplexity` | **3** | Maximal 3 Selektor-Segmente; Scoped CSS nutzen. |
+| `JS_MaxJsLineCount` | **150** | JavaScript-Datei aufteilen oder Logik nach C# migrieren. |
+| `RAZOR_MaxRazorLineCount` | **300** | Razor-Komponente aufteilen oder Teilbereiche extrahieren. |
+| `RAZOR_MaxRazorCodeBlockLines` | **20** | @code-Block in Code-Behind-Datei (.razor.cs) verschieben. |
+| `RAZOR_MaxMarkupNestingDepth` | **6** | Innere Bereiche in eigene Komponenten extrahieren. |
+| `RAZOR_MaxControlFlowBlocks` | **8** | Teilbereiche in eigenstaendige Komponenten extrahieren. |
+| `RAZOR_MaxForeachNestingDepth` | **2** | Innere Schleife in eigene Komponente extrahieren. |
+| `RAZOR_MaxComponentParameterCount` | **10** | Verwandte Parameter in Parameter-Objekt zusammenfassen. |
 
 ## Compound Suppressions (kontextabhängige Limiten)
 Folgende Regeln gelten mit relaxiertem Limit wenn alle Bedingungen erfüllt sind:
@@ -55,7 +64,8 @@ Folgende Regeln gelten mit relaxiertem Limit wenn alle Bedingungen erfüllt sind
 ## general
 - **EnforceSealedClasses** — `sealed` für konkrete Klassen; Ausnahmen: Suffixe in `rules.json → SealedClassExemptSuffixes`.
 - **EnforcePascalCase** — Öffentliche Typen/Methoden/Properties: PascalCase.
-- **EnforceSemanticNaming** — Keine `data`/`temp`/`obj` in öffentlichen Signaturen.
+- **EnforceAsciiIdentifiers** — Bezeichner duerfen keine Nicht-ASCII-Zeichen (Umlaute, Akzente, Emojis) enthalten.
+- **EnforceSemanticNaming** — Keine generischen Namen in oeffentlichen Signaturen oder werkzeug-generierte Dummy-Namen (MyRegex, NewMethod, Class1) auf Deklarationen.
 - **EnforceNullableEnable** — `#nullable enable` am Dateianfang jeder `.cs`-Datei.
 - **AllowTryPatternOutParameters** — `out` in `Try*`-Methoden erlaubt.
 - **AllowCancellationShutdownCatch** — `OperationCanceledException` beim Shutdown abfangen erlaubt.
@@ -64,7 +74,7 @@ Folgende Regeln gelten mit relaxiertem Limit wenn alle Bedingungen erfüllt sind
 Ausnahmelisten (Immutability, Sealed, Namespace-Segmente): `rules.json`.
 
 ## Deaktiviert
-Linter erzwingt nicht (trotzdem anstreben): `EnforceXmlDocumentation`, `EnforceExplicitStateImmutability`, `EnforceMinimalApiAsParameters`, `EnforceResultPatternOverExceptions`, `PreventContextDependentOverloads`.
+Linter erzwingt nicht (trotzdem anstreben): `EnforceXmlDocumentation`, `EnforceExplicitStateImmutability`, `EnforceMinimalApiAsParameters`, `EnforceResultPatternOverExceptions`, `PreventContextDependentOverloads`, `CSS_PreferScopedCss`, `JS_EnforceJsModules`, `RAZOR_BanInlineEventLambdas`, `RAZOR_BanInlineTernaryInAttributes`.
 Trotzdem immer verboten: `dynamic`; `out` (außer in `Try*`).
 
 ## Projekt-Overrides (nur Abweichungen)

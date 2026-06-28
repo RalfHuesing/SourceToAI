@@ -267,6 +267,7 @@ public sealed class MultiViewExportServiceIntegrationTests
         services.AddSingleton(settings);
         services.AddSingleton<ICSharpDocumentLoader, CSharpDocumentLoader>();
         services.AddTransient<ProjectSplittingEngine>();
+        services.AddTransient<SolutionExportUnitConsolidator>();
         services.AddViewGenerators();
         services.AddMarkdownProjectViewBuilders();
         services.AddSingleton<IAiFeedMarkdownComposer, AiFeedMarkdownComposer>();

@@ -7,6 +7,7 @@
     "EnforceValueObjectContracts": true,
     "EnableTestSentinel": true,
     "EnforcePascalCase": true,
+    "EnforceAsciiIdentifiers": true,
     "EnforceXmlDocumentation": false,
     "EnforceSemanticNaming": true,
     "EnforceNullableEnable": true,
@@ -98,6 +99,8 @@
       "CancellationToken"
     ],
     "MethodParameterCountIgnoreTypePrefixes": [],
+    "MaxMethodParameterCountAllowPrivate": false,
+    "MaxMethodParameterCountForNonPublic": 6,
     "MaxMethodLineCount": 60,
     "MaxCyclomaticComplexity": 12,
     "MaxCognitiveComplexity": 15,
@@ -298,6 +301,39 @@
       "bin/"
     ],
     "SkipGeneratedCodeAttribute": true
+  },
+  "Web": {
+    "IsEnabled": false,
+    "Css": {
+      "MaxCssLineCount": 300,
+      "PreferScopedCss": true,
+      "PreferScopedCssMinRuleCount": 5,
+      "MaxCssSelectorComplexity": 3,
+      "ExemptPaths": [
+        "**/wwwroot/lib/**",
+        "**/node_modules/**",
+        "**/*.min.css"
+      ]
+    },
+    "Js": {
+      "MaxJsLineCount": 150,
+      "EnforceJsModules": true,
+      "ExemptPaths": [
+        "**/wwwroot/lib/**",
+        "**/node_modules/**",
+        "**/*.min.js"
+      ]
+    },
+    "Razor": {
+      "MaxRazorLineCount": 300,
+      "MaxRazorCodeBlockLines": 20,
+      "MaxMarkupNestingDepth": 6,
+      "BanInlineEventLambdas": true,
+      "MaxControlFlowBlocks": 8,
+      "MaxForeachNestingDepth": 2,
+      "MaxComponentParameterCount": 10,
+      "BanInlineTernaryInAttributes": true
+    }
   },
   "RuleMetadata": {
     "MaxLineCount": {

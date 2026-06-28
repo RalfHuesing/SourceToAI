@@ -23,6 +23,7 @@ public partial class ConsoleOrchestratorTests
         services.AddSingleton(TestAppSettingsFactory.Default());
         services.AddSingleton<ICSharpDocumentLoader, CSharpDocumentLoader>();
         services.AddTransient<ProjectSplittingEngine>();
+        services.AddTransient<SolutionExportUnitConsolidator>();
         services.AddViewGenerators();
         services.AddMarkdownProjectViewBuilders();
         services.AddSingleton<IAiFeedMarkdownComposer, AiFeedMarkdownComposer>();

@@ -17,6 +17,7 @@ public static class MultiViewExportTestHost
         services.AddSingleton(new CLI.Configuration.AppSettings());
         services.AddSingleton<ICSharpDocumentLoader, CSharpDocumentLoader>();
         services.AddTransient<ProjectSplittingEngine>();
+        services.AddTransient<SolutionExportUnitConsolidator>();
         services.AddViewGenerators();
         services.AddMarkdownProjectViewBuilders();
         services.AddSingleton<IAiFeedMarkdownComposer, AiFeedMarkdownComposer>();

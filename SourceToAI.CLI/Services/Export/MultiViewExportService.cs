@@ -20,8 +20,7 @@ public sealed class MultiViewExportService(
     private const int MaxConcurrentViewBuilds = 5;
 
     private static readonly string[] ViewKeyOrder = ["complete", "signatures-only", "public-only", "dto-only"];
-
-    private record ExportUnit(ProjectDefinition Project, IReadOnlyList<string> Paths, bool DocsOnlyInCompleteView);
+    private readonly SolutionExportUnitConsolidator consolidator = new();
 
     private record ExportUnitsResult(
         List<ExportUnit> ExportUnits,
@@ -54,14 +53,54 @@ public sealed class MultiViewExportService(
     {
         var exportUnits = new List<ExportUnit>();
         var virtualProjectSplitInfo = new Dictionary<string, (string RealProj, string SubNamespace)>(StringComparer.OrdinalIgnoreCase);
+        var unmappedProjectNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        if (solutionDocs is { Count: > 0 })
+        bool hasDocs = solutionDocs is { Count: > 0 };
+        if (hasDocs)
         {
             var docProject = new ProjectDefinition(".Docs", Path.Combine(solutionRootPath, "virtual.csproj"));
-            exportUnits.Add(new ExportUnit(docProject, solutionDocs, true));
+            exportUnits.Add(new ExportUnit(docProject, solutionDocs!, true));
         }
 
+        var activeUnmapped = unmappedDirs
+            .Where(u => u.AbsoluteFilePaths.Count > 0)
+            .OrderBy(u => u.DirectoryName, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
         var isSplittingActive = appSettings.MaxFileSizeKb > 0 && appSettings.MaxFileCount > 0;
+        var perProjectLimits = consolidator.CalculatePerProjectLimits(
+            appSettings.MaxFileCount,
+            hasDocs,
+            activeUnmapped.Count,
+            projectsWithFiles);
+
+        AddProjectExportUnits(projectsWithFiles, isSplittingActive, perProjectLimits, exportUnits, virtualProjectSplitInfo);
+
+        foreach (var (directoryName, paths) in activeUnmapped)
+        {
+            var virtualCsproj = Path.Combine(solutionRootPath, directoryName, "virtual.csproj");
+            var virtualProject = new ProjectDefinition(directoryName, virtualCsproj);
+            unmappedProjectNames.Add(directoryName);
+            exportUnits.Add(new ExportUnit(virtualProject, paths, true));
+        }
+
+        var consolidatedUnits = consolidator.ConsolidateExportUnits(
+            exportUnits,
+            appSettings.MaxFileCount,
+            solutionRootPath,
+            unmappedProjectNames,
+            virtualProjectSplitInfo);
+
+        return new ExportUnitsResult(consolidatedUnits, virtualProjectSplitInfo);
+    }
+
+    private void AddProjectExportUnits(
+        IReadOnlyList<(ProjectDefinition Project, IReadOnlyList<string> AbsoluteFilePaths)> projectsWithFiles,
+        bool isSplittingActive,
+        Dictionary<string, int> perProjectLimits,
+        List<ExportUnit> exportUnits,
+        Dictionary<string, (string RealProj, string SubNamespace)> virtualProjectSplitInfo)
+    {
         var orderedProjects = projectsWithFiles
             .OrderBy(p => p.Project.ProjectName, StringComparer.OrdinalIgnoreCase);
 
@@ -70,12 +109,13 @@ public sealed class MultiViewExportService(
             if (paths.Count == 0)
                 continue;
 
-            if (isSplittingActive)
+            int projectLimit = perProjectLimits.TryGetValue(project.ProjectName, out int limit) ? limit : appSettings.MaxFileCount;
+            if (isSplittingActive && projectLimit > 0)
             {
                 var partitions = splittingEngine.PartitionProject(
                     project,
                     paths,
-                    new ProjectSplittingOptions(appSettings.MaxFileSizeKb, appSettings.MaxFileCount, appSettings.SuppressCorePartition));
+                    new ProjectSplittingOptions(appSettings.MaxFileSizeKb, projectLimit, appSettings.SuppressCorePartition));
                 foreach (var partition in partitions)
                 {
                     var partitionName = partition.SubNamespaceName;
@@ -92,17 +132,6 @@ public sealed class MultiViewExportService(
                 exportUnits.Add(new ExportUnit(project, paths, false));
             }
         }
-
-        foreach (var (directoryName, paths) in unmappedDirs
-                     .Where(u => u.AbsoluteFilePaths.Count > 0)
-                     .OrderBy(u => u.DirectoryName, StringComparer.OrdinalIgnoreCase))
-        {
-            var virtualCsproj = Path.Combine(solutionRootPath, directoryName, "virtual.csproj");
-            var virtualProject = new ProjectDefinition(directoryName, virtualCsproj);
-            exportUnits.Add(new ExportUnit(virtualProject, paths, true));
-        }
-
-        return new ExportUnitsResult(exportUnits, virtualProjectSplitInfo);
     }
 
     private static string GetVirtualProjectName(string projectName, string partitionName)
