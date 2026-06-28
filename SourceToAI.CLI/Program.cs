@@ -126,6 +126,7 @@ static async Task<int> RunExportPipelineAsync(
     services.AddTransient<IFileDiscoveryService, FileDiscoveryService>();
     services.AddSingleton<ICSharpDocumentLoader, CSharpDocumentLoader>();
     services.AddTransient<ProjectSplittingEngine>();
+    services.AddTransient<SolutionExportUnitConsolidator>();
     services.AddTransient<IFeedGenerator, MarkdownFeedGenerator>();
     services.AddTransient<IDependencyGraphMarkdownGenerator, CsprojDependencyGraphMarkdownGenerator>();
     services.AddTransient<IMultiViewExportService, MultiViewExportService>();
